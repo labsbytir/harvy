@@ -2,6 +2,10 @@
 
 This is the single project plan. It supersedes older plans and implementation notes; verified behavior must be separated from proposals.
 
+The full API/source inventories and connector adoption sequence are in [CONNECTOR_PLAN.md](CONNECTOR_PLAN.md). Its four in-repo reference inputs include the OpenTIR source-by-source catalog and the prior Harvy/Civic manifests; candidate entries are not live integrations.
+
+**System boundary:** Harvy is the single system and its ontology is shared across every use case. Ontoly is the product for the raw dataset. Civic, Tower, Ops, and Newsk are modes of the Harvy ontology, not separate systems, deployments, databases, or Cloudflare resource stacks. Mode access is controlled by shared permissions and feature flags. Automation is the external connector execution server; its connectors feed Harvy.
+
 Reusable implementation starters live outside this plan: [inactive n8n scrape JSON](../v2/workflows/scrape-v1.template.json), [n8n API calling pattern](../v2/workflows/README.md), [15-question MCP agent intake](../v2/workflows/N8N-MCP-INTAKE.md), and [shared UI frame](../v2/shared/ui/HarvyShell.tsx). The [engineering standard](DEVELOPMENT.md#19-database-object-storage-and-cloudflare-deployment-map) maps PostgreSQL, object storage, Cloudflare services, and tool slots. These artifacts are starters; they are not installed, connected, or deployed by inclusion in the repository.
 
 The [UI and Drizzle Cube specification](UI_SPEC.md) defines the website, application shell, screen inventory, component contracts, persistence, and acceptance checks. The [copyable build-agent prompt](BUILD_AGENT_PROMPT.md) directs an agent to implement this plan in verified slices and run local checks as it builds. Both are subordinate to this single plan and neither establishes a deployed capability.
@@ -57,8 +61,8 @@ Plan against 120 developer-hours and 40 Ops-hours. Allocate approximately 20 dev
 
 ### Architecture that fits the deadline
 
-- Keep the current V2 runtime and D1 during the hackathon. PostgreSQL/Hyperdrive remains the target after the pilot; do not attempt an auth/database cutover this week unless it is already provisioned and proven at kickoff. Add explicit tenant/workspace scope to new private records and reject implicit shared defaults. Use two isolated test tenants to prove the boundary before external invitations.
-- Use existing Better Auth; implement three role bundles (admin, analyst, viewer) over a small registered permission set. Store a versioned feature/entitlement map and enforce it server-side. A complete admin console and billing integration can wait.
+- Build on the clean V2 repository, which has no live database in its current Cloudflare inventory. PostgreSQL through Hyperdrive is the priority transactional target; D1 has a separate operational/index role where the V2 design assigns it. Provision and verify required data services in dependency order, with explicit tenant/workspace scope and a two-tenant isolation check before external invitations. Do not treat a legacy D1 config as a working database.
+- Port/integrate the selected Better Auth implementation into this clean repository; implement three role bundles (admin, analyst, viewer) over a small registered permission set. Store a versioned feature/entitlement map and enforce it server-side. A complete admin console and billing integration can wait.
 - Implement only the HQL subset needed for source/time/keyword/status filters, deterministic ordering, bounded pagination, and one saved query. Reject unsupported syntax explicitly. Publish matching OpenAPI for the implemented routes. Reuse MUI and Drizzle Cube where they already fit; timebox a new analytical UI integration instead of rebuilding an entire query framework.
 - Use R2 raw/processed artifacts and the existing operational query path first. Day 3 stretch: one bounded JSON-to-Parquet release with lineage and a verified query path; do not label an unregistered Parquet file as Basin analytics. Large multipart customer uploads, video processing, maps/graph polish, forecasting, and bulk archives are post-hackathon work. Retain bounded streaming for connector downloads.
 - Use the installed n8n as an internal orchestration component of Automation, following the n8n standard in DEVELOPMENT.md. One schedule owner per monitor. n8n submits/resumes bounded jobs; connector code owns external access and normalization. Existing Cloudflare queues/workflows remain where useful; do not introduce a competing scheduler for the same job.
@@ -68,9 +72,9 @@ The hackathon narrows capabilities; it does not waive tenant isolation, credenti
 
 ### Connector factory and batch ordering
 
-Build reusable families, then configure sources from the frozen ledger. Default family order: RSS/Atom; JSON/GeoJSON HTTP; CKAN; Socrata; bounded CSV/NDJSON; Spider-backed public-page extraction. These are implementation candidates—survey actual family counts and avoid building an adapter unless it unlocks enough ledger entries to justify it. Prioritize families by verified accessible sources per engineering hour, then newsroom value. Native n8n nodes are not a bypass around Automation, Webshare, provenance, or tenant checks.
+Build reusable families, then configure sources from the frozen ledger. Begin with CourtListener bulk data, Media Cloud and SocketNews API adapters, and Spider-backed public-page extraction; extend to weather and other approved JSON/GeoJSON, CKAN, Socrata, and bounded CSV/NDJSON sources. Survey actual family counts and avoid building an adapter unless it unlocks enough ledger entries to justify it. Native n8n nodes are not a bypass around Automation, Webshare, provenance, or tenant checks. RSS is excluded from the Newsk path.
 
-Initial vertical slice: one approved publisher/official RSS feed, then a simple official JSON/GeoJSON source such as USGS. Extend with GDELT and NOAA/NWS where their endpoints/access pass preflight, then portal and Civic sources. No provider is counted as verified from this plan. Facebook, X, Reddit, Media Cloud, SocketNews, YouTube, and other gated services retain their ledger rows; they advance only when access, allowed use, quota, and source-specific behavior are settled. Assign no late-night custom scraper to replace missing platform permission.
+Initial vertical slice: an approved Media Cloud or SocketNews query through Automation, with Spider Cloud crawl/scrape coverage where approved. Extend to weather after the news path works. CourtListener bulk downloads are the lead ingestion priority, followed by news, then weather; see repository issues #28, #20, and #29. No provider is counted as verified from this plan. Facebook, X, Reddit, YouTube, and other gated services retain their ledger rows; they advance only when access, allowed use, quota, and source-specific behavior are settled. Do not add RSS as a Newsk dependency.
 
 Share one input/output envelope, idempotency implementation, artifact writer, validation suite, run/health registry, and error taxonomy. Ops can prepare and verify config fixtures; Developer B reviews mappings and code. Developer A takes a second family after the core boundary works; Developer C contributes to batch acceptance after the UI slice works. Bespoke or uncertain adapters get a two-hour investigation ceiling before being recorded blocked and the next accessible family is attempted.
 
@@ -91,7 +95,7 @@ The numerical progress gates are forecasts, not claims of completion. Missing on
 | Owner | Primary work and owned files | End-of-day deliverable |
 |---|---|---|
 | Developer A — technical lead / platform | Own `v2/shared/`, the new `v2/api/` Worker, auth integration, migrations, minimal HQL, and CI/lint setup. Freeze the first schemas; all schema changes go through A. | Authenticated source/run/query endpoints using a trusted tenant context, a denied cross-tenant case, idempotent run registration, and runnable checks for changed modules. |
-| Developer B — Automation / ingestion | Own connector adapters, Automation executor, and reviewed n8n exports under `v2/workflows/`. Pair with Ops for the catalog audit. | One reusable feed adapter and real source run, raw/processed manifests, proxy proof, bounded failure handling, plus measured bulk-adoption throughput. |
+| Developer B — Automation / ingestion | Own connector adapters, Automation executor, and reviewed n8n exports under `v2/workflows/`. Pair with Ops for the catalog audit. | One approved source adapter and real source run, raw/processed manifests, proxy proof, bounded failure handling, plus measured bulk-adoption throughput. |
 | Developer C — product / UI | Own the Newsk screen and shared UI integration. Build against the frozen synthetic contract first, then switch to the real API. | Sign-in flow plus source/monitor list, result list, evidence drawer, freshness/error states, and source/time filter. Fixture mode is visibly marked until live integration. |
 | Ops / sales / support / junior engineer | Own source ledger, credentials availability by reference, n8n inventory/backup checklist, acceptance evidence, customer story, and issues. Escalate provider/admin changes to the responsible developer. | Deduplicated roster with blocker status, a five-step customer demo, acceptance notes, and three prioritized feedback questions. Draft outreach only; send when authorized. |
 
@@ -159,9 +163,9 @@ At the end of Day 1, report three separate statuses: (1) the customer workflow's
 - Legacy excluded-source code in the checkout is not approved for enablement. The user's source exclusions override earlier onboarding plans.
 - CourtListener bulk import is not implemented. Port targeted search into V2 before claiming that capability is available.
 - No remote Workers, queues, VPS processes, or stored data were changed by the V2 conversion; reconcile any still-running external consumers separately before decommissioning them.
-- Better Auth source and D1 migrations are under `v2/auth/` and `v2/migrations/`. The auth Worker now targets the shared V2 D1 database; no migration or deployment was performed by this refactor.
-- Shared canonical ontology and dashboard schema is defined by `v2/migrations/0006_ontology_and_dashboards.sql`; it has not been applied remotely.
-- `harvy-raw` stores raw captures, `harvy-artifacts` stores normalized records, and Basin is the separate analytics path. The configured `harvy-platform-v2` D1 name is a remote resource identifier, not a filesystem path.
+- Better Auth source and D1 migrations exist in the moved reference checkout, not this clean repository. Auth integration and migrations remain V2 implementation work.
+- The reference checkout's `0006_ontology_and_dashboards.sql` is a migration candidate, not a schema in this clean repository or a remotely applied migration.
+- The target R2 layout has three buckets: `harvy-raw` for source captures, `harvy-artifacts` for validated/normalized records, and a separate Basin catalog bucket for catalog-managed analytical tables. The Basin bucket name and bindings require confirmation before provisioning. The configured `harvy-platform-v2` D1 name is a legacy remote resource identifier, not the V2 target.
 - The 75% cache-hit target applies only to eligible public responses and has not been measured on a representative workload.
 
 ## Work sequence
@@ -178,7 +182,7 @@ At the end of Day 1, report three separate statuses: (1) the customer workflow's
 ## Contradiction audit
 
 - V2 implementations and configs are under `v2/`. Do not document a second root or a root Worker.
-- Active configs bind `harvy-raw` / `harvy-artifacts`. Do not rename live buckets.
+- V2 configs bind `harvy-raw` / `harvy-artifacts` for raw and processed data. Inventory live objects and bindings before any bucket migration or deletion.
 - Auth migrations live under `v2/migrations/`. The V2 auth config targets the shared V2 D1 database.
 - The legacy V2 supervisor is outside the target architecture. A Newsk `v2/api/` route does not yet exist; the UI must not be represented as working until that route is implemented and tested.
 - Facebook and CourtListener functionality has no complete V2 equivalent. Those ports are explicit work items above, not capabilities to assume from the catalog.

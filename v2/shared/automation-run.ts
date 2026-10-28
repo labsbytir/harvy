@@ -43,7 +43,10 @@ function isSourceUrl(value: unknown): value is string {
 	try {
 		const url = new URL(value);
 		return url.protocol === "https:" && !!url.hostname && !url.username && !url.password &&
-			!url.hash && url.hostname !== "localhost" && !url.hostname.endsWith(".local");
+			!url.hash && url.hostname !== "localhost" && !url.hostname.endsWith(".local") &&
+			!url.hostname.endsWith(".internal") && !url.hostname.endsWith(".localhost") &&
+			url.hostname !== "127.0.0.1" && url.hostname !== "::1" &&
+			!/^(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.)/.test(url.hostname);
 	} catch {
 		return false;
 	}

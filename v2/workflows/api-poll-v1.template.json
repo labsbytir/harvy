@@ -1,0 +1,85 @@
+{
+  "name": "Harvy Automation REST/GeoJSON Poll v1 (inactive template)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "c2000001-f9b0-4cd0-a427-a2d80139a001",
+      "name": "Schedule API Poll",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const job = {\n  contract_version: 1,\n  connector_id: 'reusable_rest_geojson',\n  source_scope_id: 'REPLACE_WITH_API_SCOPE_ID',\n  access_scope_id: 'REPLACE_WITH_ACCESS_SCOPE_ID',\n  target_url: 'https://example.gov/api/v1/events.json',\n  mode: 'scrape',\n  provider: 'spider_unlimited',\n  required_proxy: 'webshare',\n  max_pages: 1,\n  deadline_seconds: 60,\n  idempotency_key: `n8n-api-${$execution.id}`\n};\nreturn [{ json: job }];"
+      },
+      "id": "c2000001-f9b0-4cd0-a427-a2d80139a002",
+      "name": "Build API Poll Job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://REPLACE_WITH_AUTOMATION_INTERNAL_HOST/internal/v1/scrape-runs",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "c2000001-f9b0-4cd0-a427-a2d80139a003",
+      "name": "Submit to Automation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        700,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule API Poll": {
+      "main": [
+        [
+          {
+            "node": "Build API Poll Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build API Poll Job": {
+      "main": [
+        [
+          {
+            "node": "Submit to Automation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

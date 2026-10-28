@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { MODES, type HarvyProduct } from "./modes";
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -11,12 +12,7 @@ import Stack from "@mui/material/Stack";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 
-const products = [
-  { name: "Newsk", label: "Newsroom intelligence", description: "Notice emerging stories, inspect evidence, and prepare attributed briefs.", status: "First build slice" },
-  { name: "Tower", label: "Global and business intelligence", description: "Track markets, competitors, sectors, and risk through connected evidence.", status: "Specified" },
-  { name: "Ops", label: "Business operations", description: "Turn verified signals into owned actions, monitors, and decisions.", status: "Specified" },
-  { name: "Civic", label: "Civic intelligence", description: "Connect public records, civic events, institutions, and outcomes.", status: "Specified" }
-] as const;
+const products = MODES;
 
 const steps = [
   { number: "01", title: "Monitor", text: "Collect from approved sources through registered connectors." },
@@ -27,6 +23,7 @@ const steps = [
 
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [activeProduct, setActiveProduct] = useState<HarvyProduct>("Newsk");
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
       <AppBar position="static" elevation={0} color="transparent" sx={{ borderBottom: 1, borderColor: "divider" }}>
@@ -48,7 +45,7 @@ export default function App() {
         </Container>
       </AppBar>
 
-      <Box component="main" id="top">
+      <Box component="main" id="top" role="main">
         <Container maxWidth="lg" sx={{ pt: { xs: 8, md: 12 }, pb: 10 }}>
           <Chip label="Harvy foundation · development preview" color="primary" variant="outlined" sx={{ mb: 3 }} />
           <Typography component="h1" variant="h1" sx={{ fontSize: { xs: "3rem", sm: "4.5rem", md: "6rem" }, maxWidth: 900 }}>
@@ -94,7 +91,9 @@ export default function App() {
             <Typography variant="overline" color="primary">One foundation, four contexts</Typography>
             <Typography component="h2" variant="h2" sx={{ fontSize: { xs: "2.3rem", md: "3.5rem" }, mt: 1, mb: 4 }}>Work from the same evidence.</Typography>
             <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" }, gap: 2 }}>
-              {products.map((product) => <Card key={product.name} data-harvy-tag={"harvy.global.products." + product.name.toLowerCase() + ".v1"}>
+              {products.map((product) => <Card key={product.name} data-harvy-tag={"harvy.global.products." + product.name.toLowerCase() + ".v1"}
+                sx={product.name === activeProduct ? { borderColor: "primary.main", borderWidth: 2 } : undefined}
+                onClick={() => setActiveProduct(product.name as HarvyProduct)}>
                 <CardContent sx={{ p: 3 }}>
                   <Stack direction="row" justifyContent="space-between" alignItems="start" gap={1}>
                     <Typography variant="h5">{product.name}</Typography>

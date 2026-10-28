@@ -8,7 +8,11 @@
     "build": "vite build --config v2/web/vite.config.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "node --experimental-strip-types --test v2/tests/*.test.mjs",
-    "check:local": "npm run typecheck && npm test && npm run build"
+    "check:local": "npm run typecheck && npm test && npm run build",
+    "typecheck:auth": "tsc -p v2/auth/tsconfig.json",
+    "typecheck:auth-client": "tsc -p v2/auth/tsconfig.client.json",
+    "test:auth-consent": "node --test v2/auth/privacy-consent.test.mjs",
+    "build:auth-client": "vite build --config v2/auth/vite.config.mts"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -19,13 +23,24 @@
     "react-dom": "^18.3.1",
     "react-grid-layout": "^2.3.0",
     "react-is": "^19.3.1",
-    "recharts": "^3.10.1"
+    "recharts": "^3.10.1",
+    "better-auth": "^1.7.13",
+    "better-auth-cloudflare": "^0.4.1",
+    "@better-auth/api-key": "^1.7.13",
+    "@better-auth/passkey": "^1.7.13",
+    "@better-auth/stripe": "^1.7.13",
+    "@better-auth/infra": "^0.4.22",
+    "@marinedotsh/better-auth-referral": "^0.3.0",
+    "drizzle-orm": "^0.45.4",
+    "stripe": "^23.0.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^6.1.2",
     "typescript": "^5.8.3",
-    "vite": "^8.3.5"
+    "vite": "^8.3.5",
+    "@cloudflare/workers-types": "^5.20261025.1",
+    "drizzle-kit": "^0.31.11"
   }
 }

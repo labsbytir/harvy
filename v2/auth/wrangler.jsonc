@@ -1,0 +1,26 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "harvy-auth",
+  "main": "./worker.ts",
+  "workers_dev": false,
+  "routes": [
+    { "pattern": "harvybot.com/api/better-auth/*", "zone_name": "harvybot.com" }
+  ],
+  "compatibility_date": "2026-10-25",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "BETTER_AUTH_URL": "https://harvybot.com",
+    "BETTER_AUTH_BASE_PATH": "/api/better-auth",
+    "BETTER_AUTH_INFRA_ENABLED": "false",
+    "BETTER_AUTH_EMAIL_ENABLED": "false",
+    "STRIPE_ENABLED": "false"
+  },
+  "d1_databases": [
+    {
+      "binding": "HARVY_D1",
+      "database_name": "harvy-platform-v2",
+      "database_id": "2fb9f8e4-ca31-4cd0-95b4-b084429816f2",
+      "migrations_dir": "../migrations"
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "name": "Harvy Automation Spider Crawl v1 (inactive template)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "c3000001-f9b0-4cd0-a427-a2d80139a001",
+      "name": "Manual or Webhook Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const job = {\n  contract_version: 1,\n  connector_id: 'reusable_spider_crawler',\n  source_scope_id: 'REPLACE_WITH_PORTAL_SCOPE_ID',\n  access_scope_id: 'REPLACE_WITH_ACCESS_SCOPE_ID',\n  target_url: 'https://example.gov/public-notices',\n  mode: 'crawl',\n  provider: 'spider_unlimited',\n  required_proxy: 'webshare',\n  max_pages: 5,\n  deadline_seconds: 120,\n  idempotency_key: `n8n-crawl-${$execution.id}`\n};\nreturn [{ json: job }];"
+      },
+      "id": "c3000001-f9b0-4cd0-a427-a2d80139a002",
+      "name": "Build Crawl Job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://REPLACE_WITH_AUTOMATION_INTERNAL_HOST/internal/v1/scrape-runs",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 45000
+        }
+      },
+      "id": "c3000001-f9b0-4cd0-a427-a2d80139a003",
+      "name": "Submit to Automation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        700,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Manual or Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build Crawl Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Crawl Job": {
+      "main": [
+        [
+          {
+            "node": "Submit to Automation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

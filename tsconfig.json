@@ -7,8 +7,21 @@
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "lib": ["ES2022", "DOM"],
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
     "allowImportingTsExtensions": true
   },
-  "include": ["v2/**/*.ts", "v2/**/*.tsx"]
+  "include": [
+    "v2/web/**/*.ts",
+    "v2/web/**/*.tsx",
+    "v2/shared/**/*.ts",
+    "v2/tests/**/*.mts",
+    "v2/api/**/*.ts"
+  ],
+  "exclude": [
+    "v2/auth",
+    "node_modules"
+  ]
 }

@@ -95,7 +95,7 @@ Migrations use expand → backfill → switch → contract. Apply additive chang
 
 ## 5. Data filesystem: raw, processed, query
 
-Use logical stages independent of physical bucket names. Preserve existing `harvy-raw` and `harvy-artifacts` bindings until a reviewed storage migration. Bucket and prefix selection comes from shared configuration. An artifact catalog maps logical URIs to actual objects; customers receive authorized object handles rather than raw bucket credentials.
+Use logical stages independent of physical bucket names. The V2 target uses `harvy-raw`, `harvy-artifacts` for processed records, and a separate Basin catalog bucket; the catalog bucket name must be confirmed before provisioning. Bucket and prefix selection comes from shared configuration. An artifact catalog maps logical URIs to actual objects; customers receive authorized object handles rather than raw bucket credentials.
 
 ```text
 <stage>/<environment>/<scope>/<source_id>/<schema_version>/<YYYY-MM-DD>/<run_id>/<artifact_id>.<format>
@@ -322,7 +322,7 @@ This section makes the target buildable from the core schema and data lifecycle 
 | Workers | `v2/api/` exposes `/api/v1/` auth-aware product and operator operations; existing `v2/auth/` owns Better Auth. Frontend assets use the existing build path. | Auth Worker source/config exists. New product API Worker is target, unimplemented. |
 | D1 | Current operational/auth database and narrowly scoped MVP run/story state. Preserve existing migration ledger and explicit scope checks. | Configured locally; remote migration and deployed schema unverified. MVP uses it only after environment check. |
 | Hyperdrive + PostgreSQL | Preferred target for transactional core with tenant-aware schemas, stable identity, access grants, Ontoly records, run registry, and extension tables. Hyperdrive is the Worker connection layer. | Target only; PostgreSQL provider, schema deployment, and cutover unverified. Not a five-day dependency. |
-| R2 | `harvy-raw` for source captures; `harvy-artifacts` for normalized/processed objects and approved upload staging. Access through scoped artifact manifests. | Existing bucket bindings in V2 configs; live permissions and objects unverified. |
+| R2 | Three-bucket target: `harvy-raw` for source captures, `harvy-artifacts` for normalized/processed objects, and a separate Basin catalog bucket for catalog-managed analytical tables. Access through scoped artifact manifests. | Only `harvy-raw` currently appears among these target buckets in the account inventory; processed and catalog bucket provisioning/bindings remain unverified. |
 | Basin Pipelines/Catalog/SQL | Convert validated processed records into catalog-managed Iceberg/Parquet analytical releases, then query them; keep raw lineage. | Target analytical path; one bounded slice is optional for hackathon, not assumed live. |
 | K2 Streams | Durable change/lifecycle event log and independent downstream subscribers. Record IDs, scope, schema, trace. | Legacy config references a stream; target integration and live status unverified. Do not add it to a minimal job if no second consumer needs it. |
 | Queues | Buffer bounded work between API, Automation handoff, and projections if measured/reliability need exists; dead-letter failures with replay policy. | Legacy V2 binding exists; new API use is optional and unverified. n8n is not the same queue. |

@@ -1,0 +1,44 @@
+[
+  {
+    "key": "usa_gov",
+    "name": "USA.gov",
+    "url": "https://www.usa.gov/local-governments",
+    "role": "authoritative_directory"
+  },
+  {
+    "key": "census_v2025",
+    "name": "Census V2025 places",
+    "url": "https://www.everycityintheusa.com/data/city-population-csv/",
+    "role": "authoritative_places"
+  },
+  {
+    "key": "falling_rain",
+    "name": "Falling Rain",
+    "url": "https://www.fallingrain.com/world/US/",
+    "role": "enrichment"
+  },
+  {
+    "key": "city_data",
+    "name": "City-Data",
+    "url": "https://www.city-data.com/",
+    "role": "enrichment"
+  },
+  {
+    "key": "citydirectory",
+    "name": "CityDirectory.us",
+    "url": "https://www.citydirectory.us/",
+    "role": "enrichment"
+  },
+  {
+    "key": "location_reddits",
+    "name": "LocationReddits",
+    "url": "https://www.reddit.com/r/LocationReddits/wiki/faq/northamerica/",
+    "role": "community_directory"
+  },
+  {
+    "key": "statsamerica",
+    "name": "StatsAmerica",
+    "url": "https://www.statsamerica.org/uscp/default.aspx",
+    "role": "enrichment"
+  }
+]
