@@ -1,0 +1,60 @@
+{
+  "name": "Harvy Automation scrape v1 (inactive template)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "b5871968-f9b0-4cd0-a427-a2d80139a001",
+      "name": "Manual start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const job = { contract_version: 1, connector_id: 'REPLACE_WITH_APPROVED_CONNECTOR_ID', source_scope_id: 'REPLACE_WITH_APPROVED_SCOPE_ID', access_scope_id: 'REPLACE_WITH_APPROVED_ACCESS_SCOPE_ID', target_url: 'https://example.com/REPLACE_WITH_APPROVED_PUBLIC_PAGE', mode: 'scrape', provider: 'spider_unlimited', required_proxy: 'webshare', max_pages: 1, deadline_seconds: 60, idempotency_key: `n8n-${$execution.id}` }; return [{ json: job }];"
+      },
+      "id": "b5871968-f9b0-4cd0-a427-a2d80139a002",
+      "name": "Set bounded job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://REPLACE_WITH_AUTOMATION_INTERNAL_HOST/internal/v1/scrape-runs",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "b5871968-f9b0-4cd0-a427-a2d80139a003",
+      "name": "Submit to Automation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 300],
+      "continueOnFail": false
+    }
+  ],
+  "connections": {
+    "Manual start": {
+      "main": [[{ "node": "Set bounded job", "type": "main", "index": 0 }]]
+    },
+    "Set bounded job": {
+      "main": [[{ "node": "Submit to Automation", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
