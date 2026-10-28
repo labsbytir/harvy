@@ -8,7 +8,8 @@
     "build": "vite build --config v2/web/vite.config.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "node --experimental-strip-types --test v2/tests/*.test.mjs",
-    "check:local": "npm run typecheck && npm test && npm run build",
+    "test:automation": "python3 -m unittest discover -s v2/automation -p 'test_*.py'",
+    "check:local": "npm run typecheck && npm test && npm run test:automation && npm run build",
     "typecheck:auth": "tsc -p v2/auth/tsconfig.json",
     "typecheck:auth-client": "tsc -p v2/auth/tsconfig.client.json",
     "test:auth-consent": "node --test v2/auth/privacy-consent.test.mjs",
@@ -41,6 +42,7 @@
     "typescript": "^5.8.3",
     "vite": "^8.3.5",
     "@cloudflare/workers-types": "^5.20261025.1",
-    "drizzle-kit": "^0.31.11"
+    "drizzle-kit": "^0.31.11",
+    "@types/node": "24.10.1"
   }
 }

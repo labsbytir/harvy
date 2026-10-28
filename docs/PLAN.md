@@ -2,6 +2,15 @@
 
 This is the single project plan. It supersedes older plans and implementation notes; verified behavior must be separated from proposals.
 
+## Reddit bounded preview — recorded user task (2026-10-28)
+
+- Owner: Automation implementation; branch `codex/reddit-preview`, based on `71f18012301de205b3071eb7c73295ca2985ead3`. The user's task is to prepare/push the Reddit work and verify a bounded live preview. The previous checkout and its uncommitted work are preserved separately.
+- Implemented scope: [operator preview runner](REDDIT_PREVIEW.md) under `v2/automation/`, with scoped environment secret injection, direct proxy and Spider target-egress preflight, one listing page, ten-post maximum, compressed local evidence, and synthetic tests. Acceptance requires safe rejection of proxy/source failures and no direct/metered fallback or app publication.
+- Live status: BLOCKED. The installed preview last returned HTTP 407 from the proxy, and the operator reports no Webshare account access. The proxy owner must authorize the execution host or provide protected working proxy configuration before a real Reddit response can be verified. A code push does not resolve provider authentication.
+- Remaining integration: authenticated Automation dispatch, durable run/idempotency/HarvyDex mapping, authorized R2/transactional publication, and n8n control-flow verification. The preview does not add a database migration, public API route, schedule, or deployment. PostgreSQL/Hyperdrive remains the target; the old D1 staging schema was not ported.
+- OpenChamber is unavailable in this tool session; coordination and independent review remain incomplete release gates. The draft PR is the review handoff, not deployment approval. No external documentation mirror synchronization is claimed.
+- Validation: `npm run check:local` passed (typecheck, 11 shared-contract tests, 11 synthetic preview tests, website build); `git diff --check` and a changed-file credential-pattern check passed. A pre-existing missing Node type declaration was fixed with pinned MIT-licensed `@types/node` 24.10.1. `npm audit` still reports four moderate advisories in the existing Drizzle development-tool dependency chain. Unified lint/preflight, generated Python schemas, and live source/deployment checks are not implemented/passing release gates.
+
 The full API/source inventories and connector adoption sequence are in [CONNECTOR_PLAN.md](CONNECTOR_PLAN.md). Its four in-repo reference inputs include the OpenTIR source-by-source catalog and the prior Harvy/Civic manifests; candidate entries are not live integrations.
 
 **System boundary:** Harvy is the single system and its ontology is shared across every use case. Ontoly is the product for the raw dataset. Civic, Tower, Ops, and Newsk are modes of the Harvy ontology, not separate systems, deployments, databases, or Cloudflare resource stacks. Mode access is controlled by shared permissions and feature flags. Automation is the external connector execution server; its connectors feed Harvy.

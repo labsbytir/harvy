@@ -11,6 +11,7 @@ This is a clean repository seed. It contains the canonical plan, engineering and
 - [UI and Drizzle Cube specification](docs/UI_SPEC.md)
 - [Build-agent handoff prompt](docs/BUILD_AGENT_PROMPT.md)
 - [n8n starter and proposed Automation API](v2/workflows/README.md)
+- [Bounded Reddit operator preview and remaining integration](docs/REDDIT_PREVIEW.md)
 
 ## Local development
 
