@@ -7,12 +7,13 @@
     "dev": "vite --config v2/web/vite.config.ts",
     "build": "vite build --config v2/web/vite.config.ts",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "node --experimental-strip-types --test v2/tests/*.test.mjs",
-    "check:local": "npm run typecheck && npm test && npm run build",
+    "test": "node --experimental-strip-types --test v2/tests/*.test.mjs v2/auth/*.test.mjs",
+    "check:local": "npm run typecheck && npm run typecheck:api && npm run typecheck:auth && npm run typecheck:auth-client && npm test && npm run build",
     "typecheck:auth": "tsc -p v2/auth/tsconfig.json",
     "typecheck:auth-client": "tsc -p v2/auth/tsconfig.client.json",
     "test:auth-consent": "node --test v2/auth/privacy-consent.test.mjs",
-    "build:auth-client": "vite build --config v2/auth/vite.config.mts"
+    "build:auth-client": "vite build --config v2/auth/vite.config.mts",
+    "typecheck:api": "tsc -p v2/api/tsconfig.json"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -32,7 +33,10 @@
     "@better-auth/infra": "^0.4.22",
     "@marinedotsh/better-auth-referral": "^0.3.0",
     "drizzle-orm": "^0.45.4",
-    "stripe": "^23.0.0"
+    "stripe": "^23.0.0",
+    "@nivo/core": "^0.99.0",
+    "@nivo/heatmap": "^0.99.0",
+    "@tanstack/react-query": "^5.105.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.31",

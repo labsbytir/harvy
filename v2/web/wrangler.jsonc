@@ -1,0 +1,15 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "harvy",
+  "main": "./worker.ts",
+  "compatibility_date": "2026-10-28",
+  "workers_dev": false,
+  "routes": [
+    { "pattern": "harvybot.com/*", "zone_name": "harvybot.com" }
+  ],
+  "assets": {
+    "directory": "../../dist/web",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  }
+}

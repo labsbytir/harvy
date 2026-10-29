@@ -58,7 +58,7 @@ test("tenant routes are never publicly cached", () => {
 
 test("automation envelope rejects internal targets", () => {
   const base = {
-    contract_version: 1, connector_id: "approved-news",
+    contract_version: 1, run_id: "123e4567-e89b-42d3-a456-426614174000", trace_id: "123e4567-e89b-42d3-a456-426614174001", config_revision: "1", connector_id: "approved-news",
     source_scope_id: "publisher-feed", access_scope_id: "tenant-1",
     target_url: "https://example.org/news", mode: "scrape",
     provider: "spider_unlimited", required_proxy: "webshare",

@@ -12,7 +12,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const job = { contract_version: 1, connector_id: 'REPLACE_WITH_APPROVED_CONNECTOR_ID', source_scope_id: 'REPLACE_WITH_APPROVED_SCOPE_ID', access_scope_id: 'REPLACE_WITH_APPROVED_ACCESS_SCOPE_ID', target_url: 'https://example.com/REPLACE_WITH_APPROVED_PUBLIC_PAGE', mode: 'scrape', provider: 'spider_unlimited', required_proxy: 'webshare', max_pages: 1, deadline_seconds: 60, idempotency_key: `n8n-${$execution.id}` }; return [{ json: job }];"
+        "jsCode": "return [{ json: { source_id: 'REPLACE_WITH_APPROVED_SOURCE_ID', idempotency_key: `n8n-${$execution.id}` } }];"
       },
       "id": "b5871968-f9b0-4cd0-a427-a2d80139a002",
       "name": "Set bounded job",
@@ -23,9 +23,11 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://REPLACE_WITH_AUTOMATION_INTERNAL_HOST/internal/v1/scrape-runs",
+        "url": "https://REPLACE_WITH_HARVY_DOMAIN/api/v1/runs",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "x-harvy-organization-id", "value": "REPLACE_WITH_ORGANIZATION_ID" }] },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json) }}",

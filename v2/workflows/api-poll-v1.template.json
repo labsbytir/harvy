@@ -16,7 +16,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const job = {\n  contract_version: 1,\n  connector_id: 'reusable_rest_geojson',\n  source_scope_id: 'REPLACE_WITH_API_SCOPE_ID',\n  access_scope_id: 'REPLACE_WITH_ACCESS_SCOPE_ID',\n  target_url: 'https://example.gov/api/v1/events.json',\n  mode: 'scrape',\n  provider: 'spider_unlimited',\n  required_proxy: 'webshare',\n  max_pages: 1,\n  deadline_seconds: 60,\n  idempotency_key: `n8n-api-${$execution.id}`\n};\nreturn [{ json: job }];"
+        "jsCode": "return [{ json: { source_id: 'REPLACE_WITH_APPROVED_SOURCE_ID', idempotency_key: `n8n-api-${$execution.id}` } }];"
       },
       "id": "c2000001-f9b0-4cd0-a427-a2d80139a002",
       "name": "Build API Poll Job",
@@ -30,9 +30,11 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://REPLACE_WITH_AUTOMATION_INTERNAL_HOST/internal/v1/scrape-runs",
+        "url": "https://REPLACE_WITH_HARVY_DOMAIN/api/v1/runs",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "x-harvy-organization-id", "value": "REPLACE_WITH_ORGANIZATION_ID" }] },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json) }}",

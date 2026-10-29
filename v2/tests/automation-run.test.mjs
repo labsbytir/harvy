@@ -9,6 +9,9 @@ import {
 
 const request = {
 	contract_version: 1,
+	run_id: "123e4567-e89b-42d3-a456-426614174099",
+	trace_id: "123e4567-e89b-42d3-a456-426614174098",
+	config_revision: "1",
 	connector_id: "approved-news",
 	source_scope_id: "publisher-feed",
 	access_scope_id: "tenant-1",

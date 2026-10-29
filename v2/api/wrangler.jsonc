@@ -1,10 +1,28 @@
 {
-  "$schema": "../node_modules/wrangler/config-schema.json",
+  "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "harvy-api",
   "main": "./worker.ts",
   "compatibility_date": "2026-10-28",
   "compatibility_flags": ["nodejs_compat"],
-  "vars": {
-    "BETTER_AUTH_URL": "https://harvybot.com"
-  }
+  "workers_dev": false,
+  "routes": [
+    { "pattern": "harvybot.com/api/v1/*", "zone_name": "harvybot.com" },
+    { "pattern": "harvybot.com/health", "zone_name": "harvybot.com" },
+    { "pattern": "harvybot.com/internal/v1/automation-*", "zone_name": "harvybot.com" }
+  ],
+  "services": [
+    { "binding": "AUTH", "service": "harvy-auth" }
+  ],
+  "r2_buckets": [
+    { "binding": "HARVY_RAW", "bucket_name": "harvy-raw" },
+    { "binding": "HARVY_ARTIFACTS", "bucket_name": "harvy-artifacts" }
+  ],
+  "d1_databases": [
+    {
+      "binding": "HARVY_D1",
+      "database_name": "harvy-platform-v2",
+      "database_id": "2fb9f8e4-ca31-4cd0-95b4-b084429816f2",
+      "migrations_dir": "../migrations"
+    }
+  ]
 }

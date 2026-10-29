@@ -1,6 +1,6 @@
 # Harvy web and analytics UI specification
 
-Status: implementation specification, 2026-10-28. The canonical delivery sequence is PLAN.md. This clean repository contains a public website preview and a starter HarvyShell. The authenticated analytics screens are not implemented. Do not present the specification as shipped.
+Status: implementation specification, 2026-10-29. The canonical delivery sequence is PLAN.md. The repository now has a public preview, Better Auth client integration, authenticated Newsk feed/story flow, shared product event/evidence and analytics views, and an Ops handoff queue. These are local implementations, not deployed customer screens; sources, entitlements, routes, R2 bindings, and live Automation remain unconfigured. Do not present the full specification as shipped.
 
 ## 1. Product experience and visual direction
 
@@ -69,17 +69,18 @@ Component API shape: each asynchronous component receives an authorized context 
 
 | Screen | Primary task | Required elements | MVP status |
 |---|---|---|---|
-| Newsk Home | Notice a developing item and verify it | Beat/time selector, monitored source status, event feed, coverage/freshness chips, evidence panel, save brief | First customer slice |
-| Tower Business Desk | Track a market, company, competitor, sector, or risk topic | Business watchlists, entity/event timeline, signal strength and coverage, comparison cards, HQL analyses, evidence-backed intelligence brief, handoff to Ops | Defined product mode; build after Newsk core |
+| Newsk Home | Notice a developing item and verify it | Monitored source list, event feed, source/time/keyword/status filters, evidence panel, saved story, cited extractive brief | Local first slice; no live sources |
+| Tower Business Desk | Track a market, company, competitor, sector, or risk topic | Product-scoped event/evidence feed, HQL analytics, and saved source/time/keyword filters are available; entity watchlists/comparisons, scored signals, intelligence briefs, and Tower-specific handoff remain | Partial shared surface; no live sources |
+| Civic Monitoring | Follow civic and legislative events | Product-scoped approved-source feed, evidence, bounded filters, and shared analytics surface | Partial shared surface; legislative domain views and live connectors pending |
 | Monitor setup | Define a scoped source watch | Source allowlist picker, terms/coverage notice, target scope, cadence/bounds, preview, pause/resume | First fixed configuration only |
 | Event detail | Trace an emerging event | Timeline, object/link references, source citations, duplicate/contradiction flags, assignment, brief action | Minimum evidence view |
-| Analysis Workbench | Build a bounded HQL-backed query | Cube chooser, metrics/dimensions/filters, time range, preview, visualization picker, save/share/export | First query mode |
-| Dashboards | Read and compose saved views | Dashboard list, grid, filter bar, edit/save/revert, freshness/source metadata, share policy | One saved dashboard MVP |
+| Analysis Workbench | Build a bounded HQL-backed query | Drizzle Cube dashboard, ungrouped DataBrowser, and searchable Events/Evidence schema explorer over product-scoped cubes; bounded HQL API | Local tools exist; richer query authoring, drill-to-evidence, and live-source validation pending |
+| Dashboards | Read and compose saved views | Product-scoped dashboard CRUD, private/workspace visibility, revision checks, local editable grid | Local persistence path; schema validation, audit, share policy, and live DB pending |
 | Data Browser | Inspect scoped records | Cube list, filters, sortable table, column picker, pagination, record/evidence drawer | Later or gated |
 | Schema Explorer | Understand analytical cubes | Searchable cube ERD, field details, joins, selected-field handoff to builder | Later or gated |
 | Notebook | Ask and assemble grounded analysis | Prompt/chat panel, text/chart blocks, citations, budget/status, save as dashboard | Later, requires server agent |
 | Ontoly object | Examine a canonical record | Type, HarvyDex ID, properties, observations, links, provenance, correction history | Read-only MVP |
-| Ops/Admin | Manage runs and access | Connector/run registry, retry/cancel, feature flags, role grants, audit, health | Operator-only minimum |
+| Ops/Admin | Manage runs and access | Product-scoped run list and action queue/status updates exist locally; connector registry editing, retry/cancel, entitlement management, audit UI, and live health remain | Partial operator surface; no live sources or admin console |
 
 Tower, Ops, Civic, and Newsk can define landing presets, field labels, and allowed actions. They use the same underlying Shell, Analysis Workbench, dashboard, browser, evidence, and identity components. Product-specific components must consume registered object and query contracts, not bypass the shared API.
 
@@ -87,7 +88,7 @@ Tower's business mode is a view within the Tower product, not a replacement for 
 
 ## 5. Drizzle Cube integration map
 
-The new repository pins drizzle-cube 0.12.2 but has not mounted its analytics client. The former checkout had a CubeProvider/AnalyticsDashboard implementation against a legacy /api/v2/cube route; use it only as reviewed reference. Public documentation may describe APIs that differ from this pinned package. Before implementing each item, inspect installed exports/types, lockfile, release notes, and a minimal compile; record verified API names and version in the PR. New product operations belong under /api/v1 through a controlled adapter. HQL remains Harvy's external query language; a typed server adapter maps the supported HQL subset to approved cube queries. Reject unsupported operations explicitly.
+The repository pins drizzle-cube 0.12.2 and mounts `CubeProvider`/`AnalyticsDashboard` on `/api/v1/cube`. The installed client/server exports and types were inspected; a local compile, build, and D1-shaped semantic-layer test pass. The API registers Events and Evidence cubes, filters them by authenticated tenant/workspace and one explicitly entitled product, and maps a bounded HQL v1 subset to those cubes. It rejects unknown members/operators, raw SQL, unbounded limits, and missing product scope. Nivo 0.99.0 was restored from the prior Harvy stack because the pinned library's heatmap chunk requires it. The analytics screen is lazy-loaded; the build still reports large analysis/export chunks. The former checkout's `/api/v2/cube` is reference only.
 
 | Client capability | Harvy UI specification | Integration rule |
 |---|---|---|
@@ -117,11 +118,11 @@ Interaction rules: keyboard Escape closes drawers/modals; unsaved edits prompt b
 
 ## 7. Build and acceptance order
 
-1. Inventory pinned Drizzle Cube APIs and review the former graph screen as a reference. Capture the new website preview and compile baseline.
-2. Establish MUI tokens, semantic tags, responsive shell, and signed-in bootstrap. Verify two-tenant denial and keyboard/mobile behavior before wiring private data.
-3. Wire one Newsk end-to-end source and one bounded AnalysisBuilder query through the Harvy API/HQL adapter. Display provenance and partial/stale states.
-4. Persist one dashboard with server validation, revision conflict handling, and safe reloading. Add table and KPI/chart tile with drill to evidence.
-5. Add DataBrowser and schema explorer behind verified feature flags. Add custom chart plugin only after confirming installed API and a real user need.
+1. Inventory pinned Drizzle Cube APIs and review the former graph screen as a reference. **Done locally:** installed types inspected and web/API compile/build verified.
+2. Establish MUI tokens, semantic tags, responsive shell, and signed-in bootstrap. **Partial locally:** Better Auth client and org selection exist; live two-tenant denial and keyboard/mobile journey are not verified.
+3. Wire one Newsk end-to-end source and one bounded AnalysisBuilder query through the Harvy API/HQL adapter. **Partial locally:** bounded event/evidence query and UI exist; Automation/source/R2 are unconfigured, so no live path or partial/stale ingest journey is verified.
+4. Persist one dashboard with server validation, revision conflict handling, and safe reloading. **Partial locally:** scoped CRUD/revisions and reload work in code; config schema validation, DB-backed API test, chart-to-evidence drill, and deployed storage remain.
+5. Add DataBrowser and schema exploration from registered cube metadata. **Done locally:** both use the same tenant/product-scoped CubeProvider; drill-down and custom chart plugins remain.
 6. Add notebooks, richer visualizations, sharing/export, maps/graphs/media after the underlying access, source, and AI contracts pass.
 
 Minimum acceptance for each screen: correct scope denial, feature denial, loading/empty/stale/partial/error, keyboard focus, mobile width, source citation, bounded query, saved-state recovery, and no console errors. Verify actual browser behavior with two tenants and real permitted source data before customer release. Unit/contract tests cover permission and serialization; component tests cover state transitions; browser tests cover one editor journey and a denied-tenant journey; visual checks cover desktop/mobile and light/dark. Record screenshots and exact commands in the PR.

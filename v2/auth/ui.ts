@@ -215,11 +215,14 @@ function renderAccount(client: any, features: AuthFeatures, container: HTMLEleme
     const slug = name.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48);
     const result = await client.organization.create({ name, slug });
     if (result.error) return message(result.error.message || "Environment creation failed.", true);
-    await loadOrganizations(client, container);
+    const organizationId = (result.data as any)?.id;
+    if (organizationId) await client.organization.setActive({ organizationId });
+    await loadOrganizations(client, container, refresh);
+    await refresh();
   });
 
   void loadApiKeys(client, container);
-  void loadOrganizations(client, container);
+  void loadOrganizations(client, container, refresh);
   void loadSessions(client, container);
   void loadReferrals(client, container);
   if (features.infrastructure) void loadAudit(client, container);
@@ -238,12 +241,21 @@ async function loadApiKeys(client: any, container: HTMLElement) {
   }));
 }
 
-async function loadOrganizations(client: any, container: HTMLElement) {
+async function loadOrganizations(client: any, container: HTMLElement, refresh: () => Promise<void>) {
   const node = container.querySelector<HTMLElement>("#ba-org-list");
   if (!node) return;
-  const result = await client.organization.list();
+  const [result, session] = await Promise.all([client.organization.list(), client.getSession()]);
   const organizations = result.data || [];
-  node.innerHTML = organizations.length ? organizations.map((org: any) => `<div class="auth-list-row">${escapeHtml(org.name)}</div>`).join("") : "<p>No customer environments yet.</p>";
+  const activeId = session.data?.session?.activeOrganizationId;
+  node.innerHTML = organizations.length ? organizations.map((org: any) => `<div class="auth-list-row"><span>${escapeHtml(org.name)}${org.id === activeId ? " · active" : ""}</span>${org.id !== activeId ? `<button class="auth-btn-secondary" data-active-organization="${escapeHtml(org.id)}">USE WORKSPACE</button>` : ""}</div>`).join("") : "<p>No customer environments yet.</p>";
+  node.querySelectorAll<HTMLButtonElement>("[data-active-organization]").forEach((button) => button.addEventListener("click", async () => {
+    const organizationId = button.dataset.activeOrganization;
+    if (!organizationId) return;
+    const selected = await client.organization.setActive({ organizationId });
+    if (selected.error) return;
+    await loadOrganizations(client, container, refresh);
+    await refresh();
+  }));
 }
 
 async function loadSessions(client: any, container: HTMLElement) {

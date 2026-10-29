@@ -254,11 +254,11 @@ Submission sequence:
 
 ## 17. Adoption status and verified gaps
 
-As inspected on 2026-10-28: `package.json` has TypeScript checks, V2/auth tests, build scripts, Husky/commitlint dependencies, and conventional changelog tooling. `.github/workflows/ci.yml` runs Python tests, V2/auth tests, and typechecks. It does not establish the unified lint/preflight, schema compatibility, secret/dependency scans, or migration/security gates above. No root ESLint/Ruff/Prettier configuration was found during this inspection. Remote branch protection and installed agent tools were not verified.
+As inspected on 2026-10-29: `npm run check:local` runs main/API/auth/client typechecks, V2/auth tests, and the web build. The API and client typechecks are local additions; they do not establish unified lint/preflight, OpenAPI compatibility, secret/dependency scans, deployed-route checks, or production migration/security gates. No root ESLint/Ruff/Prettier configuration was found. Remote branch protection and installed agent tools were not verified.
 
-The existing `v2/migrations/0006_ontology_and_dashboards.sql` uses D1 text IDs, JSON attributes, and `environment_id` with a `shared` default for observations/links. It lacks the explicit tenant/workspace/scope constraints described here. Existing records must be classified and migrated before private multi-tenant behavior can be claimed. The existing D1 binding is not a deployed PostgreSQL/Hyperdrive implementation.
+The existing `v2/migrations/0006_ontology_and_dashboards.sql` uses D1 text IDs, JSON attributes, and `environment_id` with a `shared` default for observations/links. New local product tables in `0007_harvy_product_core.sql` add explicit tenant/workspace/product scopes and composite references; a local SQLite test rejects cross-tenant and cross-product evidence links. The migration has not been applied remotely and no two-live-tenant API/Worker test exists. Existing records must be classified before private multi-tenant behavior can be claimed. The D1 config is not a deployed PostgreSQL/Hyperdrive implementation.
 
-OpenChamber remains the required coordination target; no task was created in it by writing this document. Optimizer installation, canonical schema/config generation, PostgreSQL provisioning/cutover, HQL/CLI/MCP implementations, streaming enforcement, and the full preflight pipeline remain tracked work in `docs/PLAN.md`. Templates and written policy alone do not enforce these requirements.
+OpenChamber remains the required coordination target; this implementation is tracked as an unfinished project todo. HQL has a bounded local Events/Evidence compiler, but OpenAPI generation, broader schema/config generation, PostgreSQL provisioning/cutover, CLI/MCP, streaming uploads, and the full preflight pipeline remain tracked work in `docs/PLAN.md`. Local tests do not enforce production policy.
 
 ## 18. Uniform n8n integration standard
 

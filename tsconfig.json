@@ -17,10 +17,10 @@
     "v2/web/**/*.ts",
     "v2/web/**/*.tsx",
     "v2/shared/**/*.ts",
-    "v2/tests/**/*.mts",
-    "v2/api/**/*.ts"
+    "v2/tests/**/*.mts"
   ],
   "exclude": [
+    "v2/api",
     "v2/auth",
     "node_modules"
   ]

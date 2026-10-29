@@ -15,7 +15,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const job = {\n  contract_version: 1,\n  connector_id: 'reusable_spider_crawler',\n  source_scope_id: 'REPLACE_WITH_PORTAL_SCOPE_ID',\n  access_scope_id: 'REPLACE_WITH_ACCESS_SCOPE_ID',\n  target_url: 'https://example.gov/public-notices',\n  mode: 'crawl',\n  provider: 'spider_unlimited',\n  required_proxy: 'webshare',\n  max_pages: 5,\n  deadline_seconds: 120,\n  idempotency_key: `n8n-crawl-${$execution.id}`\n};\nreturn [{ json: job }];"
+        "jsCode": "return [{ json: { source_id: 'REPLACE_WITH_APPROVED_SOURCE_ID', idempotency_key: `n8n-crawl-${$execution.id}` } }];"
       },
       "id": "c3000001-f9b0-4cd0-a427-a2d80139a002",
       "name": "Build Crawl Job",
@@ -29,9 +29,11 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://REPLACE_WITH_AUTOMATION_INTERNAL_HOST/internal/v1/scrape-runs",
+        "url": "https://REPLACE_WITH_HARVY_DOMAIN/api/v1/runs",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "x-harvy-organization-id", "value": "REPLACE_WITH_ORGANIZATION_ID" }] },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json) }}",

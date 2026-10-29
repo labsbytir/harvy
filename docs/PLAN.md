@@ -10,7 +10,7 @@ Reusable implementation starters live outside this plan: [inactive n8n scrape JS
 
 The [UI and Drizzle Cube specification](UI_SPEC.md) defines the website, application shell, screen inventory, component contracts, persistence, and acceptance checks. The [copyable build-agent prompt](BUILD_AGENT_PROMPT.md) directs an agent to implement this plan in verified slices and run local checks as it builds. Both are subordinate to this single plan and neither establishes a deployed capability.
 
-Development has begun with a bounded [Automation run envelope and status contract](../v2/shared/automation-run.ts) plus focused local tests. The API Worker, Automation endpoint, authorization, persistence, n8n import, and live connector verification remain pending; this contract is not an end-to-end ingestion route.
+Local implementation now includes the authenticated API Worker, organization/workspace actor resolution through Better Auth, product entitlements, tenant-scoped events/evidence/stories/dashboards/actions, bounded HQL→Drizzle Cube queries, run dispatch, signed Automation status/publication callbacks, and raw/processed manifest validation. Newsk has a local newsroom workspace; Ops has an action queue; Tower and Civic use shared event/evidence and analytics surfaces. This is code-level progress only: Workers, migration, R2 bindings, Automation service, n8n workflows, entitlements, and approved sources are not deployed/configured, and no live connector is verified.
 
 On 2026-10-28 the old supervisor/API, connector deployment, hosting/infrastructure, intro/messaging/logging/support, OpenStates agent/workflow, upload Worker, Basin runbook, and duplicate planning guides were removed from the active repository tree. Git history preserves them. Current source of truth is this plan, [DEVELOPMENT.md](DEVELOPMENT.md), [UI_SPEC.md](UI_SPEC.md), [BUILD_AGENT_PROMPT.md](BUILD_AGENT_PROMPT.md), the retained Better Auth and legal/security references, and connector source research. The separate docs/Obsidian mirrors were not changed by this local cleanup.
 
@@ -62,9 +62,9 @@ Plan against 120 developer-hours and 40 Ops-hours. Allocate approximately 20 dev
 ### Architecture that fits the deadline
 
 - Build on the clean V2 repository, which has no live database in its current Cloudflare inventory. PostgreSQL through Hyperdrive is the priority transactional target; D1 has a separate operational/index role where the V2 design assigns it. Provision and verify required data services in dependency order, with explicit tenant/workspace scope and a two-tenant isolation check before external invitations. Do not treat a legacy D1 config as a working database.
-- Port/integrate the selected Better Auth implementation into this clean repository; implement three role bundles (admin, analyst, viewer) over a small registered permission set. Store a versioned feature/entitlement map and enforce it server-side. A complete admin console and billing integration can wait.
-- Implement only the HQL subset needed for source/time/keyword/status filters, deterministic ordering, bounded pagination, and one saved query. Reject unsupported syntax explicitly. Publish matching OpenAPI for the implemented routes. Reuse MUI and Drizzle Cube where they already fit; timebox a new analytical UI integration instead of rebuilding an entire query framework.
-- Use R2 raw/processed artifacts and the existing operational query path first. Day 3 stretch: one bounded JSON-to-Parquet release with lineage and a verified query path; do not label an unregistered Parquet file as Basin analytics. Large multipart customer uploads, video processing, maps/graph polish, forecasting, and bulk archives are post-hackathon work. Retain bounded streaming for connector downloads.
+- Better Auth is ported locally and resolves verified organization membership; basic role capabilities and explicit product-entitlement reads are enforced in the API. Entitlement administration, revocation tests against live sessions, and production auth routing remain pending.
+- The bounded HQL subset maps registered event/evidence fields and product scope to the installed Drizzle Cube 0.12.2 semantic layer. Search/time/source/status filters and stable event pagination are implemented; OpenAPI generation, saved-query sharing/export, and broader query grammar remain pending.
+- Raw/processed manifests are validated and scoped in the local API path, which checks R2 object size before publication. The two R2 bindings are not configured here; Basin/Parquet, streaming customer uploads, video, maps/graph, forecasting, and bulk archives remain pending.
 - Use the installed n8n as an internal orchestration component of Automation, following the n8n standard in DEVELOPMENT.md. One schedule owner per monitor. n8n submits/resumes bounded jobs; connector code owns external access and normalization. Existing Cloudflare queues/workflows remain where useful; do not introduce a competing scheduler for the same job.
 - One AI provider/model route and one optional source-grounded briefing action are enough. Apply budgets, schema validation, tool restrictions, and citations. If AI blocks completion, ship an extractive source-linked brief and label it accurately. Full multi-provider routing, autonomous agents, broad MCP/CLI rollout, and optimizer installation experiments wait until after the core works.
 
@@ -128,12 +128,12 @@ These checks precede the first end-to-end integration. Developer A owns the Harv
 
 | Gate | Current evidence and required decision | Deadline |
 |---|---|---|
-| Real execution route | The existing `v2/supervisor/` is excluded from the target architecture by the user's direction. No working Newsk API→Automation dispatch exists. Build a narrow `v2/api/` Worker for authenticated run registration/status and safe reads; Automation owns connector execution, with n8n coordinating fixed internal schedules. Do not wire Newsk to the supervisor or count catalog registration as execution. | Hour 2 contract; hour 4 live path |
-| Hosted app and database | The available auth Worker routes to `harvybot.com`, but a Newsk API route and deployed schema have not been verified. The local ontology migration is not applied remotely. Verify the actual demo domain, identity callback origin, API Worker bindings, D1 schema/version, buckets, secrets, CORS, and access to Automation before promising a hosted URL. K2/Queues are needed only if the chosen narrow flow actually uses them. | Hour 1 inventory; hour 3 go/no-go |
-| Tenant scope in old records | `0006_ontology_and_dashboards.sql` gives observations and links an `environment_id` default of `shared`, while `harvy_objects` has no tenant scope. An invite-only pilot cannot rely on that default for private records. Keep shared public source objects separate from private monitor/story/notes records, add explicit scope to new private writes, deny unscoped reads, and verify two-tenant isolation. If this cannot be demonstrated, use an internal single-tenant demo and report customer pilot blocked. | Hour 4 first check; Day 2 release gate |
+| Real execution route | A local `v2/api/` Worker registers bounded runs, dispatches through the optional Automation service binding, and accepts signed status/publication callbacks. Automation and n8n are not connected or inspected live; do not count these local routes as execution evidence. | Hour 2 contract; hour 4 live path |
+| Hosted app and database | Auth/API Worker configs and an additive D1 migration exist locally, but no route, migration, R2 binding, entitlement row, source row, or Automation service has been verified live. Verify the demo domain, identity callback origin, Worker bindings, schema/version, buckets, secrets, and Automation access before promising a hosted URL. | Hour 1 inventory; hour 3 go/no-go |
+| Tenant scope in old records | `0006_ontology_and_dashboards.sql` still gives legacy observations/links an `environment_id` default of `shared`, while legacy `harvy_objects` has no tenant scope. New product tables in `0007_harvy_product_core.sql` use explicit tenant/workspace/product scope; a local SQLite test rejects cross-tenant/product evidence links. The migration is unapplied and no two-live-tenant API/Worker test exists. Private pilot remains blocked until isolation is verified. | Hour 4 first check; Day 2 release gate |
 | n8n state and license | User reports an installed instance; version, active workflows, backup, key, edition, and job ownership are unverified. Its license permits company-controlled backend workflows, but customers configuring workflow logic could require a commercial license. Confirm the chosen fixed-workflow/validated-parameter pattern and record the result. | Hour 2 |
 | Source and egress | Spider/Webshare credentials, the approved proxy path at both Automation-to-Spider and Spider-to-target layers, provider scopes, and quotas are not verified. Test on one approved bounded source before launching the connector batch. | Hour 3 |
-| Release evidence | CI currently lacks unified lint/preflight and deployed-route verification. Define the actual commands and manual evidence for this sprint. Keep a known-good demo build and recovery steps. Run permission, failed-ingest, retry, and stale-data scenarios before any invitation. | Hour 6 local; Day 4 hosted rehearsal |
+| Release evidence | `npm run check:local` now includes main/API/auth/client typechecks, tests, and the web build. Unified lint/preflight, deployed-route verification, two-tenant live checks, and n8n recovery tests remain absent. Keep a known-good local build and recovery steps; no invitation until live permission, failed-ingest, retry, and stale-data scenarios pass. | Hour 6 local; Day 4 hosted rehearsal |
 
 At hour 3, if the required credentials or live deployment path are absent, continue building with labeled fixtures and an isolated local environment. Do not call fixture-backed UI a live pilot or count its connector entries. Give the team a concrete unblock owner and time estimate. A real source response is needed before a live-data demo claim.
 
@@ -158,12 +158,12 @@ At the end of Day 1, report three separate statuses: (1) the customer workflow's
 - Keep existing Cloudflare resource identifiers unchanged unless a separately reviewed migration requires a rename.
 - Repository docs are canonical. The retired notebook guides are no longer part of the active documentation set; inspect mirror destinations before syncing.
 
-## Verified status (2026-10-27)
+## Verified status (2026-10-29)
 
 - Legacy excluded-source code in the checkout is not approved for enablement. The user's source exclusions override earlier onboarding plans.
 - CourtListener bulk import is not implemented. Port targeted search into V2 before claiming that capability is available.
 - No remote Workers, queues, VPS processes, or stored data were changed by the V2 conversion; reconcile any still-running external consumers separately before decommissioning them.
-- Better Auth source and D1 migrations exist in the moved reference checkout, not this clean repository. Auth integration and migrations remain V2 implementation work.
+- Better Auth source and auth migrations now exist under `v2/auth/` and `v2/migrations/`; isolated auth/client typechecks pass locally. The API actor requires active organization membership and creates a default workspace after migration. No remote auth/API route or migration has been deployed.
 - The reference checkout's `0006_ontology_and_dashboards.sql` is a migration candidate, not a schema in this clean repository or a remotely applied migration.
 - The target R2 layout has three buckets: `harvy-raw` for source captures, `harvy-artifacts` for validated/normalized records, and a separate Basin catalog bucket for catalog-managed analytical tables. The Basin bucket name and bindings require confirmation before provisioning. The configured `harvy-platform-v2` D1 name is a legacy remote resource identifier, not the V2 target.
 - The 75% cache-hit target applies only to eligible public responses and has not been measured on a representative workload.
@@ -171,7 +171,7 @@ At the end of Day 1, report three separate statuses: (1) the customer workflow's
 ## Work sequence
 
 1. [x] **Complete the V2-only conversion.** V2 remains under `/v2/`. Build and surviving tests/typechecks passed locally.
-2. **Add V2 application routes.** Keep the V2 static source, but add and test V2-owned API/hosting routes before claiming query, dashboard, or public-site behavior is available.
+2. **Add V2 application routes.** Local API/auth Workers now exist with scoped API tests and a built Newsk/Ops shell. Hosting routes, external bindings, deployment, and live end-to-end behavior remain unverified; do not claim them available.
 4. **Reconcile excluded legacy connectors.** Inventory remaining code, scripts, and any remote consumers without enabling them; remove or retire them only with preserved work and an explicit remote decommission plan where needed.
 5. **Add approved V2 connectors.** Implement scoped Facebook Page monitoring only through authorized platform access and port targeted CourtListener REST search under `v2/`; preserve access limits, provenance, completeness signals, and bounded tests. Do not assume generic profile/group collection is available.
 6. **Implement CourtListener bulk import.** Stream `.csv.bz2` snapshots, validate schema and counts, checkpoint resumably, filter the agreed 2023-01-01–2026-09-30 filing window, and write raw/normalized outputs to the separate R2 buckets. Benchmark on the authorized VPS before a full run; use Basin only for historical analytics.
@@ -182,9 +182,9 @@ At the end of Day 1, report three separate statuses: (1) the customer workflow's
 ## Contradiction audit
 
 - V2 implementations and configs are under `v2/`. Do not document a second root or a root Worker.
-- V2 configs bind `harvy-raw` / `harvy-artifacts` for raw and processed data. Inventory live objects and bindings before any bucket migration or deletion.
-- Auth migrations live under `v2/migrations/`. The V2 auth config targets the shared V2 D1 database.
-- The legacy V2 supervisor is outside the target architecture. A Newsk `v2/api/` route does not yet exist; the UI must not be represented as working until that route is implemented and tested.
+- `harvy-raw` / `harvy-artifacts` are the required logical buckets, but the current API config has no R2 bindings. Inventory live objects and bindings before provisioning or migration.
+- Auth migrations live under `v2/migrations/`. Local auth/API configs reference the legacy `harvy-platform-v2` D1 ID; this does not prove the database is deployed or migrated.
+- The legacy supervisor is outside the target architecture. A local `v2/api/` Worker exists and has bounded tests, but has no verified live route or connected Automation service.
 - Facebook and CourtListener functionality has no complete V2 equivalent. Those ports are explicit work items above, not capabilities to assume from the catalog.
 - The Obsidian plan mirror at `/Users/pen/Documents/Notes/harvy/Planning/PLAN.md` is generated by `npm run sync:vault-guides` from this canonical plan.
 
@@ -198,7 +198,7 @@ At the end of Day 1, report three separate statuses: (1) the customer workflow's
 
 ## Engineering foundation adoption (2026-10-28)
 
-Canonical specification: [engineering standard](DEVELOPMENT.md). The documentation, agent instructions, submission entry point, PR template, feature issue fields, and EditorConfig are authored locally. Runtime enforcement is not yet implemented. No OpenChamber task or Obsidian sync was performed in this session; reconcile those records through available authorized integrations before release.
+Canonical specification: [engineering standard](DEVELOPMENT.md). The documentation, agent instructions, submission entry point, PR template, feature issue fields, and EditorConfig are authored locally. Runtime enforcement remains incomplete. OpenChamber tracks this implementation as an unfinished project todo; no Obsidian mirror sync was performed, so reconcile that mirror before release.
 
 | Sequence | Deliverable | Acceptance evidence | State |
 |---|---|---|---|
@@ -206,10 +206,10 @@ Canonical specification: [engineering standard](DEVELOPMENT.md). The documentati
 | 2 | Pin tooling and establish lint/preflight | Shared check definitions, ESLint/Prettier/Ruff/type tooling, docs checks, nonzero missing-gate behavior, CI using the same commands | Pending |
 | 3 | Canonical schemas/config and component catalog | Versioned schemas; generated TS/Python consumers; no duplicated universal variables; manifest validation | Pending |
 | 4 | PostgreSQL core and tenancy migration | Hosting decision, schema constraints, scoped roles/RLS, D1 mapping, backup/recovery rehearsal, pooled-connection isolation checks | Pending |
-| 5 | Unified authorization and feature evaluation | Server decisions and revocation across API, HQL, CLI, MCP, jobs, caches, and exports | Pending |
-| 6 | API/OpenAPI/HQL contracts | Operation registry, generated docs/clients, safe HQL validation/compilers, drift and compatibility gates | Pending |
-| 7 | Artifact lifecycle and streaming uploads | Bounded multipart/resume, verification/quarantine, manifests, durable publication, cleanup, JSON-to-Parquet/snapshot lineage | Pending |
-| 8 | Automation enforcement | Verified Spider/Webshare paths, secret injection, quotas, source gates, idempotent connector runs and recovery | Pending |
+| 5 | Unified authorization and feature evaluation | Better Auth membership and product grants are checked in local API/HQL/actions; revocation, CLI/MCP/jobs/cache/export enforcement remains | Partial |
+| 6 | API/OpenAPI/HQL contracts | Local bounded API routes and HQL→Drizzle Cube adapter; operation registry, generated OpenAPI/clients, compatibility gates remain | Partial |
+| 7 | Artifact lifecycle and streaming uploads | Local raw/processed manifests, scoped publication, and R2 head/size checks; multipart, quarantine, retention, and Basin lineage remain | Partial |
+| 8 | Automation enforcement | Local signed dispatch/status/publication paths; Automation host, Spider/Webshare preflight, source gates, and live recovery remain | Partial |
 | 9 | CLI and MCP adapters | Same domain policy as API, bounded tools, validated auth/scopes, consistent errors and command outputs | Pending |
 | 10 | AI routing and agent policy | Allowed routes, task budgets, constrained tools, isolated memory, adversarial evaluations, action approval and stop controls | Pending |
 | 11 | Token tool integration | Pinned licenses/versions; RTK/Headroom/Caveman/Ponytail profiles; preserved originals; measured quality/cost comparisons | Pending |

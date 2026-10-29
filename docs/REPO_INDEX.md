@@ -1,6 +1,6 @@
 # Harvy v2 repository and infrastructure index
 
-Status: inspected 2026-10-28. This index distinguishes the **required target stack** from code in this clean repository and resources currently visible in the TIR LABS Cloudflare account. A missing live resource is an implementation gap, not a decision to omit the service.
+Status: updated 2026-10-29. This index distinguishes the **required target stack** from local code and previously inspected Cloudflare inventory. Local source and tests are not proof of deployed services or live collection.
 
 ## System boundary
 
@@ -12,12 +12,12 @@ Git root: this repository (`labsbytir/harvy`, `main` at `92aecaa` when inspected
 
 | Area | Files present | Implementation state |
 |---|---|---|
-| Web | `v2/web/src/App.tsx`, `main.tsx`, `theme.ts`, Vite config | Responsive preview; no authenticated Harvy API integration. A second root Vite entry/config is currently uncommitted and must be reconciled. |
-| Shared contract | `v2/shared/automation-run.ts` | Typed Automation run/status validation only; no executor or deployed endpoint. |
-| Shared UI | `v2/shared/ui/HarvyShell.tsx` | Starter component; not wired into the web entry. |
-| n8n | `v2/workflows/` | Inactive starter exports. The prior untracked RSS starter was removed; source-specific CourtListener/news/weather templates remain to build. |
-| Tests/CI | `v2/tests/automation-run.test.mjs`, `.github/workflows/ci.yml` | Local contract/build checks; no live integration or tenant isolation proof. |
-| API/auth/database/Automation | No `v2/api/`, `v2/auth/`, `v2/automation/`, or `v2/migrations/` in this clean repo | Required implementation gaps. References to existing auth code, D1 migrations, supervisor, or connector implementations in older copied docs describe the moved reference checkout, not this active repo. |
+| Web | `v2/web/src/App.tsx`, `Workspace.tsx`, `AnalysisDesk.tsx`, `OpsDesk.tsx`, `worker.ts`, `wrangler.jsonc` | Public preview plus authenticated four-mode shell, product-scoped event/evidence views, Drizzle Cube dashboard, Newsk story/brief flow, and Ops action queue. Static Worker routing is configured locally but not deployed; sign-in needs deployed Auth/API Workers. |
+| Shared contract | `v2/shared/` | Automation, HQL, HarvyDex, artifact, error, and cache-policy contracts with bounded validation and local tests. |
+| API | `v2/api/worker.ts`, `analytics.ts`, `schema.ts`, `wrangler.jsonc` | Local D1-backed API; Better Auth service binding; product entitlements; scoped events, evidence, stories, briefs, dashboards, run dispatch/callbacks, and Ops handoffs. No live domain route or service binding is verified. |
+| Auth/database | `v2/auth/`, `v2/migrations/0007_harvy_product_core.sql` | Better Auth source and organization actor resolution are present. New scoped tables are only migration source; remote D1 was not migrated. |
+| Automation/n8n | External Automation service plus inactive `v2/workflows/` templates | API dispatch and signed publication/status contracts exist locally. Automation and the installed n8n instance were not inspected or connected. |
+| Tests/CI | `v2/tests/`, `v2/auth/*.test.mjs`, `.github/workflows/ci.yml` | Local API, analytics, contract, auth-consent tests, typechecks, and web build. No live connector, deployed tenant-isolation, or provider egress proof. |
 
 ## Required target stack and current account evidence
 
@@ -26,7 +26,7 @@ Git root: this repository (`labsbytir/harvy`, `main` at `92aecaa` when inspected
 | Workers | Shared web and `/api/v1/` runtime; Better Auth and authorized HQL/API operations | `harvy` is deployed as a web preview. Other `harvy-*` Workers are older deployments, not the clean v2 implementation. Build the API/auth boundary. |
 | PostgreSQL + Hyperdrive | Priority transactional database and pooled Worker connection for HarvyDex, ontology, tenancy, permissions, features, run registry | No Hyperdrive configuration listed. PostgreSQL host/connection and core migrations remain to implement. |
 | D1 | Cloudflare operational/index or specifically owned state where selected in the v2 design | No D1 database listed by the current CLI. Do not describe the legacy `harvy-platform-v2` binding as a live database. |
-| R2 | `harvy-raw` source captures; `harvy-artifacts` processed objects; separate Basin catalog bucket for analytical tables | `harvy-raw` exists; `harvy-artifacts` and the catalog bucket are not listed. `harvy-public` and `harvy-production` exist but are not substitutes without a reviewed mapping. |
+| R2 | `harvy-raw` source captures; `harvy-artifacts` processed objects; separate Basin catalog bucket for catalog-managed analytical tables | The API Wrangler config names `harvy-raw` and `harvy-artifacts` bindings; the last account inventory listed only `harvy-raw`. `harvy-artifacts` and the catalog bucket must be verified/provisioned before deployment. Other existing buckets are not substitutes without a reviewed mapping. |
 | Basin Pipelines/Catalog/SQL | Ingest processed data into catalog-managed Iceberg/Parquet and serve historical analytics | No pipeline/catalog listed. Name and provision the catalog bucket and analytical resources deliberately. |
 | K2 Streams | Shared durable event stream for record/run lifecycle and downstream consumers | No stream listed. Define event contract and subscribers before activation. |
 | Queues | Bounded asynchronous Harvy jobs, retries, and dead-letter handling | Older Harvy queues exist, including excluded Telegram and legacy v2 work. Reconcile before selecting the shared v2 queue(s). |
@@ -47,7 +47,11 @@ The target uses all approved platform services as one Harvy system. Deployment c
 
 ## Documentation drift to resolve
 
-- `docs/PLAN.md` still contains some older feed-slice and D1/auth/supervisor language from the moved checkout; reconcile those passages against this index and `CONNECTOR_PLAN.md` before implementation.
-- `docs/DEVELOPMENT.md` still describes old `v2/auth/`, `v2/migrations/`, `v2/projector/`, and static page paths as present, and its local check commands do not match this repo's `package.json`.
+- `docs/PLAN.md` remains the single delivery plan. Its hackathon gates require live Automation/source evidence beyond the local implementation summarized here.
+- `docs/DEVELOPMENT.md` describes target architecture as well as present code; do not treat target paths or acceptance requirements as implemented merely because they are documented.
 - `docs/BUILD_AGENT_PROMPT.md` has correct target bucket names after the latest correction, but it is a prompt, not an implementation.
 - The current Cloudflare account inventory is not proof of which actor created each resource; inspect audit logs and bindings before decommissioning anything.
+
+## Reference repository review
+
+Read-only shallow revisions reviewed on 2026-10-28: `harvyalpha-deprecated` `c0d1d7e`, `civontology` `4367e90`, and `opentir` `09bf508`. The deprecated Harvy repo has no project-wide license declaration; Civic's inspected root also has no license file; OpenTIR declares AGPL-3.0-only. No connector or runtime code was copied from these three checkouts. Their manifests, catalogs, and source-specific adapters remain candidates for individually reviewed ports through the Automation boundary; the old runtimes and storage stacks do not match the V2 plan.
