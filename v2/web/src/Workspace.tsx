@@ -18,7 +18,7 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
-import { createBrief, createDashboard, createStory, getContext, getEvent, getStory, handoffStory, HarvyApiError, listDashboards, listEvents, listRuns, listSources, listStories, saveStory, startRun, type DashboardView, type HarvyContext, type HarvyEvent, type HarvyRun, type Source, type Story } from "./api";
+import { createBrief, createDashboard, createStory, getContext, getEvent, getStory, handoffEventToOps, handoffStory, HarvyApiError, listDashboards, listEvents, listRuns, listSources, listStories, saveStory, startRun, type DashboardView, type HarvyContext, type HarvyEvent, type HarvyRun, type Source, type Story } from "./api";
 import type { HarvyProduct } from "./modes";
 const AnalysisDesk = lazy(() => import("./AnalysisDesk"));
 const OpsDesk = lazy(() => import("./OpsDesk"));
@@ -254,6 +254,16 @@ export default function Workspace() {
     finally { setBusy(false); }
   };
 
+  const handoffEvent = async () => {
+    if (!selected) return;
+    setBusy(true);
+    try {
+      const action = await handoffEventToOps(selected.id, product);
+      setSuccessNotice(`Handed off to Ops. Action ${action.action_id} is ${action.status}.`);
+    } catch (error) { setNotice(error instanceof Error ? error.message : "Event handoff could not be completed."); }
+    finally { setBusy(false); }
+  };
+
   const startStory = async () => {
     if (!selected) return;
     setBusy(true);
@@ -348,7 +358,7 @@ export default function Workspace() {
             {!selected ? <Card><CardContent><Typography variant="h6">Evidence</Typography><Typography color="text.secondary" sx={{ mt: 1 }}>Select an event to review source links, capture times, and evidence.</Typography></CardContent></Card> : <Card><CardContent>
               <Chip label={selected.status} size="small" color={selected.status === "closed" ? "default" : "primary"} />
               <Typography variant="h5" sx={{ mt: 1.5 }}>{selected.title}</Typography><Typography color="text.secondary" sx={{ mt: 1 }}>{selected.summary}</Typography>
-              <Stack direction="row" spacing={1} sx={{ mt: 2 }}>{product === "Newsk" && <Button size="small" variant="outlined" onClick={() => void startStory()} disabled={busy || !context.capabilities.includes("stories.edit")}>Save story</Button>}<Button size="small" variant="outlined" onClick={() => void selectEvent(selected)} disabled={busy}>Reload evidence</Button></Stack>
+              <Stack direction="row" spacing={1} sx={{ mt: 2 }}>{product === "Newsk" && <Button size="small" variant="outlined" onClick={() => void startStory()} disabled={busy || !context.capabilities.includes("stories.edit")}>Save story</Button>}{["Tower", "Civic"].includes(product) && context.allowedProducts.includes("Ops") && <Button size="small" variant="outlined" onClick={() => void handoffEvent()} disabled={busy || !context.capabilities.includes("events.handoff")}>Hand off to Ops</Button>}<Button size="small" variant="outlined" onClick={() => void selectEvent(selected)} disabled={busy}>Reload evidence</Button></Stack>
               <Divider sx={{ my: 2 }} /><Typography variant="subtitle2">Source evidence</Typography>
               {!selected.evidence?.length ? <Alert severity="warning" sx={{ mt: 1 }}>No source evidence is attached. This event cannot support a brief yet.</Alert> : <Stack spacing={1.5} sx={{ mt: 1 }}>{selected.evidence.map((evidence) => <Box key={evidence.id}><Typography fontWeight={700}>{evidence.headline}</Typography><Typography variant="body2" color="text.secondary">{evidence.publisher} · captured {new Date(evidence.captured_at).toLocaleString()}</Typography>{evidence.excerpt && <Typography variant="body2" sx={{ mt: 0.5 }}>{evidence.excerpt}</Typography>}<Button component="a" href={evidence.source_url} target="_blank" rel="noreferrer" size="small" sx={{ px: 0 }}>Open source</Button></Box>)}</Stack>}
             </CardContent></Card>}

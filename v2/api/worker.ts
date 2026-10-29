@@ -72,9 +72,9 @@ async function actor(request: Request, env: Env): Promise<Actor | null> {
 
 function capabilities(role: string): string[] {
   const read = ["query.view", "events.view", "evidence.view", "stories.view", "dashboards.view", "monitors.view", "runs.view", "ops.actions.view"];
-  if (["owner", "admin"].includes(role)) return [...read, "stories.edit", "stories.handoff", "ops.actions.edit", "monitors.manage", "runs.manage", "dashboards.edit", "members.manage"];
+  if (["owner", "admin"].includes(role)) return [...read, "events.edit", "stories.edit", "stories.handoff", "events.handoff", "ops.actions.edit", "monitors.manage", "runs.manage", "dashboards.edit", "members.manage"];
   if (role === "viewer") return read;
-  return [...read, "stories.edit", "stories.handoff", "ops.actions.edit", "monitors.manage", "runs.manage", "dashboards.edit"];
+  return [...read, "events.edit", "stories.edit", "stories.handoff", "events.handoff", "ops.actions.edit", "monitors.manage", "runs.manage", "dashboards.edit"];
 }
 
 async function allowedProducts(db: D1Database, tenantId: string): Promise<Product[]> {
@@ -273,7 +273,7 @@ export default {
       return result ? json(result) : fail("not_found", "Event not found.", 404, trace);
     }
     if (eventMatch && request.method === "PATCH") {
-      if (!has(a, "stories.edit")) return fail("forbidden", "Event updates denied.", 403, trace);
+      if (!has(a, "events.edit")) return fail("forbidden", "Event updates denied.", 403, trace);
       const product = await entitledProduct(db, a.tenantId, url.searchParams.get("product"));
       if (!product) return fail("forbidden", "Choose a product enabled for this organization.", 403, trace);
       let body: unknown;
@@ -283,6 +283,30 @@ export default {
       const result = await db.prepare("UPDATE harvy_v2_events SET status = ?, updated_at = ? WHERE id = ? AND tenant_id = ? AND workspace_id = ? AND product = ?")
         .bind(status, now(), eventMatch[1], a.tenantId, a.workspaceId, product).run();
       return result.meta.changes ? json({ id: eventMatch[1], status }) : fail("not_found", "Event not found.", 404, trace);
+    }
+    const eventHandoffMatch = pathname.match(/^\/api\/v1\/events\/([a-f0-9-]{36})\/handoff$/i);
+    if (eventHandoffMatch && request.method === "POST") {
+      if (!has(a, "events.handoff")) return fail("forbidden", "Event handoff is not allowed.", 403, trace);
+      const products = await allowedProducts(db, a.tenantId);
+      const product = await entitledProduct(db, a.tenantId, url.searchParams.get("product"));
+      if (!product || !["Tower", "Civic"].includes(product) || !products.includes("Ops")) return fail("forbidden", "An enabled Tower or Civic mode and Ops are required.", 403, trace);
+      const event = await db.prepare("SELECT id FROM harvy_v2_events WHERE id = ? AND tenant_id = ? AND workspace_id = ? AND product = ?")
+        .bind(eventHandoffMatch[1], a.tenantId, a.workspaceId, product).first();
+      if (!event) return fail("not_found", "Event not found.", 404, trace);
+      const evidence = await db.prepare("SELECT COUNT(*) AS count FROM harvy_v2_evidence WHERE event_id = ? AND tenant_id = ? AND workspace_id = ? AND product = ?")
+        .bind(eventHandoffMatch[1], a.tenantId, a.workspaceId, product).first<{ count: number }>();
+      if (!evidence?.count) return fail("insufficient_evidence", "An Ops handoff needs source evidence.", 409, trace);
+      const existing = await db.prepare("SELECT id, status FROM harvy_v2_ops_actions WHERE tenant_id = ? AND workspace_id = ? AND source_product = ? AND source_event_id = ? AND source_story_id IS NULL")
+        .bind(a.tenantId, a.workspaceId, product, eventHandoffMatch[1]).first<{ id: string; status: string }>();
+      if (existing) return json({ action_id: existing.id, event_id: eventHandoffMatch[1], status: existing.status }, 200);
+      const actionId = crypto.randomUUID();
+      const time = now();
+      const result = await db.prepare("INSERT OR IGNORE INTO harvy_v2_ops_actions (id, tenant_id, workspace_id, source_story_id, source_event_id, source_product, created_by, status, created_at, updated_at) VALUES (?, ?, ?, NULL, ?, ?, ?, 'open', ?, ?)")
+        .bind(actionId, a.tenantId, a.workspaceId, eventHandoffMatch[1], product, a.id, time, time).run();
+      if (result.meta.changes) return json({ action_id: actionId, event_id: eventHandoffMatch[1], status: "open" }, 201);
+      const concurrent = await db.prepare("SELECT id, status FROM harvy_v2_ops_actions WHERE tenant_id = ? AND workspace_id = ? AND source_product = ? AND source_event_id = ? AND source_story_id IS NULL")
+        .bind(a.tenantId, a.workspaceId, product, eventHandoffMatch[1]).first<{ id: string; status: string }>();
+      return concurrent ? json({ action_id: concurrent.id, event_id: eventHandoffMatch[1], status: concurrent.status }, 200) : fail("handoff_failed", "The Ops action could not be created.", 500, trace);
     }
 
     if (pathname === "/api/v1/stories" && request.method === "GET") {
@@ -346,8 +370,8 @@ export default {
       const results = await db.batch([
         db.prepare("UPDATE harvy_v2_stories SET status = 'handed_off', revision = revision + 1, updated_at = ? WHERE id = ? AND tenant_id = ? AND workspace_id = ? AND status = 'ready' AND revision = ?")
           .bind(time, story.id, a.tenantId, a.workspaceId, story.revision),
-        db.prepare("INSERT OR IGNORE INTO harvy_v2_ops_actions (id, tenant_id, workspace_id, source_story_id, created_by, status, created_at, updated_at) SELECT ?, ?, ?, ?, ?, 'open', ?, ? WHERE EXISTS (SELECT 1 FROM harvy_v2_stories WHERE id = ? AND tenant_id = ? AND workspace_id = ? AND status = 'handed_off' AND revision = ?)")
-          .bind(actionId, a.tenantId, a.workspaceId, story.id, a.id, time, time, story.id, a.tenantId, a.workspaceId, story.revision + 1),
+        db.prepare("INSERT OR IGNORE INTO harvy_v2_ops_actions (id, tenant_id, workspace_id, source_story_id, source_event_id, source_product, created_by, status, created_at, updated_at) SELECT ?, ?, ?, ?, ?, 'Newsk', ?, 'open', ?, ? WHERE EXISTS (SELECT 1 FROM harvy_v2_stories WHERE id = ? AND tenant_id = ? AND workspace_id = ? AND status = 'handed_off' AND revision = ?)")
+          .bind(actionId, a.tenantId, a.workspaceId, story.id, story.event_id, a.id, time, time, story.id, a.tenantId, a.workspaceId, story.revision + 1),
       ]);
       if (!results[0]?.meta.changes) return fail("revision_conflict", "Story changed before handoff; reload it.", 409, trace);
       if (!results[1]?.meta.changes) return fail("handoff_failed", "The Ops action could not be created.", 500, trace);
@@ -357,7 +381,7 @@ export default {
     if (pathname === "/api/v1/actions" && request.method === "GET") {
       if (!(await allowedProducts(db, a.tenantId)).includes("Ops")) return fail("forbidden", "Ops is not enabled for this organization.", 403, trace);
       if (!has(a, "ops.actions.view")) return fail("forbidden", "Ops action access denied.", 403, trace);
-      const actions = await db.prepare("SELECT a.id, a.source_story_id, a.status, a.revision, a.created_at, a.updated_at, s.title AS story_title, s.event_id, e.title AS event_title, (SELECT ev.source_url FROM harvy_v2_evidence ev WHERE ev.event_id = e.id AND ev.tenant_id = e.tenant_id AND ev.workspace_id = e.workspace_id AND ev.product = e.product ORDER BY ev.captured_at DESC LIMIT 1) AS source_url, (SELECT ev.publisher FROM harvy_v2_evidence ev WHERE ev.event_id = e.id AND ev.tenant_id = e.tenant_id AND ev.workspace_id = e.workspace_id AND ev.product = e.product ORDER BY ev.captured_at DESC LIMIT 1) AS publisher FROM harvy_v2_ops_actions a JOIN harvy_v2_stories s ON s.id = a.source_story_id AND s.tenant_id = a.tenant_id AND s.workspace_id = a.workspace_id JOIN harvy_v2_events e ON e.id = s.event_id AND e.tenant_id = a.tenant_id AND e.workspace_id = a.workspace_id WHERE a.tenant_id = ? AND a.workspace_id = ? ORDER BY a.updated_at DESC LIMIT 100")
+      const actions = await db.prepare("SELECT a.id, a.source_story_id, a.source_event_id AS event_id, a.source_product, a.status, a.revision, a.created_at, a.updated_at, s.title AS story_title, e.title AS event_title, (SELECT ev.source_url FROM harvy_v2_evidence ev WHERE ev.event_id = e.id AND ev.tenant_id = e.tenant_id AND ev.workspace_id = e.workspace_id AND ev.product = e.product ORDER BY ev.captured_at DESC LIMIT 1) AS source_url, (SELECT ev.publisher FROM harvy_v2_evidence ev WHERE ev.event_id = e.id AND ev.tenant_id = e.tenant_id AND ev.workspace_id = e.workspace_id AND ev.product = e.product ORDER BY ev.captured_at DESC LIMIT 1) AS publisher FROM harvy_v2_ops_actions a LEFT JOIN harvy_v2_stories s ON s.id = a.source_story_id AND s.tenant_id = a.tenant_id AND s.workspace_id = a.workspace_id AND s.product = a.source_product AND s.event_id = a.source_event_id JOIN harvy_v2_events e ON e.id = a.source_event_id AND e.tenant_id = a.tenant_id AND e.workspace_id = a.workspace_id AND e.product = a.source_product WHERE a.tenant_id = ? AND a.workspace_id = ? ORDER BY a.updated_at DESC LIMIT 100")
         .bind(a.tenantId, a.workspaceId).all();
       return json({ items: actions.results });
     }
@@ -369,17 +393,17 @@ export default {
       try { body = await bodyJson(request); } catch (e) { return fail("invalid_request", "Invalid request body.", e instanceof Error && e.message === "too_large" ? 413 : 400, trace); }
       const b = body as Record<string, unknown>;
       if (!Number.isInteger(b.revision) || !["open", "in_progress", "done", "cancelled"].includes(String(b.status))) return fail("invalid_action", "Action status or revision is invalid.", 400, trace);
-      const current = await db.prepare("SELECT status, revision, source_story_id FROM harvy_v2_ops_actions WHERE id = ? AND tenant_id = ? AND workspace_id = ?")
-        .bind(actionMatch[1], a.tenantId, a.workspaceId).first<{ status: string; revision: number; source_story_id: string }>();
+      const current = await db.prepare("SELECT status, revision, source_story_id, source_event_id, source_product FROM harvy_v2_ops_actions WHERE id = ? AND tenant_id = ? AND workspace_id = ?")
+        .bind(actionMatch[1], a.tenantId, a.workspaceId).first<{ status: string; revision: number; source_story_id: string | null; source_event_id: string; source_product: Product }>();
       if (!current) return fail("not_found", "Ops action not found.", 404, trace);
       if (current.revision !== b.revision) return fail("revision_conflict", "Action changed elsewhere; reload it.", 409, trace);
-      if (current.status === b.status) return json({ id: actionMatch[1], source_story_id: current.source_story_id, status: current.status, revision: current.revision });
+      if (current.status === b.status) return json({ id: actionMatch[1], source_story_id: current.source_story_id, event_id: current.source_event_id, product: current.source_product, status: current.status, revision: current.revision });
       const allowedNext: Record<string, string[]> = { open: ["in_progress", "cancelled"], in_progress: ["open", "done", "cancelled"], done: [], cancelled: ["open"] };
       if (current.status !== b.status && !allowedNext[current.status]?.includes(String(b.status))) return fail("invalid_transition", "Action cannot move to that status.", 409, trace);
       const result = await db.prepare("UPDATE harvy_v2_ops_actions SET status = ?, revision = revision + 1, updated_at = ? WHERE id = ? AND tenant_id = ? AND workspace_id = ? AND revision = ?")
         .bind(b.status, now(), actionMatch[1], a.tenantId, a.workspaceId, b.revision).run();
       if (!result.meta.changes) return fail("revision_conflict", "Action changed elsewhere; reload it.", 409, trace);
-      return json(await db.prepare("SELECT id, source_story_id, status, revision, created_at, updated_at FROM harvy_v2_ops_actions WHERE id = ? AND tenant_id = ? AND workspace_id = ?")
+      return json(await db.prepare("SELECT id, source_story_id, source_event_id AS event_id, source_product AS product, status, revision, created_at, updated_at FROM harvy_v2_ops_actions WHERE id = ? AND tenant_id = ? AND workspace_id = ?")
         .bind(actionMatch[1], a.tenantId, a.workspaceId).first());
     }
 

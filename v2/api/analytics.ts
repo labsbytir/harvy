@@ -86,7 +86,7 @@ const CUBE_MEMBERS = new Set([
   "Events.id", "Events.title", "Events.summary", "Events.status", "Events.product", "Events.firstSeenAt", "Events.lastSeenAt", "Events.count",
   "Evidence.id", "Evidence.eventId", "Evidence.sourceId", "Evidence.publisher", "Evidence.headline", "Evidence.product", "Evidence.capturedAt", "Evidence.count",
 ]);
-const CUBE_FILTERS = new Set(["equals", "notEquals", "contains", "gt", "gte", "lt", "lte", "in"]);
+const CUBE_FILTERS = new Set(["equals", "notEquals", "contains", "notContains", "startsWith", "notStartsWith", "endsWith", "notEndsWith", "gt", "gte", "lt", "lte", "set", "notSet", "inDateRange", "beforeDate", "afterDate", "between", "notBetween", "in", "notIn", "like", "notLike", "isEmpty", "isNotEmpty"]);
 const RELATIVE_RANGE = /^(?:this|last) (?:day|week|month|quarter|year|\d{1,3} days?|\d{1,2} weeks?|\d{1,2} months?|\d years?)$/i;
 
 function validDateRange(value: unknown): boolean {

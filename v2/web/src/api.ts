@@ -53,10 +53,11 @@ export interface HarvyRun {
 
 export interface OpsAction {
   id: string;
-  source_story_id: string;
-  story_title: string;
+  source_story_id: string | null;
+  story_title: string | null;
   event_id: string;
   event_title: string;
+  source_product: string;
   source_url: string | null;
   publisher: string | null;
   status: "open" | "in_progress" | "done" | "cancelled";
@@ -108,7 +109,8 @@ export const createDashboard = (value: { title: string; product: string; config:
 export const updateDashboard = (id: string, value: { revision: number; title: string; config: unknown }) => request<{ id: string; title: string; config_json: string; revision: number; updated_at: number }>(`/api/v1/dashboards/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(value) });
 export const listRuns = (product: string) => request<{ items: HarvyRun[] }>(`/api/v1/runs?product=${encodeURIComponent(product)}`);
 export const listOpsActions = () => request<{ items: OpsAction[] }>("/api/v1/actions");
-export const updateOpsAction = (action: OpsAction) => request<OpsAction>(`/api/v1/actions/${encodeURIComponent(action.id)}`, { method: "PATCH", body: JSON.stringify(action) });
+export const updateOpsAction = (action: Pick<OpsAction, "id" | "revision" | "status">) => request<OpsAction>(`/api/v1/actions/${encodeURIComponent(action.id)}`, { method: "PATCH", body: JSON.stringify({ revision: action.revision, status: action.status }) });
+export const handoffEventToOps = (id: string, product: string) => request<{ action_id: string; event_id: string; status: string }>(`/api/v1/events/${encodeURIComponent(id)}/handoff?product=${encodeURIComponent(product)}`, { method: "POST" });
 export const startRun = (source_id: string) => request<{ run_id: string; status: HarvyRun["status"]; trace_id: string }>("/api/v1/runs", { method: "POST", body: JSON.stringify({ source_id, idempotency_key: crypto.randomUUID() }) });
 export const createStory = (value: { event_id: string; title: string; notes: string }) => request<Story>("/api/v1/stories", { method: "POST", body: JSON.stringify(value) });
 export const saveStory = (story: Story) => request<Story>(`/api/v1/stories/${encodeURIComponent(story.id)}`, { method: "PATCH", body: JSON.stringify(story) });

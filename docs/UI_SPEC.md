@@ -70,8 +70,8 @@ Component API shape: each asynchronous component receives an authorized context 
 | Screen | Primary task | Required elements | MVP status |
 |---|---|---|---|
 | Newsk Home | Notice a developing item and verify it | Monitored source list, event feed, source/time/keyword/status filters, evidence panel, saved story, cited extractive brief | Local first slice; no live sources |
-| Tower Business Desk | Track a market, company, competitor, sector, or risk topic | Product-scoped event/evidence feed, HQL analytics, and saved source/time/keyword filters are available; entity watchlists/comparisons, scored signals, intelligence briefs, and Tower-specific handoff remain | Partial shared surface; no live sources |
-| Civic Monitoring | Follow civic and legislative events | Product-scoped approved-source feed, evidence, bounded filters, and shared analytics surface | Partial shared surface; legislative domain views and live connectors pending |
+| Tower Business Desk | Track a market, company, competitor, sector, or risk topic | Product-scoped event/evidence feed, HQL analytics, saved source/time/keyword watchlists, and evidence-backed Ops handoff are available; entity watchlists/comparisons, scored signals, and intelligence briefs remain | Partial shared surface; no live sources |
+| Civic Monitoring | Follow civic and legislative events | Product-scoped approved-source feed, evidence, bounded filters, shared analytics, and evidence-backed Ops handoff | Partial shared surface; legislative domain views and live connectors pending |
 | Monitor setup | Define a scoped source watch | Source allowlist picker, terms/coverage notice, target scope, cadence/bounds, preview, pause/resume | First fixed configuration only |
 | Event detail | Trace an emerging event | Timeline, object/link references, source citations, duplicate/contradiction flags, assignment, brief action | Minimum evidence view |
 | Analysis Workbench | Build a bounded HQL-backed query | Drizzle Cube dashboard, ungrouped DataBrowser, and searchable Events/Evidence schema explorer over product-scoped cubes; bounded HQL API | Local tools exist; richer query authoring, drill-to-evidence, and live-source validation pending |
@@ -80,7 +80,7 @@ Component API shape: each asynchronous component receives an authorized context 
 | Schema Explorer | Understand analytical cubes | Searchable cube ERD, field details, joins, selected-field handoff to builder | Later or gated |
 | Notebook | Ask and assemble grounded analysis | Prompt/chat panel, text/chart blocks, citations, budget/status, save as dashboard | Later, requires server agent |
 | Ontoly object | Examine a canonical record | Type, HarvyDex ID, properties, observations, links, provenance, correction history | Read-only MVP |
-| Ops/Admin | Manage runs and access | Product-scoped run list and action queue/status updates exist locally; connector registry editing, retry/cancel, entitlement management, audit UI, and live health remain | Partial operator surface; no live sources or admin console |
+| Ops/Admin | Manage runs and access | Product-scoped run list plus Newsk story and Tower/Civic event handoffs into an action queue with revision-checked status updates exist locally; connector registry editing, retry/cancel, entitlement management, audit UI, and live health remain | Partial operator surface; no live sources or admin console |
 
 Tower, Ops, Civic, and Newsk can define landing presets, field labels, and allowed actions. They use the same underlying Shell, Analysis Workbench, dashboard, browser, evidence, and identity components. Product-specific components must consume registered object and query contracts, not bypass the shared API.
 

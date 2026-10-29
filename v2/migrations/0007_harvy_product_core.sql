@@ -131,6 +131,7 @@ CREATE TABLE IF NOT EXISTS harvy_v2_stories (
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
     UNIQUE (tenant_id, workspace_id, id),
+    UNIQUE (tenant_id, workspace_id, product, id, event_id),
     FOREIGN KEY (tenant_id, workspace_id, product, event_id) REFERENCES harvy_v2_events(tenant_id, workspace_id, product, id),
     FOREIGN KEY (tenant_id, workspace_id) REFERENCES harvy_v2_workspaces(tenant_id, id)
 );
@@ -179,14 +180,19 @@ CREATE TABLE IF NOT EXISTS harvy_v2_ops_actions (
     id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL,
     workspace_id TEXT NOT NULL,
-    source_story_id TEXT NOT NULL,
+    source_story_id TEXT,
+    source_event_id TEXT NOT NULL,
+    source_product TEXT NOT NULL CHECK (source_product IN ('Newsk', 'Tower', 'Civic')),
     created_by TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'done', 'cancelled')),
     revision INTEGER NOT NULL DEFAULT 1,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
+    CHECK ((source_story_id IS NULL AND source_product IN ('Tower', 'Civic')) OR (source_story_id IS NOT NULL AND source_product = 'Newsk')),
     UNIQUE (tenant_id, workspace_id, source_story_id),
-    FOREIGN KEY (tenant_id, workspace_id, source_story_id) REFERENCES harvy_v2_stories(tenant_id, workspace_id, id),
+    FOREIGN KEY (tenant_id, workspace_id, source_product, source_event_id) REFERENCES harvy_v2_events(tenant_id, workspace_id, product, id),
+    FOREIGN KEY (tenant_id, workspace_id, source_product, source_story_id, source_event_id) REFERENCES harvy_v2_stories(tenant_id, workspace_id, product, id, event_id),
     FOREIGN KEY (tenant_id, workspace_id) REFERENCES harvy_v2_workspaces(tenant_id, id)
 );
 CREATE INDEX IF NOT EXISTS harvy_v2_ops_actions_scope ON harvy_v2_ops_actions(tenant_id, workspace_id, status, created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS harvy_v2_ops_actions_direct_event ON harvy_v2_ops_actions(tenant_id, workspace_id, source_product, source_event_id) WHERE source_story_id IS NULL;

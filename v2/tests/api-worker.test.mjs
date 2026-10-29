@@ -79,6 +79,18 @@ test("HQL endpoint executes the bounded query through the tenant-scoped semantic
   assert.ok(query.params.includes("org-a"));
 });
 
+test("Drizzle Cube DataBrowser ungrouped rows remain bound to tenant and product", async () => {
+  const db = fakeDb({ products: ["Newsk"] });
+  const query = JSON.stringify({ dimensions: ["Events.id", "Events.title"], ungrouped: true, total: true, limit: 25, offset: 0 });
+  const url = `https://harvy.test/api/v1/cube/load?${new URLSearchParams({ query })}`;
+  const response = await worker.fetch(new Request(url, { headers: { "x-harvy-product": "Newsk" } }), { HARVY_D1: db, AUTH: auth(actor) });
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json()).data, []);
+  const queryCall = db.calls.find(({ sql }) => sql.toLowerCase().includes("from \"harvy_v2_events\""));
+  assert.ok(queryCall.params.includes("org-a"));
+  assert.ok(queryCall.params.includes("Newsk"));
+});
+
 test("object write endpoints reject null JSON instead of throwing", async () => {
   const response = await worker.fetch(new Request("https://harvy.test/api/v1/stories", {
     method: "POST", headers: { "Content-Type": "application/json" }, body: "null",
@@ -162,7 +174,7 @@ test("Ops action updates require an entitled product, capability, and current re
     db.calls.push(call);
     return {
       bind(...params) { call.params = params; return this; },
-      async first() { return sql.includes("SELECT status, revision, source_story_id FROM harvy_v2_ops_actions") ? { status: "open", revision: 1, source_story_id: "story" } : { id: "123e4567-e89b-42d3-a456-426614174099", source_story_id: "story", status: "in_progress", revision: 2 }; },
+      async first() { return sql.includes("SELECT status, revision, source_story_id") ? { status: "open", revision: 1, source_story_id: "story", source_event_id: "event", source_product: "Newsk" } : { id: "123e4567-e89b-42d3-a456-426614174099", source_story_id: "story", status: "in_progress", revision: 2 }; },
       async run() { return { meta: { changes: 1 } }; },
       async all() { return { results: sql.includes("harvy_v2_product_entitlements") ? [{ product: "Ops" }] : [] }; },
     };
@@ -173,6 +185,42 @@ test("Ops action updates require an entitled product, capability, and current re
   }), { HARVY_D1: db, AUTH: auth(actor) });
   assert.equal(response.status, 200);
   assert.deepEqual(db.calls.find(({ sql }) => sql.includes("UPDATE harvy_v2_ops_actions")).params.slice(-3), ["org-a", "org-a", 1]);
+});
+
+test("Tower handoff creates one evidence-backed, product-scoped Ops action", async () => {
+  const calls = [];
+  let action = null;
+  const db = {
+    prepare(sql) {
+      const call = { sql, params: [] };
+      calls.push(call);
+      return {
+        bind(...params) { call.params = params; return this; },
+        async all() { return { results: sql.includes("product_entitlements") ? [{ product: "Tower" }, { product: "Ops" }] : [] }; },
+        async first() {
+          if (sql.includes("FROM harvy_v2_events WHERE id")) return { id: "123e4567-e89b-42d3-a456-426614174020" };
+          if (sql.includes("SELECT COUNT(*) AS count FROM harvy_v2_evidence")) return { count: 1 };
+          if (sql.includes("source_story_id IS NULL")) return action;
+          return null;
+        },
+        async run() {
+          if (sql.includes("INSERT OR IGNORE INTO harvy_v2_ops_actions")) {
+            action = { id: call.params[0], status: "open" };
+            return { meta: { changes: 1 } };
+          }
+          return { meta: { changes: 0 } };
+        },
+      };
+    },
+  };
+  const url = "https://harvy.test/api/v1/events/123e4567-e89b-42d3-a456-426614174020/handoff?product=Tower";
+  const options = { HARVY_D1: db, AUTH: auth(actor) };
+  const first = await worker.fetch(new Request(url, { method: "POST" }), options);
+  assert.equal(first.status, 201);
+  assert.ok(calls.find(({ sql }) => sql.includes("INSERT OR IGNORE INTO harvy_v2_ops_actions")).params.includes("Tower"));
+  const retry = await worker.fetch(new Request(url, { method: "POST" }), options);
+  assert.equal(retry.status, 200);
+  assert.equal((await retry.json()).action_id, action.id);
 });
 
 test("signed Automation callback advances only valid run states", async () => {
