@@ -83,6 +83,33 @@ Workflow `8q9kYIHCQqoB7xMk` "GDACS Continuous Ingestion" (inactive; last run exe
 - connector_errors data table id 92T2flIyNQfnxntj (workflow_id, workflow_name, execution_id, error_message, occurred_at) — shared failure audit for all connector workflows.
 - Exec 47 (GDACS backfill, post-fix) ended ERROR 08:58 — failing node detail pending (MCP 429 at the time); exec 45 (continuous) also ended error. src_gdacs rows still climbing (296), so ingestion works; gdacs builder ses_e73fa906effeW2aSnJv4coc5pp owns the diagnosis.
 
+## 2026-10-30 — Wave 1 complete, all builder reports QA'd (09:15 UTC)
+
+- Basin default.evidence: 440 rows total. Verified per source (SQL GROUP BY, 09:09-09:15): src_gdacs 296 (217 distinct ids — dupes from overlapping continuous+backfill runs before dedupe; EQ window itself idempotent at 19 distinct), src_nws-alerts 26, src_fema_openfema 25, src_arcgis-hub 25, src_usgs-earthquakes 25, src_ckan-generic 20, src_data-gov-apis 20, src_diag 3.
+- PROVEN + published (active:true) with 6h schedule + Error Trigger -> connector_errors (id 92T2flIyNQfnxntj):
+  - GDACS Backfill 2fUjRZpYizNc2evD (exec 47 success, 218 events, R2 gdacs/events/EQ/1574233-1743124/47.json verified, contentType json) — builder ses_e73fa906effeW2aSnJv4coc5pp
+  - CKAN Generic msNQRk0FLpHzfhMq (execs 49/51, 20 rows idempotent, R2 verified) — ses_e73fa905dffebVIeUMATxooxEt
+  - ArcGIS Hub ckUdJjP8SL0b8ZFP (execs 50/61/62, 25 rows, R2 verified) — ses_e73fa905dffdWJUgp4ift1hbuA
+  - FEMA IjsITwbIjjk35BA8 (execs 59/66, 25 rows, R2 verified) — ses_e73fa9083ffelfxxOoBJKoikgE
+  - data-gov fSoesDq572AQcpYo (execs 56/60, 20 rows, R2 verified) — ses_e73fa906effdygDbgU9fnG33l4
+  - USGS PHhaeSYwwAVhRwk1 (execs 55/57, 25 rows, R2 verified) — ses_e73fa905affeIUI5Aa2UU7x66c
+  - NWS 8Z2JslS7PbaCMbP5 (execs 58/65, 26 rows, R2 verified) — ses_e73fa906effcl86JywnqeH4hle
+  - PowerOutage US PPMnjFEv8uG02ZDe (pre-existing, QA'd: proxy on fetch, Basin direct, no hardcoded secrets; execs 67/71 success; src_poweroutage_us=0 at 09:15 — likely still inside the 300s sink flush, re-check later)
+- BLOCKED: OpenCorporates dHaVwGlVcakMtYEA — upstream now returns HTTP 401 "Invalid Api Token" on /v0.4 (token-gated; no token provisioned). Builder hit 3-attempt ceiling with 0 rows. UNPUBLISHED 09:10 (stopped failing schedule; workflow kept, not deleted). Needs an OpenCorporates API token in an n8n credential to proceed. — ses_e73fa905dffcIN1TKnQeCNa2Dk
+- Error handling pattern: each connector workflow has Error Trigger -> Log Workflow Error (insert into connector_errors data table 92T2flIyNQfnxntj). Fires on production failures only.
+- Builder quota: 10 total spawned (8 wave-1 + crt_sh ses_e73ee731affe4v2kzB6OFj095A + dbpedia ses_e73e8b653ffeoNHe8VeDggdeYZ). Cap reached; active builders now: crt_sh + dbpedia (wave-1 all completed).
+
+## 2026-10-30 ~09:30 UTC — wave 3 spawned (35 builders total), Reddit re-run, OpenObserve check
+
+- Wave 3 spawned (15 new builders, gemini-3.8-flash, v3 brief: spider-concurrency<=50, proxy var, contentType=json, OpenObserve slug metadata in description, publish-when-proven, log line): dbpedia ses_e73e9240cffd4CwUzBFJZCEWAB, socrata ses_e73e92411ffeOBh7cAgKC0L2il, opendatasoft ses_e73e9240cffeizvXh7NgbFRkbD, ofac_sdn ses_e73e923fcffe7CM9Iwo63oebkQ, wayback ses_e73e92409ffev7Ck7HdNTlZxBN, unhcr ses_e73e923e3ffeYajVOYFr5fvMOu, openflights ses_e73e923ddffeRKQd42y98WU5nn, fivethirtyeight ses_e73e923deffekgbn1XHF5CeAQ6, energydata_info ses_e73e88eb7ffeP8U06epZ1R22d8, gadm ses_e73e88e7fffczOfZAnKEICSLpQ, imf ses_e73e88e7effev56g8XvkHkRvzB, owid_datasets ses_e73e88e7fffdvx2CdBVe1AdPj7, gdelt ses_e73e88e7fffeIvdmvWkLJt3Kv2, openaddresses ses_e73e88daeffe4ZvDCTLzcz0HEE, ourworldindata ses_e73e88dafffetGr6J1qF8eXwr8. Key-gated suggestions skipped (no keys): NASA FIRMS, EIA, Congress.gov, Regulations.gov, BEA, UN Comtrade, entso_e. GDELT included (public, in CONNECTOR_PLAN batch B).
+- Workflows: 14 total, 9 ACTIVE (gdacs backfill 2fUjRZpYizNc2evD, ckan msNQRk0FLpHzfhMq, arcgis ckUdJjP8SL0b8ZFP, fema IjsITwbIjjk35BA8, datagov fSoesDq572AQcpYo, usgs PHhaeSYwwAVhRwk1, nws 8Z2JslS7PbaCMbP5, poweroutage PPMnjFEv8uG02ZDe, opencorporates dHaVwGlVcakMtYEA). GDACS Continuous 8q9kYIHCQqoB7xMk stays INACTIVE (overlaps backfill; backfill is the active one — idempotency via event_id dedup already proven by stable counts). NOAA NCEI qLP2FI5uqmP9Pozk inactive. Exec 48 (gdacs trigger, started 09:00) still "running" — watch; >30min -> force-mark error via Postgres.
+- Basin ~09:25: src_gdacs 296, src_nws 26, src_fema_openfema 25, src_usgs-earthquakes 25, src_arcgis-hub 25, src_ckan-generic 20, src_data-gov-apis 20, src_diag 3 (~440 rows, 7 sources).
+- R2: harvy-artifacts has gdacs/ckan/arcgis objects (contentType mixed text/html pre-patch + application/json post-patch — verify per new run); harvy-raw = 0 objects, harvy-production = 0 objects. CourtListener builder ses_e73f2b336ffdiSFqpnzq7Z710k still mid-build, reminded twice that raw bulk file + sha256 manifest MUST land in harvy-raw/courtlistener/.
+- Reddit 6NrHM5uC0ePlOhP3: has a "Manual Sample" manualTrigger node; exec 83 started (manual) to verify clean run with $vars.WEBSHARE_PROXY_URL before publishing.
+- OpenObserve: collector active on VPS, filelog/n8n receiver added; BUT querying eu1-api.openobserve.ai/api/<org>/ with the config's Authorization header returns HTTP 401 from this host (both header tokens tried), while collector logs show 0 export errors in the last hour — ingestion may be fine; API-side verification blocked on auth. Correlation key for traces: service="n8n" AND body contains "<workflowId>" or "<source_id>". Per-connector OTel query logged in each builder's CONNECTOR_STATUS.md line. Flagged to supervisor: check the OpenObserve token/org in the UI.
+- Codestral QA ses_e73f2b32bffd4EaUJItHn86Ks3 re-pinged with updated checklist (spider 50, contentType=json, OpenObserve slug metadata, proven-but-unpublished) + REVIEW pass.
+- OpenCorporates dHaVwGlVcakMtYEA: fetch now uses Authorization: Token token={{ $vars.OPENCORPORATES_TOKEN }} (user must set the variable; 401s without key are expected/honest, workflow stays active).
+
 ## Open gaps
 
 - AUTOMATION_URL / AUTOMATION_DISPATCH_TOKEN / AUTOMATION_CALLBACK_SECRET unset on harvy-api Worker -> /api/v1/runs 503. n8n runs standalone for now.
