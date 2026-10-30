@@ -94,10 +94,11 @@ Workflow `8q9kYIHCQqoB7xMk` "GDACS Continuous Ingestion" (inactive; last run exe
   - data-gov fSoesDq572AQcpYo (execs 56/60, 20 rows, R2 verified) — ses_e73fa906effdygDbgU9fnG33l4
   - USGS PHhaeSYwwAVhRwk1 (execs 55/57, 25 rows, R2 verified) — ses_e73fa905affeIUI5Aa2UU7x66c
   - NWS 8Z2JslS7PbaCMbP5 (execs 58/65, 26 rows, R2 verified) — ses_e73fa906effcl86JywnqeH4hle
-  - PowerOutage US PPMnjFEv8uG02ZDe (pre-existing, QA'd: proxy on fetch, Basin direct, no hardcoded secrets; execs 67/71 success; src_poweroutage_us=0 at 09:15 — likely still inside the 300s sink flush, re-check later)
+  - PowerOutage US PPMnjFEv8uG02ZDe (pre-existing, QA'd: proxy on fetch, Basin direct, no hardcoded secrets; execs 67/71 success; src_poweroutage_us=131 rows after the 300s sink flush, confirmed 09:20)
 - BLOCKED: OpenCorporates dHaVwGlVcakMtYEA — upstream now returns HTTP 401 "Invalid Api Token" on /v0.4 (token-gated; no token provisioned). Builder hit 3-attempt ceiling with 0 rows. UNPUBLISHED 09:10 (stopped failing schedule; workflow kept, not deleted). Needs an OpenCorporates API token in an n8n credential to proceed. — ses_e73fa905dffcIN1TKnQeCNa2Dk
 - Error handling pattern: each connector workflow has Error Trigger -> Log Workflow Error (insert into connector_errors data table 92T2flIyNQfnxntj). Fires on production failures only.
-- Builder quota: 10 total spawned (8 wave-1 + crt_sh ses_e73ee731affe4v2kzB6OFj095A + dbpedia ses_e73e8b653ffeoNHe8VeDggdeYZ). Cap reached; active builders now: crt_sh + dbpedia (wave-1 all completed).
+- Builder quota: 10 logical slots (8 wave-1 + crt_sh + dbpedia). dbpedia first spawn (ses_e73e8b653ffeoNHe8VeDggdeYZ) died instantly on a model 429 quota error and was respawned as ses_e73e44425ffeesGNeIj0pCYT4y. Active builders now: crt_sh + dbpedia.
+- 09:20 UTC Basin snapshot: 12 sources in default.evidence — src_gdacs 344 (still climbing via schedule), src_poweroutage_us 131, src_owid 100, src_opensky 50, src_nws-alerts 26, src_aemo_outages 25, src_fema_openfema 25, src_arcgis-hub 25, src_usgs-earthquakes 25, src_ckan-generic 20, src_data-gov-apis 20, src_diag 3. (owid/opensky/aemo landed by earlier pre-existing sessions, not wave-1 builders.)
 
 ## 2026-10-30 ~09:30 UTC — wave 3 spawned (35 builders total), Reddit re-run, OpenObserve check
 
@@ -109,6 +110,13 @@ Workflow `8q9kYIHCQqoB7xMk` "GDACS Continuous Ingestion" (inactive; last run exe
 - OpenObserve: collector active on VPS, filelog/n8n receiver added; BUT querying eu1-api.openobserve.ai/api/<org>/ with the config's Authorization header returns HTTP 401 from this host (both header tokens tried), while collector logs show 0 export errors in the last hour — ingestion may be fine; API-side verification blocked on auth. Correlation key for traces: service="n8n" AND body contains "<workflowId>" or "<source_id>". Per-connector OTel query logged in each builder's CONNECTOR_STATUS.md line. Flagged to supervisor: check the OpenObserve token/org in the UI.
 - Codestral QA ses_e73f2b32bffd4EaUJItHn86Ks3 re-pinged with updated checklist (spider 50, contentType=json, OpenObserve slug metadata, proven-but-unpublished) + REVIEW pass.
 - OpenCorporates dHaVwGlVcakMtYEA: fetch now uses Authorization: Token token={{ $vars.OPENCORPORATES_TOKEN }} (user must set the variable; 401s without key are expected/honest, workflow stays active).
+
+## 2026-10-30 ~09:40 UTC — reddit proxy fix, exec 48 force-marked, docs pushed
+
+- Reddit 6NrHM5uC0ePlOhP3: exec 83 failed in "Validate Config" (validator regex forbade credentialed proxy URLs; Run Config already had proxy_url={{ $vars.WEBSHARE_PROXY_URL }}). Fixed via update_workflow: relaxed the proxy regex to allow user:pass@host:port. Re-ran as exec 86 (manual, trigger "Manual Sample") — status check pending MCP 429 backoff. Publish after a clean success.
+- Exec 48 (gdacs backfill, trigger, started 09:00, stuck >30min) force-marked error via n8n Postgres. No other running execs at check time.
+- docs/CONNECTOR_STATUS.md committed + pushed to main (8668174) — user authorized docs pushes.
+- MCP 429s increasing as builder count grows (35 chats); manager now backs off 60-120s and retries once per policy.
 
 ## Open gaps
 
@@ -175,3 +183,19 @@ Workflow `8q9kYIHCQqoB7xMk` "GDACS Continuous Ingestion" (inactive; last run exe
 - Basin: 440 rows across 7 sources (gdacs 296, nws 26, fema 25, usgs 25, arcgis 25, ckan 20, datagov 20).
 - OpenCorporates exec 68 error: "Authorization failed" — API requires a token. Fixed Fetch node to send `Authorization: Token token={{ $vars.OPENCORPORATES_TOKEN }}` (variable must be set by user; no key in repo). Proxy var already correct.
 - Exec 69 (new workflow kTOgfOSd) running.
+
+## 2026-10-30 ~09:25 UTC — OpenSky Ingestion proven and published (builder)
+
+- OpenSky Ingestion `LM5tPQfYunwxCAUU` PROVEN + PUBLISHED (active: true): exec 70 success 09:13:19 (12 nodes, 50 flight state vectors fetched via Webshare proxy, S3 artifacts with `additionalFields.contentType: "application/json"`, Basin via `$vars.BASIN_SEND_TOKEN`).
+- Basin SQL count: `SELECT count(*) FROM default.evidence WHERE source_id='src_opensky'` = 50 rows verified in `default.evidence`.
+- R2 check: `harvy-artifacts/opensky/src_opensky_39de4f_1793351570.json` verified with `wrangler r2 object get`.
+- Idempotency: re-run (test execution 88 with duplicate payload) success, 0 items passed dedupe dataTable `me5zKDb2ie4JgXuk` (`opensky_ingested`), Basin count remained 50.
+- Concurrency note recorded: "spider-concurrency<=50", slug opensky, source_id src_opensky. Error Trigger -> `opensky_errors` dataTable (`fqYXr1hHoizIss4O`).
+
+## 2026-10-30 ~09:20 UTC — PowerOutage US proven and published (builder)
+
+- PowerOutage US Ingestion `PPMnjFEv8uG02ZDe` ("Harvy — PowerOutage US (ORNL ODIN) Ingestion") PROVEN + PUBLISHED (active: true): exec 67/80 success (9 nodes, ORNL ODIN county-level outage feed fetched via Webshare proxy `={{ $vars.WEBSHARE_PROXY_URL }}`, normalized to 9-column Ops evidence schema with deterministic event_id, S3 artifacts with `additionalFields.contentType: "application/json"`, Basin direct via `$vars.BASIN_SEND_TOKEN`).
+- Basin SQL count: `SELECT count(*) FROM default.evidence WHERE source_id='src_poweroutage_us'` = 131 rows queryable and verified in `default.evidence`.
+- R2 check: `harvy-artifacts/poweroutage_us/src_poweroutage_us_California_Inyo_2026-10-29T15:34:05+00:00.json` verified with `wrangler r2 object get`.
+- Idempotency: re-run (exec 82) success (0.86s), 0 items passed dedupe dataTable `U96EQIVEKjjSxg3o` (`poweroutage_us_ingested`), 0 downstream S3 uploads/Basin posts, Basin count did not double.
+- Concurrency note recorded: "spider-concurrency<=50", slug poweroutage_us, source_id src_poweroutage_us.
