@@ -613,3 +613,14 @@ failures are crt.sh-side, not credentials.
 - DEVIATION: raw→harvy-raw split not added; both workflows persist the raw record at harvy-artifacts/<ns>/<id>.json (contentType application/json), normalized event → Basin. harvy-raw/unhcr|owid_datasets/ prefixes do not exist yet (follow-up if required).
 - Tables: unhcr_ingested 76lH5eodx5BNtv7Y / unhcr_errors yfnZVqPGuIKMw1nH; owid_datasets_ingested I53AZa8obhi4jtJE / owid_datasets_errors A5GNAdOVATFlintz.
 - End state: both sources active on 6h schedules. 13:02 UTC snapshot: src_unhcr 1164 rows/119 distinct, src_owid 1700/500 (still climbing while stacked runs drain).
+
+## 2026-10-30 ~13:10 UTC — [muse-loop] courtlistener RECAP docket path proven; infra quirks logged
+
+- [courtlistener] DjCaH0ZTdgEDXmQp reworked to S3-direct: bulk index = com-courtlistener-storage public listing (prefix recap/, max-keys=1000), NO proxy (bucket public, direct egress verified); courtlistener.com API 403s via CloudFront — do not use it.
+- Pipeline now: filter *.docket.xml keys (74 in first page) -> bounded slice 100/run -> download XML direct -> sha256 manifest -> raw XML -> harvy-raw courtlistener/raw/recap/... -> normalize -> dedupe on docket id (event_id src_courtlistener_docket_<pacer docket id>, table gxY25wP6EE5GsZ1k) -> harvy-artifacts courtlistener/dockets/ -> Basin (source_id=src_courtlistener_bulk, product civic).
+- Proof: Basin src_courtlistener_bulk kind=docket_recap 74 rows / 74 distinct (zero dupes). Plus courts 25 (old) and 158,783 other-namespace rows from the parallel courtlistener agent. Total source 25 -> 159,286 rows.
+- End state: ACTIVE on 6h Schedule Trigger (1-min-cron proof window restored). 19 proof executions still draining in execution_entity (status running) — they keep landing rows; leave them.
+- INFRA QUIRK (fleet-wide): JS task offers flap — n8n logs "No matching task offer (type javascript). Available offer types: [python]" whenever the JS runner (n8n-runners-1) is in its ~15s idle-exit/relaunch gap; dispatches in the gap hang their execution in status=running (no retry). docker restart n8n-runners-1 + n8n-n8n-1 did NOT clear it. Workflows still land rows, slowly.
+- API QUIRK: GET /api/v1/executions never lists new runs (fleet already noted) — trust psql execution_entity. API key cannot DELETE executions ("Forbidden") — stuck-run cleanup needs DB-level action.
+- GDACS Backfill 2fUjRZpYizNc2evD verified ACTIVE with its 90-min dual-cron (left untouched). UNHCR/OWID/WorldBank/WHO deltas owned by their fleet agents (worldbank 50->7,370/965 distinct, who 0->25 confirmed in this sweep).
+- 1-min-cron races can append duplicate event_ids (append-only evidence) — always report count(DISTINCT event_id); my docket run had 0 dupes.
