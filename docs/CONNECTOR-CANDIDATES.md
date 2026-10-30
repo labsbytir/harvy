@@ -34,7 +34,7 @@ Add further hazard, climate, energy, outage, infrastructure, transit, procuremen
 
 ### Explicitly excluded by current project policy
 
-Do not implement or activate Telegram, JudyRecords, or Truth Social sources. SAM.gov was un-excluded by direct user directive on 2026-10-30; the three SAM.gov records below are now rollout candidates (pending SAM_GOV_API_KEY and bounded verification), kept here so the history of the exclusion stays visible.
+Do not implement or activate JudyRecords or Truth Social sources. Telegram was un-excluded by direct user directive on 2026-10-30, scoped exactly to channels explicitly joined by the user's own approved Telegram app (a configured channel list); no discovery or expansion beyond that list, no member-list or profile harvesting, and the user's approved app session is the only access path. SAM.gov was un-excluded by direct user directive on 2026-10-30; the three SAM.gov records below are now rollout candidates (pending SAM_GOV_API_KEY and bounded verification), kept here so the history of the exclusion stays visible.
 
 ## Source-by-source connector catalog
 

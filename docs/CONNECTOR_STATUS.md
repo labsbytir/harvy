@@ -648,3 +648,51 @@ failures are crt.sh-side, not credentials.
 - [energydata] (actual source_id `src_energydata_info`, NOT `src_energydata`) wf CP70bgI3eOvR21o2: CKAN package_search rows 25 -> 300 (catalog count 1191; needs `start` paging for the rest). Run: Basin src_energydata_info 25 -> 300 (+275; dedupe table 300 rows = clean 1:1). Errors dataTable empty.
 - End state: all three active + continuous 6h cronExpression at offset minutes per the worldbank note (:00 fires get missed): openflights "20 */6 * * *", dbpedia "10 */6 * * *", energydata "40 */6 * * *"; each re-POSTed /activate after the PUT. Verified Basin counts via basin sql query (300/103/300, stable re-query). n8n success not used as proof.
 - Housekeeping: VPS scratch (/tmp/patch*.py, /tmp/wf*.json, exec dumps) removed. MCP connector.harvy.dev still 403 from agent sessions (needs user re-auth) — manual runs used the sanctioned 1-min cron trick instead. Execution rows on this box are purged from execution_entity within minutes (261/266/269 gone post-run) — audit via dataTables + Basin counts.
+
+## 2026-10-30 - Telegram exclusion LIFTED by direct user directive
+
+Direct user instruction (CEO-approved policy change) supersedes the Telegram exclusion introduced in
+seed commit 92aecaa; precedent: SAM.gov lift commit ac5a53d. Scope, verbatim in effect: Telegram is
+approved, scoped exactly to channels explicitly joined by the user's own approved Telegram app (a
+configured channel list). No discovery or expansion beyond that list, no member-list or profile
+harvesting, no private data outside those channels. The user's approved app session is the only
+access path; session material must never be stored in repo, logs, or prompts. JudyRecords and Truth
+Social remain excluded.
+
+Files changed (this directive only; line 481 history above intentionally NOT rewritten):
+- AGENTS.md (platform-rules line: Telegram approval + scope; JudyRecords/Truth Social remain excluded; SAM.gov sentence intact)
+- docs/CONNECTOR_PLAN.md (Telegram removed from do-not-reintroduce list; approval + scope sentence added)
+- docs/BUILD_AGENT_PROMPT.md ("user excludes Telegram" replaced with approval + scope; JudyRecords/Truth Social exclusion kept)
+- docs/REPO_INDEX.md (two spots: queue-inventory wording; port-exclusions wording)
+- docs/IOS_APP_PLAN.md (5.1.1 enforcement wording: Telegram approved w/ configured-channel-list scope; JudyRecords/Truth Social permanent)
+- docs/CONNECTOR-CANDIDATES.md (do-not-implement sentence: Telegram removed; approval + scope added)
+- v2/catalog/reference/harvy-connector-scopes.json (new named_connectors entry id "telegram": enabled=false, excluded=false, exclusion_reason=null, api_documentation_url https://core.telegram.org/api, implementation_status "approved by direct user directive 2026-10-30; configured channel list only; not implemented"; sam-gov entry's dated directive_change left as history)
+- docs/PLAN.md: checked — contains no explicit Telegram exclusion sentence; left untouched per directive
+Status: not implemented; no workflow, connector, or credential created or run by this change.
+
+## 2026-10-30 ~17:30 UTC — batch-1 RUN agent: HARD STOP, fleet unreachable (no runs)
+
+- SCOPE: batch-1 open/keyless APIs only (Federal Register, SEC EDGAR, CDC PLACES, openFDA, api.weather.gov, USAspending POST, USGS, OpenFEMA, CMS, NHTSA, CFPB). Excluded sources untouched (JudyRecords, Truth Social, Telegram; SAM.gov skipped — no key in scope of this run). No workflows created/modified/deleted; no commit/push.
+- PREFLIGHT (presence only, no values): env N8N_API_KEY / N8N_URL / WEBSHARE_PROXY_URL / SPIDER_API_KEY / BASIN_SEND_TOKEN / SAM_GOV_API_KEY / WRANGLER_BASIN_SQL_AUTH_TOKEN all UNSET; ~/.config/harvy/ does not exist on this host; this worker is an agent box (local fresh n8n, 0 workflows/0 vars/0 keys), not the fleet VPS.
+- GATE 1 (proxy): FAIL — no Webshare URL anywhere on this host, so egress preflight `curl --proxy ... ipv4.webshare.io` not runnable. Not improvised.
+- GATE 2 (fleet n8n): FAIL — connector.harvy.dev DNS -> 85.9.199.60, HTTPS times out (15s) from here; SSH to 85.9.199.60 and 85.9.194.73 both time out; SSH to 194.113.74.92 works but its n8n is a FRESH instance (0 workflows, 0 variables, 0 executions, 0 api_keys — DB copied and counted read-only), not the fleet runner; local n8n (localhost:5678, this box) is also fresh (0 workflows) with Unauthorized REST and no usable key. No MCP automation tool in this session's catalog. No new workflows created anywhere.
+- GATE 3 (Basin): FAIL for writes/reads — `wrangler basin sql query` errors `Missing WRANGLER_BASIN_SQL_AUTH_TOKEN` (no token on this host); ingest POST needs Bearer token likewise absent. Catalog itself verified active via wrangler OAuth: warehouse `9061d93166998cf39e011a52b369b812_harvy-basin`. R2 buckets listed via OAuth (harvy-basin/inbox/production/public/raw) but no objects written — without the fleet runner + Basin token the verify chain cannot close, so nothing was written.
+- OPEN-API READ-ONLY REACHABILITY (direct single GETs from this worker; open keyless JSON APIs, no crawling, no proxy — allowed per ledger notes): Federal Register 200, SEC EDGAR 200, CDC PLACES 200, openFDA 200, weather.gov 200 (only without `limit` param; `?limit=1` is 400), USAspending POST 200 (live spending payload returned), USGS water + earthquake 200, NHTSA 200, CFPB complaints 200, CMS 200 via `/api/v1/dataset` and `/data.json` (404 only on wrong `/data-api/v1/dataset/` path). OpenFEMA timed out from here (000) on 2 attempts — needs a fleet-side retry, not a verdict.
+- OUTCOME: 0 bounded runs, 0 new workflows, 0 Basin rows. Table below records reachability only — not ingestion.
+
+| source | wf id | run id | Basin rows / distinct | status | blocker |
+|---|---|---|---|---|---|
+| federal-register | none | none | n/a | BLOCKED | fleet n8n unreachable; API itself 200 direct |
+| sec-edgar | none | none | n/a | BLOCKED | same; API 200 direct (needs UA header) |
+| cdc-places | none | none | n/a | BLOCKED | same; API 200 direct |
+| openfda | none | none | n/a | BLOCKED | same; API 200 direct |
+| weather-gov | none | none | n/a | BLOCKED | same; API 200 direct (no `limit` param) |
+| usaspending | none | none | n/a | BLOCKED | same; POST 200 direct |
+| usgs | none | none | n/a | BLOCKED | same; API 200 direct |
+| openfema | none | none | n/a | BLOCKED | same; timed out from this worker, retry fleet-side |
+| cms | none | none | n/a | BLOCKED | same; API 200 direct (correct path `/api/v1/dataset`) |
+| nhtsa | none | none | n/a | BLOCKED | same; API 200 direct |
+| cfpb | none | none | n/a | BLOCKED | same; API 200 direct |
+| sam-gov | skipped | — | n/a | SKIPPED | key-gated, no key in scope |
+
+- RESUME (needs supervisor/user): (a) run this agent on a host with fleet SSH/MCP + secrets present, or re-attach automation MCP; (b) re-check OpenFEMA from the fleet host; (c) then one bounded fetch (25-100) -> normalize -> R2 harvy-raw -> Basin POST (curl UA) -> wait >=5min -> basin sql count + distinct -> log. Files changed: docs/CONNECTOR_STATUS.md only (this section).

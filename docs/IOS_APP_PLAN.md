@@ -330,7 +330,7 @@ Operating an Open Source Intelligence (OSINT) and threat intelligence platform o
 - **Risk:** Apple aggressively scrutinizes apps that aggregate personal information, public records, or social profiles, frequently rejecting them under rules prohibiting surveillance, doxxing, harassment, or unauthorized data scraping.
 - **Mitigation:**
   - **Positioning:** Harvy must be positioned and described in App Store metadata strictly as an **Enterprise Threat Intelligence & Cyber Security Monitoring Platform** (serving corporate security, newsrooms, and civic infrastructure), NOT a "background check", "people search", or "person finder" app.
-  - **Enforce Exclusions:** Enforce Harvy's platform policy: legacy consumer crawlers (Telegram, JudyRecords, Truth Social) are permanently excluded.
+  - **Enforce Exclusions:** Enforce Harvy's platform policy: JudyRecords and Truth Social are permanently excluded; Telegram is approved (2026-10-30) but only for channels explicitly joined by the user's own approved Telegram app (configured channel list), with no discovery, member-list, or profile harvesting.
   - **Terms of Service:** Require all users to accept terms confirming institutional use and compliance with applicable data privacy laws upon first mobile launch.
 
 ### Risk 2: Guideline 5.1.1(v) — Mandatory In-App Account Deletion

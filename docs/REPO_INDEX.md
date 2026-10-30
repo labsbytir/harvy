@@ -29,7 +29,7 @@ Git root: this repository (`labsbytir/harvy`, `main` at `92aecaa` when inspected
 | R2 | `harvy-raw` source captures; `harvy-artifacts` processed objects; separate Basin catalog bucket for catalog-managed analytical tables | The API Wrangler config names `harvy-raw` and `harvy-artifacts` bindings; the last account inventory listed only `harvy-raw`. `harvy-artifacts` and the catalog bucket must be verified/provisioned before deployment. Other existing buckets are not substitutes without a reviewed mapping. |
 | Basin Pipelines/Catalog/SQL | Ingest processed data into catalog-managed Iceberg/Parquet and serve historical analytics | No pipeline/catalog listed. Name and provision the catalog bucket and analytical resources deliberately. |
 | K2 Streams | Shared durable event stream for record/run lifecycle and downstream consumers | No stream listed. Define event contract and subscribers before activation. |
-| Queues | Bounded asynchronous Harvy jobs, retries, and dead-letter handling | Older Harvy queues exist, including excluded Telegram and legacy v2 work. Reconcile before selecting the shared v2 queue(s). |
+| Queues | Bounded asynchronous Harvy jobs, retries, and dead-letter handling | Older Harvy queues exist, including legacy Telegram work (Telegram approved 2026-10-30, configured channel list only) and other legacy v2 work. Reconcile before selecting the shared v2 queue(s). |
 | Workflows | Durable multi-step Harvy execution where needed | Three older Harvy Workflows exist; one has a schedule. Reconcile schedule ownership with n8n and Automation. |
 | Workers KV | Shared read-heavy configuration/cache and safe feature snapshots | No namespace listed. Define keys, TTL, invalidation, and ownership before provisioning. |
 | Containers | Isolated large conversion/model workloads when part of the processing path | One unrelated-looking `harvesting-harvestingprocessor` application is listed with zero active instances; ownership unverified. |
@@ -43,7 +43,7 @@ Git root: this repository (`labsbytir/harvy`, `main` at `92aecaa` when inspected
 2. News through Media Cloud (#26), SocketNews (#27), and approved Spider Cloud coverage (#8), surfaced in Newsk mode (#20). No RSS dependency.
 3. Weather ingestion/context (#29).
 
-The target uses all approved platform services as one Harvy system. Deployment can proceed in dependency order, but absence of a resource is tracked as a gap rather than a claim that it is unnecessary. Do not create one stack per mode or port excluded Telegram, JudyRecords, or Truth Social connectors. SAM.gov was un-excluded by direct user directive on 2026-10-30.
+The target uses all approved platform services as one Harvy system. Deployment can proceed in dependency order, but absence of a resource is tracked as a gap rather than a claim that it is unnecessary. Do not create one stack per mode or port excluded JudyRecords or Truth Social connectors; Telegram was approved on 2026-10-30, scoped to channels explicitly joined by the user's own approved Telegram app (configured channel list only). SAM.gov was un-excluded by direct user directive on 2026-10-30.
 
 ## Documentation drift to resolve
 
