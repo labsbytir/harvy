@@ -565,3 +565,9 @@ timezone, 85k airports, USDOT motor-carrier safety, VIN, universities, holidays,
 text/AI enrichment (sentiment, textsimilarity for near-dup dedupe, embeddings for semantic search
 over Basin, textlanguage, spellcheck, profanityfilter, dictionary).
 Poller service_map on VPS extended: api-ninjas -> API_NINJAS_API_KEY (syntax verified).
+
+## 2026-10-30 ~12:00 UTC — Webshare proxy fixed: rotating backbone endpoint (supervisor)
+
+Old direct creds (9.249.21.58:6392, user hhrndunk) got 407 on every endpoint incl. p.webshare.io backbone -> account auth rejected, not a stall. New sub-user creds supplied by user work ONLY in rotating mode: http://<user>-us-rotate:<pass>@p.webshare.io:80/ (plain username gets 407/56). Verified: 3 requests -> 3 rotating residential egress IPs; com-courtlistener-storage S3 via proxy = 200; courtlistener.com itself is CloudFront 403 (use S3 bulk path or Spider for the site).
+n8n variable WEBSHARE_PROXY_URL on VPS updated to the backbone rotating URL (56 chars, value never printed; stored /root/.ws_url_new 600 on VPS + local 600 file). First update attempt emptied the var (quoting) - fixed via psql -f file; verified SELECT length=56 backbone=t, egress rotates via stored value.
+SECURITY: old proxy password appeared in a curl -v log and both proxy passwords were pasted in chat - rotate the old sub-user in the webshare dashboard.
