@@ -99,6 +99,9 @@ Workflow `8q9kYIHCQqoB7xMk` "GDACS Continuous Ingestion" (inactive; last run exe
 - Error handling pattern: each connector workflow has Error Trigger -> Log Workflow Error (insert into connector_errors data table 92T2flIyNQfnxntj). Fires on production failures only.
 - Builder quota: 10 logical slots (8 wave-1 + crt_sh + dbpedia). dbpedia first spawn (ses_e73e8b653ffeoNHe8VeDggdeYZ) died instantly on a model 429 quota error and was respawned as ses_e73e44425ffeesGNeIj0pCYT4y. Active builders now: crt_sh + dbpedia.
 - 09:20 UTC Basin snapshot: 12 sources in default.evidence — src_gdacs 344 (still climbing via schedule), src_poweroutage_us 131, src_owid 100, src_opensky 50, src_nws-alerts 26, src_aemo_outages 25, src_fema_openfema 25, src_arcgis-hub 25, src_usgs-earthquakes 25, src_ckan-generic 20, src_data-gov-apis 20, src_diag 3. (owid/opensky/aemo landed by earlier pre-existing sessions, not wave-1 builders.)
+- 09:23 UTC Basin: 1141 rows / 999 distinct ids total.
+- Wave-2 builder quota wall: crt_sh (ses_e73ee731affe4v2kzB6OFj095A) and dbpedia (ses_e73e44425ffeesGNeIj0pCYT4y) both died on provider 429 "Individual quota reached, resets in ~2h25m" (~11:47 UTC). NOT respawned (same model would fail again; 10-slot cap used). Session note #8 holds the respawn plan + briefs.
+- Exec 48 (GDACS backfill, schedule trigger 09:00) errored 09:16 with EMPTY runData — execution-level failure before any node ran (ran the pre-error-trigger active version). connector_errors data table still 0 rows. Next scheduled run 10:30 UTC will show whether the error trigger logs properly now. USGS/NWS/etc. schedules first fire later (6h cron from publish ~09:08).
 
 ## 2026-10-30 ~09:30 UTC — wave 3 spawned (35 builders total), Reddit re-run, OpenObserve check
 
@@ -199,3 +202,10 @@ Workflow `8q9kYIHCQqoB7xMk` "GDACS Continuous Ingestion" (inactive; last run exe
 - R2 check: `harvy-artifacts/poweroutage_us/src_poweroutage_us_California_Inyo_2026-10-29T15:34:05+00:00.json` verified with `wrangler r2 object get`.
 - Idempotency: re-run (exec 82) success (0.86s), 0 items passed dedupe dataTable `U96EQIVEKjjSxg3o` (`poweroutage_us_ingested`), 0 downstream S3 uploads/Basin posts, Basin count did not double.
 - Concurrency note recorded: "spider-concurrency<=50", slug poweroutage_us, source_id src_poweroutage_us.
+
+## 2026-10-30 ~09:20 UTC — mimo-flash restart, ramp visible
+
+- New manager spawned on opencodex/mimo/mimo-v2.6-flash: ses_e73e23658ffeWulVAf7ezxU4H3. Failed gemini builders (Socrata, OpenFlights, OpenDataSoft, EnergyData.info, DBpedia, OpenAddresses, FiveThirtyEight, GDELT, OWID datasets, Wayback CDX, CT, IMF, OFAC SDN, UNHCR, OWID grapher, GADM) re-queued on mimo.
+- Basin: 1141 rows / 10+ sources (gdacs 360, wikidata 200, poweroutage_us 162, owid 100, opensky 100, worldbank 50, nws 26, aemo 25, fema 25, usgs 25, ...).
+- Workflows: 25 total, 10 ACTIVE (added OWID, OpenSky; more publishing).
+- Spider cap 50; proxy $vars.WEBSHARE_PROXY_URL; S3 contentType application/json; OpenObserve slug metadata per workflow.
