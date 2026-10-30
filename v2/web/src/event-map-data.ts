@@ -1,9 +1,17 @@
 import type { HarvyEvent } from "./api";
 
-type LocatedEvent = Pick<HarvyEvent, "id" | "title" | "last_seen_at" | "evidence_count"> & {
+export type LocatedEvent = Pick<HarvyEvent, "id" | "title" | "last_seen_at" | "evidence_count"> & {
   latitude?: unknown;
   longitude?: unknown;
 };
+
+export function locatedCoordinates(event: { latitude?: unknown; longitude?: unknown }): [number, number] | null {
+  const latitude = event.latitude;
+  const longitude = event.longitude;
+  if (typeof latitude !== "number" || !Number.isFinite(latitude) || latitude < -90 || latitude > 90 ||
+      typeof longitude !== "number" || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) return null;
+  return [longitude, latitude];
+}
 
 export interface EventPoint {
   type: "Feature";
@@ -21,14 +29,12 @@ export function toEventPoints(events: readonly LocatedEvent[]): EventPoints {
   return {
     type: "FeatureCollection",
     features: events.flatMap((event) => {
-      const latitude = event.latitude;
-      const longitude = event.longitude;
-      if (typeof latitude !== "number" || !Number.isFinite(latitude) || latitude < -90 || latitude > 90 ||
-          typeof longitude !== "number" || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) return [];
+      const coordinates = locatedCoordinates(event);
+      if (!coordinates) return [];
       return [{
         type: "Feature",
         id: event.id,
-        geometry: { type: "Point", coordinates: [longitude, latitude] },
+        geometry: { type: "Point", coordinates },
         properties: { eventId: event.id, title: event.title, lastSeenAt: event.last_seen_at, evidenceCount: event.evidence_count, weight: 1 },
       }];
     }),

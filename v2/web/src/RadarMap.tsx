@@ -32,12 +32,13 @@ function timeframe(from: string, to: string): string {
   return "No date bounds · latest loaded events";
 }
 
-export default function RadarMap({ product, events, hasMoreEvents, from, to, onSelectEvent }: {
+export default function RadarMap({ product, events, hasMoreEvents, from, to, selectedEventId, onSelectEvent }: {
   product: string;
   events: HarvyEvent[];
   hasMoreEvents: boolean;
   from: string;
   to: string;
+  selectedEventId?: string | null;
   onSelectEvent: (event: HarvyEvent) => void;
 }) {
   const container = useRef<HTMLDivElement>(null);
@@ -186,7 +187,7 @@ export default function RadarMap({ product, events, hasMoreEvents, from, to, onS
     <Box component="details" sx={{ borderTop: 1, borderColor: "divider", pt: 1 }}>
       <Box component="summary" sx={{ cursor: "pointer", color: "primary.main", fontWeight: 700, py: 1 }}>View events as a list ({events.length} loaded)</Box>
       {events.length ? <Stack spacing={0.5} sx={{ pt: 1 }}>
-        {events.map((event) => <Button key={event.id} onClick={() => onSelectEvent(event)} sx={{ textAlign: "left", justifyContent: "flex-start" }}>
+        {events.map((event) => <Button key={event.id} onClick={() => onSelectEvent(event)} aria-current={selectedEventId === event.id ? "true" : undefined} sx={{ textAlign: "left", justifyContent: "flex-start" }}>
           <Box><Typography variant="body2" fontWeight={700}>{event.title}</Typography><Typography variant="caption" color="text.secondary">{new Date(event.last_seen_at).toLocaleString()} · {event.evidence_count} sources</Typography></Box>
         </Button>)}
       </Stack> : <Typography variant="body2" color="text.secondary" sx={{ pt: 1 }}>No events in the current result page.</Typography>}

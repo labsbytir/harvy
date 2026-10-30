@@ -29,6 +29,7 @@ const AnalysisDesk = lazy(() => import("./AnalysisDesk"));
 const OpsDesk = lazy(() => import("./OpsDesk"));
 const InvestigationsDesk = lazy(() => import("./InvestigationsDesk"));
 const RadarMap = lazy(() => import("./RadarMap"));
+const TowerIntel = lazy(() => import("./TowerIntel"));
 
 interface AuthUser { id: string; name?: string; email?: string; activeOrganizationId?: string | null }
 interface AuthGlobals {
@@ -89,7 +90,7 @@ export default function Workspace() {
   const [context, setContext] = useState<HarvyContext | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
   const [product, setProduct] = useState<HarvyProduct>("Newsk");
-  const [surface, setSurface] = useState<"events" | "analysis" | "actions" | "investigations" | "map">("events");
+  const [surface, setSurface] = useState<"events" | "analysis" | "actions" | "investigations" | "map" | "intel">("events");
   const [searchTargetDashboard, setSearchTargetDashboard] = useState<string | null>(null);
   const [searchTargetAction, setSearchTargetAction] = useState<string | null>(null);
   const [searchTargetInvestigation, setSearchTargetInvestigation] = useState<string | null>(null);
@@ -463,6 +464,7 @@ export default function Workspace() {
           {product === "Ops" ? <Button role="tab" aria-selected={surface === "actions"} onClick={() => setSurface("actions")}>Actions</Button> : <Button role="tab" aria-selected={surface === "events"} onClick={() => setSurface("events")}>Events</Button>}
           {product === "Ops" && <Button role="tab" aria-selected={surface === "events"} onClick={() => setSurface("events")}>Signals</Button>}
           {product !== "Ops" && <Button role="tab" aria-selected={surface === "investigations"} onClick={() => setSurface("investigations")}>Investigations</Button>}
+          {product === "Tower" && <Button role="tab" aria-selected={surface === "intel"} onClick={() => setSurface("intel")}>Intelligence</Button>}
           {product !== "Ops" && <Button role="tab" aria-selected={surface === "map"} onClick={() => setSurface("map")}>Map</Button>}
           <Button role="tab" aria-selected={surface === "analysis"} onClick={() => setSurface("analysis")}>Analysis</Button>
         </Stack>}
@@ -505,6 +507,15 @@ export default function Workspace() {
             <Box sx={{ mt: 1 }}>
               <Suspense fallback={<Stack alignItems="center" sx={{ py: 8 }}><CircularProgress aria-label="Loading radar map" /></Stack>}>
                 <RadarMap product={product} events={events} hasMoreEvents={!!nextCursor} from={from} to={to} onSelectEvent={(event) => void selectEvent(event)} />
+              </Suspense>
+            </Box>
+          </CardContent></Card> : surface === "intel" ? <Card sx={{ gridColumn: { lg: "1 / 3" } }}><CardContent>
+            <Stack direction="row" justifyContent="flex-end" alignItems="center">
+              <Button size="small" onClick={() => void reload()} disabled={busy}>Refresh</Button>
+            </Stack>
+            <Box sx={{ mt: 1 }}>
+              <Suspense fallback={<Stack alignItems="center" sx={{ py: 8 }}><CircularProgress aria-label="Loading Tower intelligence" /></Stack>}>
+                <TowerIntel product={product} events={events} runs={runs} sources={sources} hasMoreEvents={!!nextCursor} from={from} to={to} selectedEventId={selected?.id ?? null} onSelectEvent={(event) => void selectEvent(event)} />
               </Suspense>
             </Box>
           </CardContent></Card> : <>

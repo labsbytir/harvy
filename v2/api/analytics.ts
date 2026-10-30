@@ -4,11 +4,16 @@ import { drizzle as drizzlePostgres } from "drizzle-orm/node-postgres";
 import { createDrizzleSemanticLayer, type Cube, type DrizzleDatabase, type SecurityContext, type SemanticQuery } from "drizzle-cube/server";
 import type { D1Database } from "@cloudflare/workers-types";
 import type { HqlQuery } from "../shared/hql.ts";
+import { CUBE_LIST, cubeByHqlName, cubeMembers, hqlFieldMap, type CubeDefinition } from "../shared/cubes.ts";
 import { events, evidence, apiSchema } from "./schema.ts";
 import { pgEvents, pgEvidence, pgApiSchema } from "./pg-schema.ts";
 import { PostgresDatabase, type SqlDatabase } from "../shared/sql-database.ts";
 
 export interface QueryScope { tenantId: string; workspaceId: string; products: string[] }
+
+// Single cube definitions live in v2/shared/cubes.ts; both engines read them.
+const EVENTS_DEF = CUBE_LIST.find((def) => def.hql === "events") as CubeDefinition;
+const EVIDENCE_DEF = CUBE_LIST.find((def) => def.hql === "evidence") as CubeDefinition;
 
 export function createAnalyticsLayer(database: SqlDatabase) {
   const isPostgres = database instanceof PostgresDatabase;
@@ -26,9 +31,9 @@ export function createAnalyticsLayer(database: SqlDatabase) {
     return { tenantId: context.tenantId, workspaceId: context.workspaceId, products: context.products as string[] };
   }
   layer.registerCube({
-    name: "Events",
-    title: "Events",
-    description: "Organization-scoped observed events.",
+    name: EVENTS_DEF.name,
+    title: EVENTS_DEF.title,
+    description: EVENTS_DEF.description,
     sql: ({ securityContext }) => ({
       from: eventTable,
       where: (() => { const scope = scopeFrom(securityContext); return and(eq(eventTable.tenantId, scope.tenantId), eq(eventTable.workspaceId, scope.workspaceId), inArray(eventTable.product, scope.products)); })(),
@@ -47,7 +52,7 @@ export function createAnalyticsLayer(database: SqlDatabase) {
     },
     joins: {
       Evidence: {
-        targetCube: "Evidence",
+        targetCube: EVIDENCE_DEF.name,
         relationship: "hasMany",
         on: [
           { source: eventTable.id, target: evidenceTable.eventId },
@@ -58,9 +63,9 @@ export function createAnalyticsLayer(database: SqlDatabase) {
     },
   } satisfies Cube);
   layer.registerCube({
-    name: "Evidence",
-    title: "Evidence",
-    description: "Source-attributed observations attached to events.",
+    name: EVIDENCE_DEF.name,
+    title: EVIDENCE_DEF.title,
+    description: EVIDENCE_DEF.description,
     sql: ({ securityContext }) => ({
       from: evidenceTable,
       where: (() => { const scope = scopeFrom(securityContext); return and(eq(evidenceTable.tenantId, scope.tenantId), eq(evidenceTable.workspaceId, scope.workspaceId), inArray(evidenceTable.product, scope.products)); })(),
@@ -82,20 +87,9 @@ export function createAnalyticsLayer(database: SqlDatabase) {
   return layer;
 }
 
-const EVENT_FIELDS: Record<string, string> = {
-  id: "Events.id", title: "Events.title", summary: "Events.summary",
-  status: "Events.status", product: "Events.product", first_seen_at: "Events.firstSeenAt", last_seen_at: "Events.lastSeenAt", source_id: "Evidence.sourceId",
-};
-const EVIDENCE_FIELDS: Record<string, string> = {
-  id: "Evidence.id", event_id: "Evidence.eventId", source_id: "Evidence.sourceId",
-  publisher: "Evidence.publisher", headline: "Evidence.headline", product: "Evidence.product", captured_at: "Evidence.capturedAt",
-};
 const OPERATORS = { eq: "equals", neq: "notEquals", gt: "gt", gte: "gte", lt: "lt", lte: "lte", contains: "contains", in: "in" } as const;
 
-const CUBE_MEMBERS = new Set([
-  "Events.id", "Events.title", "Events.summary", "Events.status", "Events.product", "Events.firstSeenAt", "Events.lastSeenAt", "Events.count",
-  "Evidence.id", "Evidence.eventId", "Evidence.sourceId", "Evidence.publisher", "Evidence.headline", "Evidence.product", "Evidence.capturedAt", "Evidence.count",
-]);
+const CUBE_MEMBERS = cubeMembers();
 const CUBE_FILTERS = new Set(["equals", "notEquals", "contains", "notContains", "startsWith", "notStartsWith", "endsWith", "notEndsWith", "gt", "gte", "lt", "lte", "set", "notSet", "inDateRange", "beforeDate", "afterDate", "between", "notBetween", "in", "notIn", "like", "notLike", "isEmpty", "isNotEmpty"]);
 const RELATIVE_RANGE = /^(?:this|last) (?:day|week|month|quarter|year|\d{1,3} days?|\d{1,2} weeks?|\d{1,2} months?|\d years?)$/i;
 
@@ -156,11 +150,11 @@ export function normalizeCubeQuery(value: unknown): SemanticQuery | null {
 }
 
 export function hqlToSemanticQuery(query: HqlQuery): SemanticQuery | null {
-  const map = query.cube === "events" ? EVENT_FIELDS : query.cube === "evidence" ? EVIDENCE_FIELDS : null;
-  const cubeName = query.cube === "events" ? "Events" : query.cube === "evidence" ? "Evidence" : null;
-  if (!map || !cubeName) return null;
+  const def = cubeByHqlName(query.cube);
+  if (!def) return null;
+  const map = hqlFieldMap(def);
   const dimensions = query.dimensions.map((name) => map[name]);
-  const measures = query.measures.map((name) => name === "count" ? `${cubeName}.count` : undefined);
+  const measures = query.measures.map((name) => name === "count" ? def.countMeasure.member : undefined);
   if (dimensions.some((value) => !value) || measures.some((value) => !value)) return null;
   const filters = query.filters.map((filter) => {
     const member = map[filter.field];
@@ -175,7 +169,7 @@ export function hqlToSemanticQuery(query: HqlQuery): SemanticQuery | null {
   const order = Object.fromEntries(orderEntries) as Record<string, "asc" | "desc">;
   const timeDimensions: NonNullable<SemanticQuery["timeDimensions"]> = [];
   if (query.time_range) timeDimensions.push({
-    dimension: query.cube === "events" ? "Events.lastSeenAt" : "Evidence.capturedAt",
+    dimension: map[def.timeField],
     dateRange: [query.time_range.from, query.time_range.to],
   });
   return { dimensions: dimensions as string[], measures: measures as string[], filters: filters as NonNullable<SemanticQuery["filters"]>, timeDimensions, order, limit: query.limit };

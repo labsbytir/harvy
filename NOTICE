@@ -1,0 +1,8 @@
+# NOTICE
+
+Harvy's Tower intelligence surface takes abstract layout inspiration from
+World Monitor (github.com/koala73/worldmonitor, licensed AGPL-3.0-only): a
+world map, a ranked regional intensity list, and a stream freshness strip.
+No World Monitor source code, CSS, or assets were copied, ported, adapted, or
+transcribed. The surface is built from scratch with Harvy's own MUI
+components and theme tokens.
