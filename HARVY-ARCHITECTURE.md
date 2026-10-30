@@ -2,7 +2,7 @@
 
 This file records the user's authoritative direction for the Harvy SaaS integration. It takes precedence over architecture claims in source repositories when they conflict.
 
-The detailed repository engineering standard is maintained in [harvy-platform/docs/DEVELOPMENT.md](harvy-platform/docs/DEVELOPMENT.md), with implementation/adoption tracked in that repository's [single plan](harvy-platform/docs/PLAN.md). It defines repository/agent contribution rules, expandable source and database ownership, raw/processed/query artifacts, streaming uploads, universal configuration, secrets, API/HQL/CLI/OpenAPI/MCP, feature/tenant permissions, AI routing/safety, documentation discovery, and token optimization. OpenChamber is the mandated engineering coordination environment; Spider Cloud and Webshare preflight is mandatory before crawling. These are requirements; see the adoption status for enforcement that remains to be built.
+The detailed repository engineering standard is maintained in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md), with implementation/adoption tracked in the repository's [single plan](docs/PLAN.md). It defines repository/agent contribution rules, expandable source and database ownership, raw/processed/query artifacts, streaming uploads, universal configuration, secrets, API/HQL/CLI/OpenAPI/MCP, feature/tenant permissions, AI routing/safety, documentation discovery, and token optimization. OpenChamber is the mandated engineering coordination environment; Spider Cloud and Webshare preflight is mandatory before crawling. These are requirements; see the adoption status for enforcement that remains to be built.
 
 ## Product structure
 
@@ -11,7 +11,7 @@ The detailed repository engineering standard is maintained in [harvy-platform/do
 - **Tower** is Harvy's global intelligence product, built on Ontoly.
 - **Ops** is Harvy's business product, built on Ontoly.
 - **Civic** is Harvy's civic product line, built on Ontoly.
-- **Newsk** is an add-on desk for Media & News that combines Tower, Ops, and Civic and includes all paths across them.
+- **Newsk** is the newsroom intelligence mode and first customer workflow. It shares Ontoly, HQL, HarvyDex, permissions, and UI foundations with Tower, Ops, and Civic, but does not inherit their entitlements.
 - **HarvyDex** assigns and manages a global UUID for every record in Harvy.
 - **HQL** is the shared query protocol across Harvy products and product lines.
 
@@ -79,7 +79,7 @@ Harvy currently has one external server, named **Automation**. It connects to th
 - transforming
 - ingestion for external APIs
 
-The existing n8n installation is an internal orchestration component of Automation. Follow the [uniform n8n standard](harvy-platform/docs/DEVELOPMENT.md#18-uniform-n8n-integration-standard): team-owned workflows coordinate bounded jobs through the same connector/run contracts, with one schedule owner, scoped credentials, idempotency, and verified Spider/Webshare preflight. Harvy owns tenant policy and canonical records; n8n is not a customer workflow builder or a separate source-ingestion system. The [five-day hackathon plan](harvy-platform/docs/PLAN.md#five-day-hackathon-2026-10-28-through-2026-11-01) takes delivery priority over broad platform migration this week while retaining the full-legacy-catalog 50% adoption target.
+The existing n8n installation is an internal orchestration component of Automation. Follow the [uniform n8n standard](docs/DEVELOPMENT.md#18-uniform-n8n-integration-standard): team-owned workflows coordinate bounded jobs through the same connector/run contracts, with one schedule owner, scoped credentials, idempotency, and verified Spider/Webshare preflight. Harvy owns tenant policy and canonical records; n8n is not a customer workflow builder or a separate source-ingestion system. The [five-day hackathon plan](docs/PLAN.md#five-day-hackathon-2026-10-28-through-2026-11-01) takes delivery priority over broad platform migration this week while retaining the full-legacy-catalog 50% adoption target.
 
 Automation uses Spider Cloud's API, including the Unlimited endpoint and AI endpoint. The Unlimited API exposes `/unlimited/scrape`, `/unlimited/crawl`, and `/unlimited/links` (aliases under `/v1/unlimited/...`); the user refers to these operationally as `/scrape`, `/scrawl`, and `/links`. Verify exact route/version against Spider's current docs when implementing. Spider's docs describe the route as `crawl` (not `scrawl`) and document concurrency limits and immediate `429` responses with `Retry-After` when capacity is full.
 
@@ -289,7 +289,7 @@ Treat Harvy's V2 platform as the runtime base, and bring forward the strongest d
 ### Harvy target architecture
 
 1. **One ontology and identity layer:** define shared object/link types, observations, evidence, actions, permissions, and temporal history. Give every record a HarvyDex UUID at the ingestion boundary and preserve source IDs as external identifiers.
-2. **One ingestion boundary:** Automation owns third-party API access and web extraction. Its Connectors use the required Webshare proxy and Spider Cloud where applicable. Harvy Workers, Queues, and Workflows coordinate Harvy-side jobs and state; they do not become a second scraping system.
+2. **One ingestion boundary:** VPS-hosted n8n Automation workflows own third-party API access and web extraction. Their connectors use the required Webshare proxy and Spider Unlimited where applicable. Harvy Workers, Queues, and Workflows coordinate Harvy-side authorization, jobs, and state; they do not become a second scraping system.
 3. **One data path:** retain raw source captures and normalized evidence in R2; keep operational job and registration state in the appropriate database; emit lifecycle events to K2 Streams; use Basin for analytical telemetry and aggregate analysis. PostgreSQL through Hyperdrive is the transactional target; the hosting provider and migration from current direct D1 access still need implementation decisions. Database ownership, scope constraints, extension tables, and raw/processed/query stages follow the engineering standard.
 4. **One query contract:** translate useful Civic query semantics and OpenTIR API filters into versioned HQL. Drizzle Cube is the analysis/query authoring UI; it must use Ontoly metadata and enforce the same permissions as APIs.
 5. **One design system and entitlement path:** MUI components use stable global UI element tags. Better Auth supplies identity and organization context; Harvy's feature-flag manager evaluates product, plan, organization, user, environment, and rollout access on the server.

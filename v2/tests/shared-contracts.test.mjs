@@ -5,6 +5,23 @@ import { parseHqlQuery } from "../shared/hql.ts";
 import { parseArtifactManifest } from "../shared/artifacts.ts";
 import { getCacheHeader } from "../shared/cache-policy.ts";
 import { parseAutomationRunRequest } from "../shared/automation-run.ts";
+import { isDashboardConfig, isPersistedDashboardConfig, isSavedViewConfig } from "../shared/dashboard-config.ts";
+
+test("dashboard and saved-view configs have bounded, distinct schemas", () => {
+  const dashboard = {
+    portlets: [{ id: "events", title: "Events", query: JSON.stringify({ measures: ["Events.count"] }), chartType: "bar", w: 6, h: 4, x: 0, y: 0 }],
+    layoutMode: "grid", grid: { cols: 12, rowHeight: 80, minW: 2, minH: 2 },
+  };
+  const savedView = { kind: "saved_view", hql_version: 1, filters: { query: "city council", source_id: "", from: "", to: "", status: "all" } };
+  assert.equal(isDashboardConfig(dashboard), true);
+  assert.equal(isDashboardConfig({ ...dashboard, features: { xlsExport: { enabled: true }, dashboardImportExport: { enabled: true } } }), false);
+  assert.equal(isDashboardConfig({ ...dashboard, sql: "select * from users" }), false);
+  assert.equal(isDashboardConfig({ ...dashboard, portlets: [{ ...dashboard.portlets[0], query: JSON.stringify({ sql: "drop table events" }) }] }), false);
+  assert.equal(isSavedViewConfig(savedView), true);
+  assert.equal(isDashboardConfig(savedView), false);
+  assert.equal(isPersistedDashboardConfig(savedView), true);
+  assert.equal(isSavedViewConfig({ ...savedView, filters: { ...savedView.filters, status: "admin" } }), false);
+});
 
 test("scope IDs require explicit tenant or shared", () => {
   assert.equal(isScopeId("tenant-1"), true);
@@ -61,7 +78,7 @@ test("automation envelope rejects internal targets", () => {
     contract_version: 1, run_id: "123e4567-e89b-42d3-a456-426614174000", trace_id: "123e4567-e89b-42d3-a456-426614174001", config_revision: "1", connector_id: "approved-news",
     source_scope_id: "publisher-feed", access_scope_id: "tenant-1",
     target_url: "https://example.org/news", mode: "scrape",
-    provider: "spider_unlimited", required_proxy: "webshare",
+		provider: "spider_unlimited", required_proxy: "webshare", preflight_required: true, direct_fallback_allowed: false,
     max_pages: 1, deadline_seconds: 60, idempotency_key: "job-12345",
   };
   for (const target_url of [

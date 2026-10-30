@@ -9,7 +9,7 @@ if (!variables.BETTER_AUTH_SECRET) {
 export const auth = createAuth({
   HARVY_D1: undefined as unknown as HarvyAuthEnv["HARVY_D1"],
   BETTER_AUTH_SECRET: variables.BETTER_AUTH_SECRET,
-  BETTER_AUTH_URL: "https://harvybot.com",
+  BETTER_AUTH_URL: "https://harvy.dev",
   BETTER_AUTH_API_KEY: variables.BETTER_AUTH_API_KEY,
   BETTER_AUTH_INFRA_ENABLED: variables.BETTER_AUTH_INFRA_ENABLED,
   BETTER_AUTH_EMAIL_ENABLED: variables.BETTER_AUTH_EMAIL_ENABLED,

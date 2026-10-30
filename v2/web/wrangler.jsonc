@@ -5,7 +5,7 @@
   "compatibility_date": "2026-10-28",
   "workers_dev": false,
   "routes": [
-    { "pattern": "harvybot.com/*", "zone_name": "harvybot.com" }
+    { "pattern": "harvy.dev/*", "zone_name": "harvy.dev" }
   ],
   "assets": {
     "directory": "../../dist/web",

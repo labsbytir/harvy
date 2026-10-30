@@ -4,7 +4,7 @@ Status: updated 2026-10-29. This index distinguishes the **required target stack
 
 ## System boundary
 
-Harvy is one system and one shared ontology. Ontoly is the raw dataset product. Civic, Tower, Ops, and Newsk are modes of Harvy; they share HarvyDex identity, HQL, permissions, feature flags, API, storage, and UI. Automation is the external Python/TypeScript connector execution server, using Spider Cloud Unlimited and Webshare proxy as required. Installed n8n coordinates internal Automation workflows.
+Harvy is one system and one shared ontology. Ontoly is the raw dataset product. Civic, Tower, Ops, and Newsk are modes of Harvy; they share HarvyDex identity, HQL, permissions, feature flags, API, storage, and UI. Automation is the user's VPS-hosted n8n runtime: its workflows execute approved Spider/Webshare or structured API requests, normalize results, store artifacts in R2, and call Harvy's signed endpoints. No separate executor is assumed; live n8n access is unverified.
 
 ## Actual clean repository
 
@@ -12,18 +12,18 @@ Git root: this repository (`labsbytir/harvy`, `main` at `92aecaa` when inspected
 
 | Area | Files present | Implementation state |
 |---|---|---|
-| Web | `v2/web/src/App.tsx`, `Workspace.tsx`, `AnalysisDesk.tsx`, `OpsDesk.tsx`, `worker.ts`, `wrangler.jsonc` | Public preview plus authenticated four-mode shell, product-scoped event/evidence views, Drizzle Cube dashboard, Newsk story/brief flow, and Ops action queue. Static Worker routing is configured locally but not deployed; sign-in needs deployed Auth/API Workers. |
+| Web | `v2/web/src/App.tsx`, `Workspace.tsx`, `AnalysisDesk.tsx`, `OpsDesk.tsx`, `GlobalSearch.tsx`, `worker.ts`, `wrangler.jsonc` | Public preview plus authenticated four-mode shell, scoped global search, revision-checked event assignment/status activity, Harvy-admin audit view, validated private/workspace Drizzle Cube dashboards, data/schema tools, Newsk story/brief flow, and Ops action queue. Static Worker routing is configured locally but not deployed; sign-in needs deployed Auth/API Workers. |
 | Shared contract | `v2/shared/` | Automation, HQL, HarvyDex, artifact, error, and cache-policy contracts with bounded validation and local tests. |
-| API | `v2/api/worker.ts`, `analytics.ts`, `schema.ts`, `wrangler.jsonc` | Local D1-backed API; Better Auth service binding; product entitlements; scoped events, evidence, stories, briefs, dashboards, run dispatch/callbacks, and Ops handoffs. No live domain route or service binding is verified. |
+| API | `v2/api/worker.ts`, `analytics.ts`, `schema.ts`, `wrangler.jsonc` | Local D1-backed API; Better Auth service binding; explicit product entitlements; scoped events/evidence/stories/briefs/dashboards/actions/search; audited monitor and dashboard state changes; per-tenant run/page quotas; idempotent dispatch claims; signed callbacks. No live domain route, n8n webhook, or service binding is verified. |
 | Auth/database | `v2/auth/`, `v2/migrations/0007_harvy_product_core.sql` | Better Auth source and organization actor resolution are present. New scoped tables are only migration source; remote D1 was not migrated. |
-| Automation/n8n | External Automation service plus inactive `v2/workflows/` templates | API dispatch and signed publication/status contracts exist locally. Automation and the installed n8n instance were not inspected or connected. |
+| Automation/n8n | User-reported VPS-hosted n8n executes approved source workflows; checked-in `v2/workflows/` are inactive run-submission starters | API dispatch and signed publication/status contracts exist locally. The live n8n instance and execution workflows were not inspected or connected. |
 | Tests/CI | `v2/tests/`, `v2/auth/*.test.mjs`, `.github/workflows/ci.yml` | Local API, analytics, contract, auth-consent tests, typechecks, and web build. No live connector, deployed tenant-isolation, or provider egress proof. |
 
 ## Required target stack and current account evidence
 
 | Service | Harvy v2 role | Current evidence / next implementation need |
 |---|---|---|
-| Workers | Shared web and `/api/v1/` runtime; Better Auth and authorized HQL/API operations | `harvy` is deployed as a web preview. Other `harvy-*` Workers are older deployments, not the clean v2 implementation. Build the API/auth boundary. |
+| Workers | Shared web and `/api/v1/` runtime; Better Auth and authorized HQL/API operations | An existing `harvy` preview Worker was observed in the 2026-10-28 account inventory; it is not verified as this checkout's V2 build. Other `harvy-*` Workers are older deployments. The current static/API/Auth configs remain local and undeployed. |
 | PostgreSQL + Hyperdrive | Priority transactional database and pooled Worker connection for HarvyDex, ontology, tenancy, permissions, features, run registry | No Hyperdrive configuration listed. PostgreSQL host/connection and core migrations remain to implement. |
 | D1 | Cloudflare operational/index or specifically owned state where selected in the v2 design | No D1 database listed by the current CLI. Do not describe the legacy `harvy-platform-v2` binding as a live database. |
 | R2 | `harvy-raw` source captures; `harvy-artifacts` processed objects; separate Basin catalog bucket for catalog-managed analytical tables | The API Wrangler config names `harvy-raw` and `harvy-artifacts` bindings; the last account inventory listed only `harvy-raw`. `harvy-artifacts` and the catalog bucket must be verified/provisioned before deployment. Other existing buckets are not substitutes without a reviewed mapping. |
@@ -33,9 +33,9 @@ Git root: this repository (`labsbytir/harvy`, `main` at `92aecaa` when inspected
 | Workflows | Durable multi-step Harvy execution where needed | Three older Harvy Workflows exist; one has a schedule. Reconcile schedule ownership with n8n and Automation. |
 | Workers KV | Shared read-heavy configuration/cache and safe feature snapshots | No namespace listed. Define keys, TTL, invalidation, and ownership before provisioning. |
 | Containers | Isolated large conversion/model workloads when part of the processing path | One unrelated-looking `harvesting-harvestingprocessor` application is listed with zero active instances; ownership unverified. |
-| Secrets Store | Scoped Worker secrets; Automation and n8n use approved secret injection/credential stores | Account default store exists; contents and bindings not audited. |
+| Secrets Store | Scoped Worker secrets; the VPS n8n instance uses its approved credential/secret store | Account default store exists; contents and bindings not audited. |
 | Email Service | Transactional verification, invite, and notification email | Account/domain sending readiness not audited. |
-| n8n + Automation + Spider + Webshare | External connectors and internal schedule/control flow | n8n instance and Automation host are user-reported; not accessible/verified from this checkout. |
+| n8n + Spider + Webshare | VPS n8n executes approved scrape/API workflows, normalizes results, and uploads artifacts | Instance and workflow are user-reported; not accessible/verified from this checkout. |
 
 ## Source and product order
 
@@ -54,4 +54,4 @@ The target uses all approved platform services as one Harvy system. Deployment c
 
 ## Reference repository review
 
-Read-only shallow revisions reviewed on 2026-10-28: `harvyalpha-deprecated` `c0d1d7e`, `civontology` `4367e90`, and `opentir` `09bf508`. The deprecated Harvy repo has no project-wide license declaration; Civic's inspected root also has no license file; OpenTIR declares AGPL-3.0-only. No connector or runtime code was copied from these three checkouts. Their manifests, catalogs, and source-specific adapters remain candidates for individually reviewed ports through the Automation boundary; the old runtimes and storage stacks do not match the V2 plan.
+Read-only shallow revisions reviewed on 2026-10-28: `harvyalpha-deprecated` `c0d1d7e`, `civontology` `4367e90`, and `opentir` `09bf508`. The deprecated Harvy repo has no project-wide license declaration; Civic's inspected root also has no license file; OpenTIR declares AGPL-3.0-only. No connector or runtime code was copied from these three checkouts. Their manifests, catalogs, and source-specific adapters remain candidates for individually reviewed ports through the Automation boundary; the old runtimes and storage stacks do not match the V2 plan. The historical candidate file `docs/CONNECTOR-CANDIDATES.md` is not the canonical denominator: its source points to a separate legacy inventory, while the supplied `opentir` checkout and Civic/HarvyAlpha manifests overlap and use different identifiers. Do not claim an adoption percentage until the unified catalog ledger is reviewed.

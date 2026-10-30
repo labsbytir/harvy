@@ -1,6 +1,6 @@
 # Harvy connector candidates from OpenTIR
 
-Source: [`labsbytir/opentir-development/sources.yaml`](https://github.com/labsbytir/opentir-development/blob/main/sources.yaml), read on 2026-10-27 at revision `d706aa369af37c2a9fa04c3dd5fc4bc645a13656`. It contains 150 source records and 149 unique IDs. Each entry below documents where the source is published, its API/download location, the collection scope present in the source file, and access notes. These are candidates for review, not implemented connectors.
+The cited `opentir-development/sources.yaml` revision returned 404 from the public repository endpoint when rechecked on 2026-10-29, so its original 150-record/149-ID count is not independently verified. This file currently has 147 numbered entries and 146 unique IDs: `entso_e_outages` appears twice, and numbers 61, 112, and 145 are absent without a recorded disposition. Treat this as a candidate reference, not an approved or implemented connector catalog; no entry here proves live verification or enablement.
 
 ## Harvy-wide connector scope
 
@@ -17,7 +17,7 @@ Source: [`labsbytir/opentir-development/sources.yaml`](https://github.com/labsby
 Begin with public feeds and a few clearly bounded government/catalog APIs. Establish provenance, normalization, freshness, recovery, and source-health handling first.
 
 - **Ontoly:** `gdelt` (bounded recent English articles/events); `usgs_earthquakes` (configured magnitude/time feeds); `gdacs` (active elevated alerts and bounded earthquake history); `nasa_firms` (daily global active-fire feed); `nws_tornadoes` and `noaa_spc` (active warnings/reports); `fema_openfema` (declarations and selected projects); `eia_open_data` (selected series); `opensky_live` (bounded flight-state snapshots after terms review); `worldbank_api` and `un_data` (metadata first, then configured indicators); `ofac_sdn` and `eu_sanctions` (official list snapshots and changes).
-- **Civic / Ontoly:** `legistar_nyc` (public legislative records); `congress_gov` and `regulations_gov` (public bills, dockets, rules, document metadata); `sam_contract_awards` (bounded award records); `ckan_portal` and `socrata_portal` (named portal pilots, catalog metadata); `wayback_cdx` (approved URL watchlists).
+- **Civic / Ontoly:** `legistar_nyc` (public legislative records); `congress_gov` and `regulations_gov` (public bills, dockets, rules, document metadata); `ckan_portal` and `socrata_portal` (named portal pilots, catalog metadata); `wayback_cdx` (approved URL watchlists).
 
 ### Wave 2 — expand when a product workflow needs it
 
@@ -31,6 +31,10 @@ Add further hazard, climate, energy, outage, infrastructure, transit, procuremen
 - **Commercial/tenant-specific:** preserve source-specific tenant boundaries. In particular, `poweroutage_us` is marked per-tenant-only in the source file; do not ingest it as shared data.
 - **Sensitive personal data:** do not ingest NYC benefits-screening calls or resident-level equivalents. Microdata sources may be indexed as catalog metadata only until privacy, consent, license, and retention have separate review.
 - **Unverified sources:** verify publisher identity, endpoint, terms, and data quality for opaque feeds and bespoke scrapes before implementation.
+
+### Explicitly excluded by current project policy
+
+Do not implement or activate Telegram, JudyRecords, Truth Social, or SAM.gov sources. The three SAM.gov records below remain in this historical candidate inventory only so exclusions are visible; they are not rollout candidates.
 
 ## Source-by-source connector catalog
 
@@ -1216,4 +1220,3 @@ Each item corresponds to one source record, including both configured `entso_e_o
 ## Source-file cleanup notes
 
 The YAML repeats `entso_e_outages`; resolve that duplicate before using it as an import manifest. The `example` and `no_public_api` entries are placeholders, not active upstream sources. Records such as `realtime_osint_roadmap`, `owid_lc_reconcile`, `owid_legal_use_summary`, `owid_browser_semantic_search`, `owid_cartograms`, `owid_chartbook`, and `owid_tech_radar` should be reviewed as processing/research artifacts rather than automatically implemented as connectors.
-

@@ -6,9 +6,9 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
   "routes": [
-    { "pattern": "harvybot.com/api/v1/*", "zone_name": "harvybot.com" },
-    { "pattern": "harvybot.com/health", "zone_name": "harvybot.com" },
-    { "pattern": "harvybot.com/internal/v1/automation-*", "zone_name": "harvybot.com" }
+    { "pattern": "harvy.dev/api/v1/*", "zone_name": "harvy.dev" },
+    { "pattern": "harvy.dev/health", "zone_name": "harvy.dev" },
+    { "pattern": "harvy.dev/internal/v1/automation-*", "zone_name": "harvy.dev" }
   ],
   "services": [
     { "binding": "AUTH", "service": "harvy-auth" }

@@ -11,6 +11,8 @@ export interface AutomationRunRequest {
 	mode: "scrape" | "crawl" | "links" | "api";
 	provider: "spider_unlimited" | "registered_api";
 	required_proxy: "webshare";
+	preflight_required: true;
+	direct_fallback_allowed: false;
 	max_pages: number;
 	deadline_seconds: number;
 	idempotency_key: string;
@@ -80,7 +82,7 @@ export function parseAutomationRunRequest(value: unknown): AutomationRunRequest 
 	if (!isRecord(value)) return null;
 	const fields = [
 		"contract_version", "run_id", "trace_id", "config_revision", "connector_id", "source_scope_id", "access_scope_id",
-		"target_url", "mode", "provider", "required_proxy", "max_pages",
+		"target_url", "mode", "provider", "required_proxy", "preflight_required", "direct_fallback_allowed", "max_pages",
 		"deadline_seconds", "idempotency_key",
 	];
 	if (Object.keys(value).some((key) => !fields.includes(key))) return null;
@@ -93,6 +95,7 @@ export function parseAutomationRunRequest(value: unknown): AutomationRunRequest 
 		!["scrape", "crawl", "links", "api"].includes(String(value.mode)) ||
 		!((value.mode === "api" && value.provider === "registered_api") ||
 			(value.mode !== "api" && value.provider === "spider_unlimited")) || value.required_proxy !== "webshare" ||
+		value.preflight_required !== true || value.direct_fallback_allowed !== false ||
 		!Number.isInteger(value.max_pages) || (value.max_pages as number) < 1 ||
 		(value.max_pages as number) > 100 || !Number.isInteger(value.deadline_seconds) ||
 		(value.deadline_seconds as number) < 10 || (value.deadline_seconds as number) > 900 ||

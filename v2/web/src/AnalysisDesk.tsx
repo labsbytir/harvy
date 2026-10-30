@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { QueryClient } from "@tanstack/react-query";
 import Alert from "@mui/material/Alert";
 import Accordion from "@mui/material/Accordion";
@@ -14,9 +14,15 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useTheme } from "@mui/material/styles";
-import { AnalyticsDashboard, CubeProvider, DataBrowser, useCubeMeta, type DashboardConfig } from "drizzle-cube/client";
+import type { DashboardConfig } from "drizzle-cube/client/components";
+import { CubeProvider } from "drizzle-cube/client/providers";
+import { useCubeMetaQuery } from "drizzle-cube/client/hooks";
 import "drizzle-cube/client/styles.css";
-import { createDashboard, listDashboards, updateDashboard, type DashboardView, type HarvyContext } from "./api";
+import { createDashboard, deleteDashboard, listDashboards, updateDashboard, type DashboardView, type HarvyContext } from "./api";
+import { isDashboardConfig } from "../../shared/dashboard-config";
+
+const DataBrowser = lazy(() => import("drizzle-cube/client").then(({ DataBrowser }) => ({ default: DataBrowser })));
+const AnalyticsDashboard = lazy(() => import("drizzle-cube/client/components").then(({ AnalyticsDashboard }) => ({ default: AnalyticsDashboard })));
 
 const DEFAULT_CONFIG: DashboardConfig = {
   portlets: [
@@ -28,13 +34,10 @@ const DEFAULT_CONFIG: DashboardConfig = {
   grid: { cols: 12, rowHeight: 80, minW: 2, minH: 2 },
 };
 
-function isDashboardConfig(value: unknown): value is DashboardConfig {
-  return typeof value === "object" && value !== null && !Array.isArray(value) &&
-    Array.isArray((value as Record<string, unknown>).portlets);
-}
+const CUBE_FEATURES = { xlsExport: { enabled: false }, dashboardImportExport: { enabled: false } };
 
 function SchemaExplorer() {
-  const { meta, metaLoading, metaError } = useCubeMeta();
+  const { meta, isLoading: metaLoading, error: metaError } = useCubeMetaQuery();
   const [search, setSearch] = useState("");
   const term = search.trim().toLocaleLowerCase();
   const cubes = meta?.cubes.filter((cube) => {
@@ -46,7 +49,7 @@ function SchemaExplorer() {
   return <Stack spacing={2} aria-label="Analytics schema explorer">
     <TextField size="small" label="Search cubes and fields" value={search} onChange={(event) => setSearch(event.target.value)} />
     {metaLoading && <CircularProgress size={22} aria-label="Loading schema" />}
-    {metaError && <Alert severity="error">{metaError}</Alert>}
+    {metaError && <Alert severity="error">{metaError.message}</Alert>}
     {cubes.map((cube) => {
       const dimensions = cube.dimensions.filter((field) => !term || field.title.toLocaleLowerCase().includes(term) || field.name.toLocaleLowerCase().includes(term));
       const measures = cube.measures.filter((field) => !term || field.title.toLocaleLowerCase().includes(term) || field.name.toLocaleLowerCase().includes(term));
@@ -63,22 +66,28 @@ function SchemaExplorer() {
   </Stack>;
 }
 
-export default function AnalysisDesk({ context, product }: { context: HarvyContext; product: string }) {
+export default function AnalysisDesk({ context, product, openDashboardId }: { context: HarvyContext; product: string; openDashboardId?: string | null }) {
   const theme = useTheme();
-  const queryClient = useMemo(() => new QueryClient(), [context.tenantId, context.workspaceId, context.featureRevision, product]);
+  const queryClient = useMemo(() => new QueryClient(), [context.principalId, context.tenantId, context.workspaceId, context.featureRevision, context.capabilities.join(","), product]);
   const [config, setConfig] = useState<DashboardConfig>(DEFAULT_CONFIG);
   const [title, setTitle] = useState(`${product} analysis`);
+  const [visibility, setVisibility] = useState<"private" | "workspace">("private");
   const [dashboards, setDashboards] = useState<DashboardView[]>([]);
   const [selected, setSelected] = useState<DashboardView | null>(null);
   const [view, setView] = useState<"dashboard" | "records" | "schema">("dashboard");
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
   const canEdit = context.capabilities.includes("dashboards.edit");
+  const canEditDashboard = canEdit && (!selected || selected.can_edit);
 
   useEffect(() => () => queryClient.clear(), [queryClient]);
 
   useEffect(() => {
     let live = true;
+    setSelected(null);
+    setConfig(DEFAULT_CONFIG);
+    setTitle(`${product} analysis`);
+    setVisibility("private");
     void listDashboards().then((result) => {
       if (live) setDashboards(result.results.filter((item) => item.product === product));
     }).catch((error: unknown) => {
@@ -87,14 +96,30 @@ export default function AnalysisDesk({ context, product }: { context: HarvyConte
     return () => { live = false; };
   }, [product]);
 
+  useEffect(() => {
+    if (!openDashboardId) return;
+    const dashboard = dashboards.find((item) => item.id === openDashboardId);
+    if (!dashboard) return;
+    try {
+      const parsed: unknown = JSON.parse(dashboard.config_json);
+      if (!isDashboardConfig<DashboardConfig>(parsed)) return;
+      setConfig(parsed);
+      setTitle(dashboard.title);
+      setVisibility(dashboard.visibility);
+      setSelected(dashboard);
+      setNotice(`Opened ${dashboard.title}.`);
+    } catch { setNotice("This saved dashboard has an unsupported configuration."); }
+  }, [openDashboardId, dashboards]);
+
   const load = (id: string) => {
     const dashboard = dashboards.find((item) => item.id === id);
     if (!dashboard) return;
     try {
       const parsed: unknown = JSON.parse(dashboard.config_json);
-      if (!isDashboardConfig(parsed)) throw new Error("Invalid dashboard config");
+      if (!isDashboardConfig<DashboardConfig>(parsed)) throw new Error("Invalid dashboard config");
       setConfig(parsed);
       setTitle(dashboard.title);
+      setVisibility(dashboard.visibility);
       setSelected(dashboard);
       setNotice(`Loaded ${dashboard.title}.`);
     } catch { setNotice("This saved dashboard has an unsupported configuration."); }
@@ -103,8 +128,8 @@ export default function AnalysisDesk({ context, product }: { context: HarvyConte
   const save = async () => {
     try {
       const record = selected
-        ? await updateDashboard(selected.id, { revision: selected.revision, title: title.trim(), config })
-        : await createDashboard({ title: title.trim(), product, config, visibility: "private" });
+        ? await updateDashboard(selected.id, { revision: selected.revision, title: title.trim(), config, visibility })
+        : await createDashboard({ title: title.trim(), product, config, visibility });
       const result = await listDashboards();
       const updated = result.results.find((item) => item.id === record.id);
       setDashboards(result.results.filter((item) => item.product === product));
@@ -112,6 +137,21 @@ export default function AnalysisDesk({ context, product }: { context: HarvyConte
       setNotice("Dashboard saved.");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Dashboard could not be saved.");
+    }
+  };
+
+  const remove = async () => {
+    if (!selected || !window.confirm(`Delete “${selected.title}”? This removes it from dashboard lists.`)) return;
+    try {
+      await deleteDashboard(selected.id, selected.revision);
+      setDashboards((await listDashboards()).results.filter((item) => item.product === product));
+      setSelected(null);
+      setConfig(DEFAULT_CONFIG);
+      setTitle(`${product} analysis`);
+      setVisibility("private");
+      setNotice("Dashboard deleted.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Dashboard could not be deleted.");
     }
   };
 
@@ -123,7 +163,8 @@ export default function AnalysisDesk({ context, product }: { context: HarvyConte
           <MenuItem value="" disabled>Saved dashboards</MenuItem>
           {dashboards.map((dashboard) => <MenuItem key={dashboard.id} value={dashboard.id}>{dashboard.title}</MenuItem>)}
         </Select>
-        {canEdit && <><TextField size="small" aria-label="Dashboard title" value={title} onChange={(event) => setTitle(event.target.value)} sx={{ width: 190 }} /><Button variant="contained" onClick={() => void save()} disabled={!title.trim()}>Save dashboard</Button></>}
+        {canEdit && <Button size="small" variant="outlined" onClick={() => { setSelected(null); setConfig(DEFAULT_CONFIG); setTitle(`${product} analysis`); setVisibility("private"); }}>New dashboard</Button>}
+        {canEditDashboard && <><TextField size="small" aria-label="Dashboard title" value={title} onChange={(event) => setTitle(event.target.value)} sx={{ width: 190 }} /><Select size="small" value={visibility} onChange={(event) => setVisibility(event.target.value as "private" | "workspace")} aria-label="Dashboard visibility"><MenuItem value="private">Private</MenuItem><MenuItem value="workspace">Share with workspace</MenuItem></Select><Button variant="contained" onClick={() => void save()} disabled={!title.trim()}>Save dashboard</Button>{selected && <Button color="error" onClick={() => void remove()}>Delete dashboard</Button>}</>}
       </Stack>
     </Stack>
     <Stack direction="row" spacing={1} role="tablist" aria-label="Analysis tools">
@@ -155,8 +196,8 @@ export default function AnalysisDesk({ context, product }: { context: HarvyConte
       overflow: "hidden",
       p: { xs: 1, md: 2 },
     }}>
-      <CubeProvider queryClient={queryClient} apiOptions={{ apiUrl: "/api/v1/cube", credentials: "same-origin", headers: { "x-harvy-product": product } }} enableBatching={false}>
-        {loading && view === "dashboard" ? <CircularProgress size={22} aria-label="Loading dashboards" /> : view === "dashboard" ? <AnalyticsDashboard config={config} editable={canEdit} onConfigChange={setConfig} /> : view === "records" ? <DataBrowser defaultCube="Events" defaultPageSize={25} maxHeight="64rem" /> : <SchemaExplorer />}
+      <CubeProvider queryClient={queryClient} features={CUBE_FEATURES} apiOptions={{ apiUrl: "/api/v1/cube", credentials: "same-origin", headers: { "x-harvy-product": product } }} enableBatching={false}>
+        {loading && view === "dashboard" ? <CircularProgress size={22} aria-label="Loading dashboards" /> : view === "dashboard" ? <Suspense fallback={<CircularProgress size={22} aria-label="Loading dashboard" />}><AnalyticsDashboard config={config} editable={canEditDashboard} onConfigChange={setConfig} /></Suspense> : view === "records" ? <Suspense fallback={<CircularProgress size={22} aria-label="Loading data browser" />}><DataBrowser defaultCube="Events" defaultPageSize={25} maxHeight="64rem" /></Suspense> : <SchemaExplorer />}
       </CubeProvider>
     </Box>}
     <Typography variant="caption" color="text.secondary">Every query is tenant-scoped by the server. Charts use only registered fields; saved views remain private to this organization and owner.</Typography>

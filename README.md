@@ -1,6 +1,6 @@
 # Harvy
 
-Harvy is a new web SaaS for source-grounded intelligence and operations. Ontoly is the shared ontology. Tower, Ops, Civic, and Newsk are product contexts; Tower includes a business intelligence desk. HarvyDex provides stable UUIDs, HQL is the shared query contract, and Automation owns connectors and external source access.
+Harvy is a new web SaaS for source-grounded intelligence and operations. Ontoly is the shared ontology. Tower, Ops, Civic, and Newsk are product contexts; Tower includes a business intelligence desk. HarvyDex provides stable UUIDs, HQL is the shared query contract, and the user's VPS-hosted n8n workflows are Harvy's Automation system for approved external source access.
 
 This is the clean V2 repository. It contains Better Auth integration, a tenant-scoped product API, Newsk story/brief flows, Tower/Civic event views, an Ops handoff queue, a Drizzle Cube analytics surface, inactive n8n control templates, and additive D1 migrations. The local preview contains no live customer data. Worker routes, migrations, R2 bindings, product grants, Automation/n8n connections, and approved source configurations are not deployed or verified.
 

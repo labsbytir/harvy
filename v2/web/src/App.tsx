@@ -39,7 +39,7 @@ function MarketingHome() {
     docs: { title: "Harvy documentation", description: "Public product guides are not published yet. The current build and deployment status is shown here; no live integration instructions are implied." },
     contact: { title: "Talk with Harvy", description: "The demo/contact workflow is not connected yet. No message is sent from this preview." },
   }[infoPage as "ontology" | "security" | "docs" | "contact"];
-  const routeDescription = routeProduct ? `${routeProduct.description}${routeProduct.name === "Newsk" ? " Its organization entitlement includes Tower, Ops, and Civic modes." : ""} The local build shows only product-scoped records and labels the service state honestly.` : null;
+  const routeDescription = routeProduct ? `${routeProduct.description} The local build shows only product-scoped records and labels the service state honestly.` : null;
   const home = window.location.pathname === "/";
   const topHref = home ? "#top" : "/";
   const workflowHref = home ? "#workflow" : "/#workflow";

@@ -67,7 +67,7 @@ export function authFeatures(env: HarvyAuthEnv) {
 }
 
 export function createAuth(env: HarvyAuthEnv, ctx?: ExecutionContext, cf?: object): any {
-  const baseURL = env.BETTER_AUTH_URL || "https://harvybot.com";
+  const baseURL = env.BETTER_AUTH_URL || "https://harvy.dev";
   const basePath = env.BETTER_AUTH_BASE_PATH || "/api/better-auth";
   const infraKey = env.BETTER_AUTH_API_KEY;
   const infraEnabled = Boolean(infraKey && env.BETTER_AUTH_INFRA_ENABLED === "true");
@@ -173,7 +173,7 @@ export function createAuth(env: HarvyAuthEnv, ctx?: ExecutionContext, cf?: objec
       baseURL,
       basePath,
       secret: env.BETTER_AUTH_SECRET,
-      trustedOrigins: [origin, "https://harvybot.com", "https://www.harvybot.com", "http://localhost:8903", "http://127.0.0.1:8903"],
+      trustedOrigins: [origin, "https://harvy.dev", "http://localhost:8903", "http://127.0.0.1:8903"],
       socialProviders: socialProviders as any,
       plugins,
       rateLimit: {

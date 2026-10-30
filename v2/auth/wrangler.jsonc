@@ -4,12 +4,12 @@
   "main": "./worker.ts",
   "workers_dev": false,
   "routes": [
-    { "pattern": "harvybot.com/api/better-auth/*", "zone_name": "harvybot.com" }
+    { "pattern": "harvy.dev/api/better-auth/*", "zone_name": "harvy.dev" }
   ],
   "compatibility_date": "2026-10-25",
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
-    "BETTER_AUTH_URL": "https://harvybot.com",
+    "BETTER_AUTH_URL": "https://harvy.dev",
     "BETTER_AUTH_BASE_PATH": "/api/better-auth",
     "BETTER_AUTH_INFRA_ENABLED": "false",
     "BETTER_AUTH_EMAIL_ENABLED": "false",

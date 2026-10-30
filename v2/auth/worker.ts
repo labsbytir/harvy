@@ -19,6 +19,7 @@ export default {
 };
 
 async function resolveActor(request: Request, env: HarvyAuthEnv, auth: ReturnType<typeof createAuth>) {
+  const harvyAdminIds = new Set((env.HARVY_ADMIN_USER_IDS || "").split(",").map((id) => id.trim()).filter(Boolean));
   const session = await auth.api.getSession({ headers: request.headers });
   if (session?.user) {
     const user = session.user as typeof session.user & { role?: string; twoFactorEnabled?: boolean };
@@ -42,6 +43,7 @@ async function resolveActor(request: Request, env: HarvyAuthEnv, auth: ReturnTyp
       workspaceId: tenantId,
       tenantName: organization.name,
       role: member.role,
+      harvyAdmin: harvyAdminIds.has(user.id),
       authMethod: "better_auth_session",
     }, { headers: { "Cache-Control": "no-store" } });
   }
@@ -64,17 +66,18 @@ async function resolveActor(request: Request, env: HarvyAuthEnv, auth: ReturnTyp
     twoFactorEnabled?: number;
   }>();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  const isHarvyAdmin = harvyAdminIds.has(user.id);
   const tenantId = request.headers.get("x-harvy-organization-id");
   if (!tenantId) return Response.json({ error: "Organization scope required." }, { status: 403 });
   const member = await env.HARVY_D1.prepare(
     "SELECT role FROM member WHERE organization_id = ? AND user_id = ? LIMIT 1",
   ).bind(tenantId, user.id).first<{ role: string }>();
-  if (!member) return Response.json({ error: "Organization membership required." }, { status: 403 });
+  if (!member && !isHarvyAdmin) return Response.json({ error: "Organization membership required." }, { status: 403 });
   const organization = await env.HARVY_D1.prepare("SELECT name FROM organization WHERE id = ? LIMIT 1").bind(tenantId).first<{ name: string }>();
   if (!organization) return Response.json({ error: "Organization not found." }, { status: 403 });
   await env.HARVY_D1.prepare("INSERT OR IGNORE INTO harvy_v2_workspaces (id, tenant_id, name, created_at) VALUES (?, ?, ?, ?)")
     .bind(tenantId, tenantId, `${organization.name} workspace`, Date.now()).run();
-  return Response.json({ id: user.id, tenantId, workspaceId: tenantId, tenantName: organization.name, role: member.role }, { headers: { "Cache-Control": "no-store" } });
+  return Response.json({ id: user.id, tenantId, workspaceId: tenantId, tenantName: organization.name, role: member?.role || "platform_admin", harvyAdmin: isHarvyAdmin }, { headers: { "Cache-Control": "no-store" } });
 }
 
 const POLICY_VERSION = "2026-10-v1";

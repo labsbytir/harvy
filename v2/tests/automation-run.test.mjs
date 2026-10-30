@@ -19,6 +19,8 @@ const request = {
 	mode: "scrape",
 	provider: "spider_unlimited",
 	required_proxy: "webshare",
+	preflight_required: true,
+	direct_fallback_allowed: false,
 	max_pages: 1,
 	deadline_seconds: 60,
 	idempotency_key: "job-12345",
@@ -42,6 +44,8 @@ test("Automation envelope rejects missing scope, unbounded work, and unsafe targ
 		{ target_url: "https://localhost/news" },
 		{ target_url: "https://example.org/news#fragment" },
 		{ required_proxy: "none" },
+		{ preflight_required: false },
+		{ direct_fallback_allowed: true },
 		{ provider: "spider_metered" },
 		{ unexpected_field: "value" },
 	]) {
