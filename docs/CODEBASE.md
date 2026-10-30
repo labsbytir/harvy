@@ -23,7 +23,7 @@ This map describes the clean V2 repository. Paths are authoritative; diagrams an
 | Migrations | `v2/migrations/` | database schema source | migration order, adapter, isolation tests |
 | Catalog | `v2/catalog/` | source and API registry/reference ledgers | connector policy, source permissions, provenance rules; connector adapter implementations live in `v2/catalog/connectors/` (batch-1: Open JSON API adapter family — bounded GET/POST to normalized events with provenance, ≤10 records, fetch performed by Automation; unverified) |
 | Workflows | `v2/workflows/` | inactive local Automation starters and examples | `docs/DEVELOPMENT.md`, workflow README |
-| Docs | `docs/` | canonical engineering and operations documentation | `docs/PLAN.md`, `docs/DEVELOPMENT.md` |
+| Docs | `docs/` | canonical engineering and operations documentation | `docs/ROADMAP.md`, `docs/DEVELOPMENT.md` |
 | Tests | `v2/tests/`, `v2/auth/*.test.mjs` | local contract, API, auth, and UI utility checks | the implementation under test |
 
 ## Request path
@@ -58,7 +58,7 @@ The live Automation path is not proven by checked-in templates or local tests.
 - `v2/api/worker.ts` owns health, callbacks, context, entitlements, audit, sources, search, events, stories, briefs, dashboards, runs, and HQL.
 - `v2/api/investigations.ts` owns investigations, investigation items, entities, relationships, and graph reads.
 - `v2/api/analytics.ts` owns cube metadata, normalization, HQL-to-semantic conversion, and execution dispatch.
-- `v2/api/basin-compiler.ts` owns bounded Basin SQL compilation and Basin execution configuration.
+- Analytics queries are served from Postgres/Hyperdrive via `v2/api/analytics.ts`; the Basin compiler was removed when Basin was paused (2026-10-30).
 - `v2/shared/` owns the input/output contracts used by API, web, and Automation boundaries.
 
 ## Caller and test rule

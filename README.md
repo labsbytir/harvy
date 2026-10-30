@@ -8,7 +8,7 @@ This is the clean V2 repository. It contains Better Auth integration, a tenant-s
 
 ## Start here
 
-- [Single master plan](docs/PLAN.md)
+- [Single roadmap](docs/ROADMAP.md)
 - [Engineering standard](docs/DEVELOPMENT.md)
 - [UI and Drizzle Cube specification](docs/UI_SPEC.md)
 - [Build-agent handoff prompt](docs/BUILD_AGENT_PROMPT.md)

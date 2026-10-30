@@ -2,10 +2,11 @@
 
 This directory is the current documentation set for the new Harvy repository.
 
-- [PLAN.md](PLAN.md): one canonical delivery plan and status.
+- [ROADMAP.md](ROADMAP.md): one canonical delivery plan and status.
 - [DEVELOPMENT.md](DEVELOPMENT.md): engineering, data, access, API, AI, and contribution standards.
 - [UI_SPEC.md](UI_SPEC.md): website and product UI components, Drizzle Cube integration, and acceptance.
 - [BUILD_AGENT_PROMPT.md](BUILD_AGENT_PROMPT.md): copyable agent handoff with continuous local checks.
+- [AGENT_LOOP.md](AGENT_LOOP.md): versioned bounded prompt-improvement loop template for collection workflows.
 - [REPO_INDEX.md](REPO_INDEX.md): actual clean-repo contents, target stack, live-resource evidence, and documentation drift.
 - [CONNECTOR_PLAN.md](CONNECTOR_PLAN.md): complete source inputs, adoption rules, priority order, and adapter batches.
 - [SECURITY_VULNERABILITY_REPORTING.md](SECURITY_VULNERABILITY_REPORTING.md): private vulnerability reporting route.

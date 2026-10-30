@@ -202,7 +202,7 @@ public enum Endpoints {
     // MARK: - APNs Device Registration (UNIMPLEMENTED BACKEND STUB)
     //
     // TODO: Device token registration endpoint `POST /api/v1/devices/apns`
-    // was planned in docs/IOS_APP_PLAN.md section 3.4, but does NOT currently exist
+    // was planned in docs/IOS_APP_ROADMAP.md section 3.4, but does NOT currently exist
     // in `v2/api/worker.ts`. Do not call until the backend route is implemented.
     public struct DeviceRegistrationRequest: Codable, Sendable {
         public let deviceToken: String

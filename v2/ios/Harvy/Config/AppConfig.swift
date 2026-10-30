@@ -19,7 +19,7 @@ public struct AppConfig: Sendable {
     /// Primary production domain as specified in architecture directives.
     public static let productionBaseURL = URL(string: "https://harvy.dev") ?? URL(fileURLWithPath: "/")
 
-    /// Staging/dev tunnel domain as specified in docs/IOS_APP_PLAN.md section 3.2.
+    /// Staging/dev tunnel domain as specified in docs/IOS_APP_ROADMAP.md section 3.2.
     public static let developmentBaseURL = URL(string: "https://dev.harvy.dev") ?? productionBaseURL
 
     /// Root base URL depending on current environment build setting.

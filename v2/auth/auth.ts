@@ -1,5 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
+import { drizzle as drizzlePostgres } from "drizzle-orm/node-postgres";
+import { PostgresDatabase } from "../shared/sql-database.ts";
 import {
   admin,
   anonymous,
@@ -202,6 +204,18 @@ export function createAuth(env: HarvyAuthEnv, ctx?: ExecutionContext, cf?: objec
       options,
     ) as any);
   }
+  if (env.HYPERDRIVE_PRIVATE?.connectionString) {
+    // Production: real Better Auth adapter over PostgreSQL via Hyperdrive, same
+    // node-postgres client pattern as v2/api/analytics.ts. Default table mapping
+    // matches v2/migrations/0004_better_auth.sql.
+    const pg = new PostgresDatabase(env.HYPERDRIVE_PRIVATE.connectionString);
+    return betterAuth({
+      ...options,
+      database: drizzleAdapter(drizzlePostgres(pg.nativeClient), { provider: "pg" }),
+    } as any);
+  }
+  if (ctx) throw new Error("No database binding: set HYPERDRIVE_PRIVATE (prod) or HARVY_D1 (local/test).");
+  // CLI schema generation only (schema.config.ts); never runs in the worker and never connects.
   return betterAuth({
     ...options,
     database: drizzleAdapter({} as any, { provider: "sqlite" }),

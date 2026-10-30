@@ -30,7 +30,7 @@ A request may *narrow* these (by choosing a product) but never *widen* them. Cro
 - **Event** — the unit of intelligence: a title, summary, status (`new`, `reviewing`, `saved`, `closed`), optional source-provided coordinates, and a revision counter. Events are what analysts triage and what [[TUTORIAL|integrations]] poll.
 - **Evidence** — a captured source observation attached to an event: publisher, source URL, headline, excerpt, capture time, optional artifact ID. Every claim an event makes should trace to evidence; evidence-less handoffs are rejected by design.
 - **Artifact** — persisted raw/processed material referenced by an evidence row. The `artifact_id` is metadata; it is not a public download URL.
-- **Source** — a registered, approved monitoring configuration (target, connector, mode, page budget). Only approved, enabled sources can be collected. Unregistered targets do not exist as far as the API is concerned.
+- **Source** — a registered, approved monitoring configuration (target, workflow, mode, page budget). Only approved, enabled sources can be collected. Unregistered targets do not exist as far as the API is concerned.
 
 Provenance rule that runs through everything ([[DATASET_ENGINEERING|Dataset engineering]]): a name match is not an identity claim; observed, inferred and disputed must stay distinguishable.
 

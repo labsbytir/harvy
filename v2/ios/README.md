@@ -91,11 +91,11 @@ All endpoints, query parameters, and payload structures match the existing code:
 ## 5. What is Stubbed
 
 1. **APNs Device Registration (`POST /api/v1/devices/apns`)**:
-   - Planned in `docs/IOS_APP_PLAN.md` Section 3.4 for remote push notification registration.
+   - Planned in `docs/IOS_APP_ROADMAP.md` Section 3.4 for remote push notification registration.
    - **Backend Status:** Route does NOT exist in `v2/api/worker.ts`.
    - **Client Status:** Staged in `Endpoints.swift` with a `// TODO` annotation. The client does not call it to avoid 404 runtime errors.
 2. **Offline Outbox Mutation Sync (SwiftData)**:
-   - Planned in `docs/IOS_APP_PLAN.md` Section 3.3 for queuing offline status changes.
+   - Planned in `docs/IOS_APP_ROADMAP.md` Section 3.3 for queuing offline status changes.
    - Currently, the app performs live async updates via `Endpoints.updateEvent`. SwiftData model persistence is deferred until the production backend deployment is live.
 
 ---

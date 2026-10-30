@@ -21,7 +21,7 @@ Every record must carry, directly or through a manifest:
 - source URL or registered API identity;
 - publisher/source label and collection timestamp;
 - observed time range when the source exposes one;
-- collection method and connector/source scope ID;
+- collection method and workflow/source scope ID;
 - raw artifact reference and content hash when persisted;
 - normalized schema version and configuration revision;
 - coverage gaps, limitations, and error/partial status;
@@ -78,4 +78,4 @@ Before a source is adopted, verify two bounded successful runs, idempotent repla
 
 - [[DEVELOPER_STANDARDS|Developer standards]]
 - [[CODEBASE|Codebase map]]
-- See repository `docs/DEVELOPMENT.md` for detailed data and connector requirements.
+- See repository `docs/DEVELOPMENT.md` for detailed data and workflow requirements.
