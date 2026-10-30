@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "kind": "bulk_source",
+  "title": "CourtListener public bulk data bucket (verified listable + downloadable, no proxy needed)",
+  "bucket": "com-courtlistener-storage.s3-us-west-2.amazonaws.com",
+  "list_endpoint": "https://com-courtlistener-storage.s3-us-west-2.amazonaws.com/?list-type=2&prefix=bulk-data/&max-keys=1000 (paginate with continuation-token)",
+  "verified_2026_10_30": "listed 1000+ keys from the VPS directly; AWS S3, NOT Cloudflare-fronted, no proxy required",
+  "families_observed": ["citation-map", "citations", "courts", "dockets", "financial-disclosures(+investments/agreements/debts/gifts/positions/reimbursements/spousal-income/non-investment-income)", "fjc-integrated-database", "opinion-clusters", "opinions", "oral-arguments", "originating-court-information", "parentheticals", "people-db-*(people, educations, positions, races, retention-events, schools, political-affiliations)", "eyecite", "load-bulk-data-*.sh"],
+  "cadence": "monthly dumps, dated 2022-08 .. 2026-09-30, format <family>-YYYY-MM-DD.csv.bz2",
+  "plan": {
+    "proof": "latest month of courts- + dockets- + citation-map- (small files)",
+    "expansion": "all families, all months, checkpointed per file in a dedupe data table, weekly schedule (dumps are monthly)",
+    "pipeline": "list -> download .csv.bz2 to harvy-raw courtlistener/bulk-data/<file> -> bunzip2 -> CSV parse -> normalized JSON to harvy-artifacts -> Basin evidence source_id=src_courtlistener_bulk, product civic/tower, provenance = s3 key + url -> dedupe sha1(key)"
+  },
+  "notes": "Replaces PACER per ledger n=27. The courtlistener.com WEBSITE is CF-fronted (403 via fixed datacenter proxy) — use Spider for any site scraping; the S3 bucket needs no proxy at all."
+}

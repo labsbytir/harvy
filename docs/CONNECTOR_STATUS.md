@@ -480,3 +480,22 @@ docs/REPO_INDEX.md, docs/PLAN.md (annotated), v2/catalog/reference/official-sour
 v2/catalog/reference/harvy-connector-scopes.json (sam-gov: enabled=true, excluded=false,
 directive_change recorded). Telegram/JudyRecords/Truth Social remain excluded.
 Onboarding gate: SAM_GOV_API_KEY (api.data.gov) into secrets, then bounded verification before publish.
+
+| source | workflow | exec | Basin SQL | R2 key | idempotent | published | blockers |
+|---|---|---|---|---|---|---|---|
+| crtsh | VWIoiffIlPjtjjpa "Harvy — crt.sh Certificate Transparency Ingestion" (12 nodes; reused pre-existing draft, no duplicate; publisher/captured_at/description fixed) | 107 real manual success (live endpoint returned [] — crt.sh has ZERO %.harvy.dev certs today, verified direct+proxy+control query %.example.com=27KB); 124 pinned-input test: real S3+Basin+dataTable writes for 3 sample certs; 134 idempotency re-run: Filter emitted 0, S3/Basin never fired | count=3 (src_crtsh_99990000001/2/3 in default.evidence; SQL visibility lag ~3min after committed:1) | crtsh/99990000001.json, crtsh/99990000002.json, crtsh/99990000003.json in harvy-artifacts verified via wrangler r2 object get --remote | proven (exec 134, table stayed 3) | yes (activeVersionId 39dab761-741d-4ed6-a1b0-f04c9764155d) | LIVE SOURCE EMPTY: crt.sh returns [] for %.harvy.dev (source-side, not workflow); WEBSHARE_PROXY_URL started returning 407 "Not authenticated" ~10:39 UTC (same outage as unhcr/owid_datasets; worked at 10:27 exec 107) — next 6h cron run will fail at Fetch until proxy creds refreshed |
+
+Design: schedule (6h + manual) -> GET crt.sh ?q=%.harvy.dev&output=json&limit=50 via $vars.WEBSHARE_PROXY_URL (timeout 90s) -> Normalize (dedupe by id, event_id=src_crtsh_<id>, publisher="crt.sh", headline="common_name (issuer: issuer_name)", product=ops, tenant/workspace=shared, captured_at=not_before ISO) -> dedupe crtsh_ingested (jhzHdCHVgXAkTQFg, rowNotExists) -> S3 harvy-artifacts/crtsh/<id>.json (contentType application/json) -> Basin POST (Bearer $vars.BASIN_SEND_TOKEN, 9-col body) -> Verify committed>=1 (throws otherwise) -> mark ingested; Error Trigger -> Format Error -> crtsh_errors (OsWRWehoyiFmmxmq).
+
+## 2026-10-30 ~10:45 UTC — CourtListener bulk via public S3 bucket (supervisor)
+
+User was right: com-courtlistener-storage.s3-us-west-2.amazonaws.com bulk-data/ is fully public and
+listable/downloadable DIRECT from the VPS (AWS S3, not CF-fronted, no proxy needed — verified 1000+
+keys). Families: courts-, dockets-, opinions-, opinion-clusters-, citation-map-, parentheticals-,
+oral-arguments-, people-db-*, financial-disclosures-*, fjc-integrated-database-, eyecite-, monthly
+.csv.bz2 dumps 2022-08..2026-09-30. (The courtlistener.com SITE is CF-fronted and 403s the fixed
+datacenter proxy — Spider only for site scraping; S3 bucket needs nothing.)
+Catalog: v2/catalog/reference/courtlistener-bulk.json. Builder dispatched:
+ses_e7390db69ffekwFlOtc9JinXmv (mimo-flash) — proof: latest month of courts/dockets/citation-map;
+expansion: all families all months, weekly schedule, dedupe sha1(key), raw bz2 -> harvy-raw,
+parsed -> harvy-artifacts -> Basin src_courtlistener_bulk (product civic). PACER stays replaced by this.
