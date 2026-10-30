@@ -418,3 +418,28 @@ WEBSHARE_PROXY_URL_RESIDENTIAL for CF-fronted targets; (b) route CF-fronted targ
 reputation-flagged IP, so retry loops cannot fix CF blocks here. Rotation only exists on the
 rotating-residential backbone (p.webshare.io:80, per-request exit) — use that var for CF-fronted
 targets, or Spider Cloud.
+
+## 2026-10-30 ~10:35 UTC — wayback PUBLISHED
+
+| source | workflow | exec | Basin SQL | R2 key | idempotent | published | blockers |
+|---|---|---|---|---|---|---|---|
+| wayback | L84UojEd9WxxFDzT "Harvy — wayback Ingestion" | 108 success | count=1 (src_wayback) | wayback/src_wayback_org,gdacs)/_20051023120259.json verified | re-run 115 success, 0 items after Filter, count stayed 1 | yes (activeVersionId b5e2755e-26b4-47ce-a3f7-124f8e732aa8) | none |
+| gadm | IzejENNoBmFVKHt3 "Harvy — gadm Ingestion" | 109 success (exec 99 earlier crashed at "Fetch GADM States" NodeCrashedError/OOM during 09:36 outage) | `SELECT count(*) FROM default.evidence WHERE source_id='src_gadm'` = 25 | gadm/src_gadm_USA.1_1.json verified (243B valid JSON, GID_1=USA.1_1) | re-run 116 success, 0 items after Filter Already Ingested, count stayed 25 | yes (activeVersionId ba794962-d62c-46de-919e-8de014368719) | none |
+
+
+## 2026-10-30 ~10:39 UTC — noaa_spc PUBLISHED
+
+| source | workflow | exec | Basin SQL | R2 key | idempotent | published | blockers |
+|---|---|---|---|---|---|---|---|
+| noaa_spc | PqY9l7ifqJ0ZYnBc "Harvy — noaa_spc Ingestion" | 111 success (38 items chain-verified) | count=38 (src_noaa_spc) | noaa_spc/src_noaa_spc_urn_oid_2.49.0.1.840.0.2fbaf806a3cbbe13acd88a6e1ed558ed4b833529.001.1.json verified (3855 B real warning) | re-run 118 success, 0 items after Filter, count stayed 38 | yes (activeVersionId 93d7ff33-bae7-4621-b845-da3bd36310b2) | none — fetch uses api.weather.gov /alerts?event=Tornado%20Warning (7-day window; `limit` param rejected 400 and /alerts/active returned 0 features at quiet period) |
+
+## 2026-10-30 ~10:30 UTC — 10 priority datasets queued (supervisor)
+
+Catalog: v2/catalog/reference/priority-datasets.json (8 catalog.data.gov + NASA snowmodel + CDI).
+Access verified from VPS: catalog.data.gov CKAN API is DEAD (404 all /api/3/action/*), but dataset
+HTML pages are live and embed direct resource URLs (CDI -> data.cdc.gov Socrata export.csv/json).
+data.nasa.gov CKAN API alive (snowmodel package_show success, 8 resources). .gov sites are NOT
+CF-fronted -> fetch DIRECT from VPS, no proxy (the fixed Webshare IP can't even CONNECT to
+catalog.data.gov). Builder: ses_e739810fdffeajsK9FSf44R4nZ (mimo-flash). Per-dataset source_ids
+src_datagov_*/src_nasa_snowmodel_1980_2020; raw->harvy-raw, normalized->harvy-artifacts, Basin
+9-col evidence, dedupe sha1(slug+resource_url), 6h schedule, publish-on-proof.

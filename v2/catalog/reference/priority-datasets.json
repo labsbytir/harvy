@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "kind": "priority_dataset_queue",
+  "title": "Priority structured datasets to onboard (user-supplied 2026-10-30)",
+  "notes": "catalog.data.gov CKAN API (/api/3/action/*) is DISABLED (404) — dataset HTML pages are live and embed direct resource URLs (e.g. data.cdc.gov Socrata exports). data.nasa.gov CKAN API is alive. Fetch pages DIRECT from the VPS (no proxy needed; .gov not CF-fronted).",
+  "entries": [
+    { "id": "src_datagov_ghg_naics", "slug": "supply-chain-greenhouse-gas-emission-factors-v1-3-by-naics-6", "page": "https://catalog.data.gov/dataset/supply-chain-greenhouse-gas-emission-factors-v1-3-by-naics-6", "portal": "catalog.data.gov", "topic": "climate/emissions" },
+    { "id": "src_datagov_disability_fy25", "slug": "fy-2025-disability-compensation-recipients-by-county", "page": "https://catalog.data.gov/dataset/fy-2025-disability-compensation-recipients-by-county", "portal": "catalog.data.gov", "topic": "veterans/benefits" },
+    { "id": "src_datagov_jpl_sbdb", "slug": "jpl-small-body-database-browser", "page": "https://catalog.data.gov/dataset/jpl-small-body-database-browser", "portal": "catalog.data.gov", "topic": "space" },
+    { "id": "src_datagov_crdc_harassment_1516", "slug": "2015-16-harassment-or-bullying-by-basis-category-civil-rights-data-collection", "page": "https://catalog.data.gov/dataset/2015-16-harassment-or-bullying-by-basis-category-civil-rights-data-collection", "portal": "catalog.data.gov", "topic": "civil rights" },
+    { "id": "src_datagov_iolp", "slug": "inventory-of-owned-and-leased-properties-iolp", "page": "https://catalog.data.gov/dataset/inventory-of-owned-and-leased-properties-iolp", "portal": "catalog.data.gov", "topic": "property/assets" },
+    { "id": "src_datagov_nps_2024", "slug": "nps-visitor-use-statistics-data-package-2024", "page": "https://catalog.data.gov/dataset/nps-visitor-use-statistics-data-package-2024", "portal": "catalog.data.gov", "topic": "parks/visitation" },
+    { "id": "src_datagov_hts_2025", "slug": "harmonized-tariff-schedule-of-the-united-states-2025", "page": "https://catalog.data.gov/dataset/harmonized-tariff-schedule-of-the-united-states-2025", "portal": "catalog.data.gov", "topic": "trade/tariffs" },
+    { "id": "src_datagov_cdi", "slug": "u-s-chronic-disease-indicators", "page": "https://catalog.data.gov/dataset/u-s-chronic-disease-indicators", "portal": "catalog.data.gov", "topic": "health", "resources_verified": ["https://data.cdc.gov/api/v3/views/hksd-2xuw/export.csv?accessType=DOWNLOAD", "https://data.cdc.gov/api/v3/views/hksd-2xuw/query.json?accessType=DOWNLOAD"] },
+    { "id": "src_datagov_crdc_arrests_1718", "slug": "2017-18-arrests-civil-rights-data-collection", "page": "https://catalog.data.gov/dataset/2017-18-arrests-civil-rights-data-collection", "portal": "catalog.data.gov", "topic": "civil rights" },
+    { "id": "src_nasa_snowmodel_1980_2020", "slug": "daily-snowmodel-outputs-covering-the-above-core-domain-3-km-resolution-1980-2020-bc00e", "page": "https://data.nasa.gov/dataset/daily-snowmodel-outputs-covering-the-above-core-domain-3-km-resolution-1980-2020-bc00e", "portal": "data.nasa.gov", "topic": "cryosphere/weather history", "api": "CKAN package_show works (8 resources) — bound downloads, sample large grids" }
+  ]
+}
