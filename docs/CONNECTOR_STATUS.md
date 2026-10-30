@@ -262,3 +262,24 @@ Workflow `8q9kYIHCQqoB7xMk` "GDACS Continuous Ingestion" (inactive; last run exe
   _search 401), so verification must happen in the OpenObserve UI (Traces tab) or with a
   read-capable API key.
 - Correlation: execution id (n8n logs, service=n8n) <-> Basin source_id per connector.
+
+## 2026-10-30 ~09:45 UTC — UNHCR (src_unhcr) BLOCKED at build (builder)
+
+- API probed OK (no key): /years/ latest-with-data=2025; per-country via /population/?year=2025&coo=<ISO> (coa= and bulk dump unsupported); /countries/?limit=500 returns all 232 in one page. Full workflow design prepared (mirror of proven PowerOutage PPMnjFEv8uG02ZDe; 9-col Civic schema; proxy $vars.WEBSHARE_PROXY_URL; S3 harvy-artifacts/unhcr/<id>.json; Basin DIRECT; dedupe unhcr_ingested).
+- BLOCKER: connector.harvy.dev n8n MCP failed 429 -> HTTP 502 (origin_bad_gateway) -> persistent "requires user authorization"; automation server then withdrawn from the tool catalog. No tools.automation.* reachable. REST API is disallowed, so create/validate/execute/publish could not run. Nothing created, nothing published. Needs user to re-authorize the n8n MCP, then rebuild from session note #18.
+
+## 2026-10-30 ~09:50 UTC — Cloudflare/proxy blocking audit (supervisor)
+
+Question: is Cloudflare blocking agent traffic via the proxies?
+Answer, from evidence:
+- OUR zone (harvy.dev): connector.harvy.dev is proxied (CF edge IPs). No custom WAF rules,
+  no IP access rules, no UA rules (verified via cf CLI). n8n logs show zero 403/blocked vs harvy.dev
+  in last 2h. -> our Cloudflare is NOT blocking the agents.
+- TARGET sites via Webshare proxy (egress 9.249.21.58, datacenter IP): 1454x HTTP 200 across
+  executions; 15 executions saw cf-ray response headers (CF-fronted sites answering OK through proxy).
+  BUT 6x 403 and 1 Cloudflare "Request blocked" page: exec 93 = CourtListener bulk (courtlistener.com,
+  CF-fronted, blocked the proxy IP); execs 94/95 = Reddit (403, datacenter IP block).
+- Conclusion: target-side Cloudflare Bot Fight Mode / IP reputation blocks the datacenter proxy IP
+  for SOME targets (CourtListener, Reddit), not most. Fix: route CF-fronted targets through
+  Spider Cloud unlimited (approved path) instead of raw proxy HTTP, or keep those sources
+  proxy-free/direct with rate limits.
