@@ -130,6 +130,12 @@ Workflow `8q9kYIHCQqoB7xMk` "GDACS Continuous Ingestion" (inactive; last run exe
 - Basin ~09:45: 8+ sources incl. src_aemo_outages 25 (new), gdacs ~296, nws 26, fema/arcgis/usgs 25 each, ckan/datagov 20 each, diag 3.
 - docs pushed to main (8668174, 4e7c450).
 
+## 2026-10-30 ~09:55 UTC — reddit proxy verified + published
+
+- Reddit 6NrHM5uC0ePlOhP3: exec 95 — Validate Config SUCCESS (proxy regex fix worked), Check Proxy SUCCESS (egress via $vars.WEBSHARE_PROXY_URL confirmed), Scrape got HTTP 403 from Spider (Reddit blocks scrapers — upstream block, handled honestly by Handle Spider Reply, no paid fallback). Published (active:true) per supervisor directive; schedule runs will log the 403s.
+- Fresh wave: 20 builders on opencodex/mimo/mimo-v2.6-flash (see previous entry for sessionIds). 12 idle-succeeded gemini builders re-pinged with VERIFY+PUBLISH.
+- Basin ~09:45: gdacs ~296, nws 26, fema 25, arcgis 25, usgs 25, aemo 25, ckan 20, datagov 20, diag 3 (~476 rows, 8 sources). harvy-raw / harvy-production still 0 objects (CourtListener verify pending).
+
 ## Open gaps
 
 - AUTOMATION_URL / AUTOMATION_DISPATCH_TOKEN / AUTOMATION_CALLBACK_SECRET unset on harvy-api Worker -> /api/v1/runs 503. n8n runs standalone for now.
