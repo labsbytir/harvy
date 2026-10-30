@@ -2,7 +2,7 @@
 
 **Document Version:** 1.0.0  
 **Target Platform:** iOS 17.0+ (iPhone)  
-**Repository Path:** `docs/IOS_APP_PLAN.md`  
+**Repository Path:** `docs/IOS_APP_ROADMAP.md`
 **Status:** Planning Document (Architecture & Execution Roadmap)  
 
 ---

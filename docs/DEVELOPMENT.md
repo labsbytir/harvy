@@ -1,12 +1,14 @@
 # Harvy engineering and contribution standard
 
-Status: adopted target requirements, with enforcement gaps listed below. MUST denotes a release requirement; SHOULD requires a documented reason to depart. A documented gate is not an implemented check. This file is the canonical engineering standard for all Harvy products, extensions, human contributors, and agents. Product direction remains in the workspace's `HARVY-ARCHITECTURE.md`; implementation work is tracked in `docs/PLAN.md`. Keep decisions here instead of creating competing standards or plans.
+Status: adopted target requirements, with enforcement gaps listed below. MUST denotes a release requirement; SHOULD requires a documented reason to depart. A documented gate is not an implemented check. This file is the canonical engineering standard for all Harvy products, extensions, human contributors, and agents. Product direction and architecture live in `docs/ROADMAP.md` (the former root `HARVY-ARCHITECTURE.md` is merged there as an appendix); implementation work is tracked in `docs/ROADMAP.md`. Keep decisions here instead of creating competing standards or plans.
+
+**Terminology (2026-10-30):** source integrations are called **workflows** in docs, UI, comments, and paths; legacy identifiers (`connector_id`, `src_<slug>`, `v2/catalog/connectors/` reference code) stay until a reviewed migration. Never write artifacts, SDK files, or downloads to the repo root — workflow definitions belong in `v2/workflows/`; R2 is the only artifact store.
 
 ## 1. Repository, issues, branches, forks, and merges
 
 Harvy V2 is the runtime base. The OpenTIR and Civic checkouts are reference sources; importing their behavior requires contract mapping and license review. Develop within the actual Git root returned by `git rev-parse --show-toplevel`; do not hard-code a developer's filesystem path. Keep production code under `v2/`.
 
-- Every substantive change MUST reference an issue or recorded user task containing the problem, desired behavior, acceptance criteria, affected contracts, data/access impact, owner, and exclusions. Security reports use the private reporting procedure rather than public issue payloads. Existing bug, connector, API, and feature issue forms remain the entry points.
+- Every substantive change MUST reference an issue or recorded user task containing the problem, desired behavior, acceptance criteria, affected contracts, data/access impact, owner, and exclusions. Security reports use the private reporting procedure rather than public issue payloads. Existing bug, workflow, API, and feature issue forms remain the entry points.
 - Keep `main` releasable. Use short-lived `codex/<issue-or-task>-<slug>` branches for agent work and `feat/`, `fix/`, or `docs/` for other contributors. Each branch has one accountable owner. Use separate worktrees for parallel write tasks and record their base revisions.
 - Forks are for external contributions or intentional experiments, with a documented upstream/base and license provenance. They MUST NOT become competing production cores. Fork PRs receive no production secrets, privileged runners, or write tokens. Never run untrusted fork code with privileged `pull_request_target` credentials.
 - A PR has one coherent outcome, a linked task, a description of observed behavior, affected contracts, evidence, migration/recovery instructions, and documentation changes. Open a draft while incomplete; unresolved required checks mean it remains unmergeable.
@@ -41,16 +43,16 @@ CONTRIBUTING.md                  # submission entry point
 .github/                        # PR/issue templates, ownership, existing CI
 docs/                           # canonical human and machine-readable documentation sources
   DEVELOPMENT.md                # this standard
-  PLAN.md                       # single implementation backlog and decision status
+  ROADMAP.md                       # single implementation backlog and decision status
 v2/
   shared/
     schemas/                    # config, manifests, records, events, HQL, tool schemas
     src/                        # shared TS libraries, config, generated client entry points
     python/                     # generated Python models and shared adapters
   catalog/
-    connectors/<connector>/     # manifest, config schema, adapter source, fixtures
+    workflows/<workflow>/     # manifest, config schema, adapter source, fixtures
     components/                 # product/domain/agent/tool registrations
-  automation/                   # external-server executor and connector host
+  automation/                   # external-server executor and workflow host
   api/                          # Harvy product API Worker; target for Newsk
   auth/                        # existing Better Auth integration
   ontology/                    # Ontoly model, actions, queries
@@ -69,7 +71,7 @@ Every module follows its registered contract and declares exports, dependencies,
 
 ## 4. Core database and safe table expansion
 
-Production topology: Cloudflare hosts the web, auth, and API Workers plus R2; PostgreSQL runs on the user's database server and is reached from Workers through Hyperdrive; the separate VPS n8n system executes connector workflows. D1 is only the current local/test adapter, not the production authority. The Wrangler configs now declare a `HYPERDRIVE_PRIVATE` binding (`v2/auth/wrangler.jsonc:18-23`, `v2/api/wrangler.jsonc:20-25`) and `v2/shared/sql-database.ts:160-187` implements a tested dedicated-client batch path, but the Better Auth adapter is still D1-bound (`v2/auth/auth.ts:199-208` returns an empty `drizzleAdapter` when `HARVY_D1` is absent) and no database connection is provisioned or verified, so auth/API deployment remains blocked until the adapter, migrations, and secure connection are implemented. Do not deploy a second D1 authority. [Hyperdrive documentation](https://developers.cloudflare.com/hyperdrive/)
+Production topology: Cloudflare hosts the web, auth, and API Workers plus R2; PostgreSQL runs on the user's database server and is reached from Workers through Hyperdrive; the separate VPS n8n system executes workflow workflows. D1 is only the current local/test adapter, not the production authority. The Wrangler configs now declare a `HYPERDRIVE_PRIVATE` binding (`v2/auth/wrangler.jsonc:18-23`, `v2/api/wrangler.jsonc:20-25`) and `v2/shared/sql-database.ts:160-187` implements a tested dedicated-client batch path, but the Better Auth adapter is still D1-bound (`v2/auth/auth.ts:199-208` returns an empty `drizzleAdapter` when `HARVY_D1` is absent) and no database connection is provisioned or verified, so auth/API deployment remains blocked until the adapter, migrations, and secure connection are implemented. Do not deploy a second D1 authority. [Hyperdrive documentation](https://developers.cloudflare.com/hyperdrive/)
 
 Partition the target database by ownership. Table names below are a logical contract to implement, not a migration to run against existing D1:
 
@@ -144,13 +146,13 @@ Only source rows with an approved status, approver, and timestamp can be enabled
 
 HQL is a versioned, typed JSON query document over registered Ontoly semantics. It declares object types, selected properties, predicates, relationships, measures, grouping, ordering, page cursor, snapshot/as-of requirements, and resource bounds. The grammar permits only registered operators/functions; no raw SQL strings, arbitrary code, tenant overrides, or model-generated executable fragments. Drizzle Cube builds these documents. Backend compilers map them to transactional or analytical engines after permission filtering. Reject unsupported cross-engine joins explicitly until a bounded, governed federation implementation exists.
 
-The Harvy CLI is a client of the same API/domain operations, not a customer-data export surface. Target commands may include `harvy auth`, `harvy connectors`, `harvy runs`, `harvy features`, and `harvy doctor`; do not add query-result file/NDJSON output or data download commands. These names are a CLI specification, not currently installed commands. Require explicit environment selection for writes, progress on stderr, stable exit codes, pagination, cancellation where supported, and dry-run support for consequential operations. Credentials come from an approved OS credential store or secret injection, never source files or CLI arguments. CLI authentication cannot bypass tenant policy or protected deployment approval.
+The Harvy CLI is a client of the same API/domain operations, not a customer-data export surface. Target commands may include `harvy auth`, `harvy workflows`, `harvy runs`, `harvy features`, and `harvy doctor`; do not add query-result file/NDJSON output or data download commands. These names are a CLI specification, not currently installed commands. Require explicit environment selection for writes, progress on stderr, stable exit codes, pagination, cancellation where supported, and dry-run support for consequential operations. Credentials come from an approved OS credential store or secret injection, never source files or CLI arguments. CLI authentication cannot bypass tenant policy or protected deployment approval.
 
 ## 8. Multi-tenancy and granular permissions
 
 An organization is the customer tenant. Workspaces subdivide a tenant; development/staging/production are deployment environments and MUST NOT be overloaded as customer IDs. Explicitly approved shared Ontoly data may be read by authorized tenants; their private objects, overlays, monitors, uploads, prompts, notes, and derived outputs remain private. A matching public entity name never promotes private data into the shared dataset.
 
-Use RBAC for job roles and granular resource/attribute policy for specific actions. Suggested built-in role bundles are tenant owner, tenant admin, editor/analyst, viewer, and service operator. They map to registered permissions such as `ontoly.object.read`, `ontoly.object.update`, `connector.run`, `member.manage`, and `feature.manage`; no customer-data export permission exists. The bundles must not hard-code product-specific superuser bypasses.
+Use RBAC for job roles and granular resource/attribute policy for specific actions. Suggested built-in role bundles are tenant owner, tenant admin, editor/analyst, viewer, and service operator. They map to registered permissions such as `ontoly.object.read`, `ontoly.object.update`, `workflow.run`, `member.manage`, and `feature.manage`; no customer-data export permission exists. The bundles must not hard-code product-specific superuser bypasses.
 
 An authorization decision evaluates principal, tenant membership, workspace scope, action, object/property access, source restrictions, and applicable policy conditions. Missing grants deny access; explicit deny overrides allow. Field masking, row filters, and relationship traversal apply to HQL, APIs, CLI, MCP, agents, caches, and background tasks. No customer-data export is allowed through any of these surfaces. Organization admin status does not automatically grant platform administration or provider secrets.
 
@@ -170,9 +172,9 @@ Cloudflare Secrets Store is the configured managed secret source; workloads rece
 
 Separate development, staging, production, platform, and tenant credentials. Use least privilege, expiry, rotation with overlap where necessary, audited retrieval, and immediate revocation procedures. Store a non-reversible verifier for Harvy-issued API keys; third-party credentials that must be recovered require managed encryption/secret storage. Keep secret material out of client bundles, docs, traces, prompts, compression caches, exception strings, and URLs. Secret scans run before submission and in CI. Never print a proxy URL containing credentials during diagnosis.
 
-**Every crawl/scrape/link-discovery run MUST pass the VPS n8n workflow's Spider and Webshare preflight before starting.** The run contract requires preflight and sets `direct_fallback_allowed: false`; the workflow must reject any request without verified proxy egress. Check connector registration, bounded target/scope, source access, secret references, Spider Unlimited route, concurrency/rate allowance, validated proxy configuration, and a safe proxy connectivity check. Use `/unlimited/scrape`, `/unlimited/crawl`, or `/unlimited/links` as applicable; honor `429` and retry guidance. No silent fallback to direct crawling, another provider, or metered endpoints. Spider AI requests use their separately configured account limits. [Spider Unlimited](https://spider.cloud/docs/api/unlimited/), [Webshare documentation](https://apidocs.webshare.io/)
+**Every crawl/scrape/link-discovery run MUST pass the VPS n8n workflow's Spider and Webshare preflight before starting.** The run contract requires preflight and sets `direct_fallback_allowed: false`; the workflow must reject any request without verified proxy egress. Check workflow registration, bounded target/scope, source access, secret references, Spider Unlimited route, concurrency/rate allowance, validated proxy configuration, and a safe proxy connectivity check. Use `/unlimited/scrape`, `/unlimited/crawl`, or `/unlimited/links` as applicable; honor `429` and retry guidance. No silent fallback to direct crawling, another provider, or metered endpoints. Spider AI requests use their separately configured account limits. [Spider Unlimited](https://spider.cloud/docs/api/unlimited/), [Webshare documentation](https://apidocs.webshare.io/)
 
-Distinguish the client-to-Spider connection from Spider-to-target egress. Routing the API call through Webshare does not prove Spider's crawler used Webshare. Record the required proxy scope, confirm supported Spider custom-proxy configuration for target requests, and verify the applicable egress path before enablement. If it cannot meet the mandate, report a blocked connector and resolve configuration; do not silently bypass it. Official third-party API connectors also require the approved Webshare path but need not send API payloads through a crawl endpoint. Proxies do not bypass source permissions or rate controls.
+Distinguish the client-to-Spider connection from Spider-to-target egress. Routing the API call through Webshare does not prove Spider's crawler used Webshare. Record the required proxy scope, confirm supported Spider custom-proxy configuration for target requests, and verify the applicable egress path before enablement. If it cannot meet the mandate, report a blocked workflow and resolve configuration; do not silently bypass it. Official third-party API workflows also require the approved Webshare path but need not send API payloads through a crawl endpoint. Proxies do not bypass source permissions or rate controls.
 
 ## 11. AI routing and agent minimum standard
 
@@ -264,11 +266,11 @@ As inspected on 2026-10-29: `npm run check:local` runs main/API/auth/client type
 
 The existing `v2/migrations/0006_ontology_and_dashboards.sql` uses D1 text IDs, JSON attributes, and `environment_id` with a `shared` default for observations/links. New local product tables in `0007_harvy_product_core.sql` add explicit tenant/workspace/product scopes and composite references; a local SQLite test rejects cross-tenant and cross-product evidence links. The migration has not been applied remotely and no two-live-tenant API/Worker test exists. Existing records must be classified before private multi-tenant behavior can be claimed. The D1 config is not a deployed PostgreSQL/Hyperdrive implementation.
 
-OpenChamber remains the required coordination target; this implementation is tracked as an unfinished project todo. HQL has a bounded local Events/Evidence compiler, but OpenAPI generation, broader schema/config generation, the PostgreSQL adapter and provisioning needed for launch, CLI/MCP, streaming uploads, and the full preflight pipeline remain tracked work in `docs/PLAN.md`. Local tests do not enforce production policy.
+OpenChamber remains the required coordination target; this implementation is tracked as an unfinished project todo. HQL has a bounded local Events/Evidence compiler, but OpenAPI generation, broader schema/config generation, the PostgreSQL adapter and provisioning needed for launch, CLI/MCP, streaming uploads, and the full preflight pipeline remain tracked work in `docs/ROADMAP.md`. Local tests do not enforce production policy.
 
 ## 18. Uniform n8n integration standard
 
-The user already has n8n installed. Reuse that instance and its existing workflows after inventory; do not reinstall, change its database, rotate its encryption key, or introduce a new workflow engine as part of routine connector onboarding. Installed version, edition, node packages, persistence, access controls, and active workflows must be inspected before assuming compatibility. The hackathon's time-bounded capability scope is recorded in PLAN.md and does not waive this section's security/data rules. [n8n installation options](https://docs.n8n.io/deploy/host-n8n/install-options)
+The user already has n8n installed. Reuse that instance and its existing workflows after inventory; do not reinstall, change its database, rotate its encryption key, or introduce a new workflow engine as part of routine workflow onboarding. Installed version, edition, node packages, persistence, access controls, and active workflows must be inspected before assuming compatibility. The hackathon's time-bounded capability scope is recorded in ROADMAP.md and does not waive this section's security/data rules. [n8n installation options](https://docs.n8n.io/deploy/host-n8n/install-options)
 
 ### Ownership and boundaries
 
@@ -301,7 +303,7 @@ Internal schedule / authenticated Harvy trigger
 
 Every n8n source workflow must verify Spider Unlimited availability and the approved Webshare egress before collection. Structured API calls must also route through the approved Webshare proxy; no direct-network fallback is allowed. Keep workflow logic within the user's existing n8n workflows, use scoped credentials, preserve source provenance, and avoid importing a parallel workflow or adding unreviewed community packages.
 
-Set explicit execution deadlines, retry ceilings, per-provider concurrency, polling backoff, and cancellation behavior. Handle 429/5xx/network failures by the established retry owner; route permanent auth/schema failures to a blocked run. If continuing after an item error, aggregate failures and mark the canonical result partial/failed as appropriate. `continueOnFail` must not turn failed collection/storage into a successful connector. Cancellation stops new dispatches and requests cancellation of the actual Automation run; stopping n8n alone does not prove the remote job stopped.
+Set explicit execution deadlines, retry ceilings, per-provider concurrency, polling backoff, and cancellation behavior. Handle 429/5xx/network failures by the established retry owner; route permanent auth/schema failures to a blocked run. If continuing after an item error, aggregate failures and mark the canonical result partial/failed as appropriate. `continueOnFail` must not turn failed collection/storage into a successful workflow. Cancellation stops new dispatches and requests cancellation of the actual Automation run; stopping n8n alone does not prove the remote job stopped.
 
 ### Secrets, persistence, and operational safety
 
@@ -353,18 +355,18 @@ The first migration design uses these minimum columns and constraints. `scope_id
 | `ontoly.objects` | UUID `id`, `scope_id`, type/version, validated properties, source lineage | `(scope_id, id)` references record registry; index scope/type/time and approved search fields. |
 | `ontoly.links` | UUID `id`, `scope_id`, type/version, from/to object IDs, evidence | Composite scope-safe references or an explicit approved cross-scope relation. |
 | `ontoly.observations` | UUID `id`, `scope_id`, object ID, observed time, value, source/artifact IDs | Preserve source value and provenance; idempotency on source observation identity. |
-| `ops_runtime.connector_runs` | UUID `id`, `scope_id`, connector/version, source scope, status, attempt, idempotency key, deadline | Unique `(scope_id, connector_id, idempotency_key)`; explicit status transitions and failure reason. |
+| `ops_runtime.connector_runs` | UUID `id`, `scope_id`, workflow/version, source scope, status, attempt, idempotency key, deadline | Unique `(scope_id, connector_id, idempotency_key)`; explicit status transitions and failure reason. |
 | `ops_runtime.artifacts` | UUID `id`, `scope_id`, run ID, stage, logical URI, object key, hash, bytes, media type, policy | Unique immutable artifact identity; authorized lookup by scope and run, never raw bucket access. |
 | `audit.events` | UUID `id`, actor, action, `scope_id`, target ID, decision, trace, occurred time | Append-only service write path; retention and redaction policy. |
 
-Add `core.scopes`, auth-ID mapping, role-permission links, connector registrations, idempotency, and outbox support tables in the actual migration; they are required dependencies of the rows above. Freeze exact DDL after the Better Auth/PostgreSQL adapter mapping and database endpoint are verified. Do not apply this table sketch as a migration.
+Add `core.scopes`, auth-ID mapping, role-permission links, workflow registrations, idempotency, and outbox support tables in the actual migration; they are required dependencies of the rows above. Freeze exact DDL after the Better Auth/PostgreSQL adapter mapping and database endpoint are verified. Do not apply this table sketch as a migration.
 
 The first PostgreSQL migration must create schemas and restricted runtime roles before moving data. Migrate Better Auth via a reviewed adapter/mapping instead of rewriting its internal IDs. Use additive migrations and scope-preserving backfill. Establish an outbox for state transitions before introducing cross-service event delivery. Keep raw captures immutable except governed deletion and store object keys/hashes in `ops_runtime.artifacts`; operational tables hold references, not arbitrary file bytes. Basin owns analytical table snapshots. Do not write a single transaction that assumes D1, PostgreSQL, R2, and K2 commit atomically; use durable state plus retriable publication and reconciliation.
 
 The data path is:
 
 ```text
-Approved source → Automation connector (Spider/Webshare when crawling)
+Approved source → Automation workflow (Spider/Webshare when crawling)
   → R2 raw capture + manifest
   → validated Ontoly observation + R2 processed JSON/NDJSON
   → scoped API/HQL operational read
@@ -392,13 +394,13 @@ The UI may render capability flags for discoverability, but server-side auth/ent
 
 ## Repository layout
 
-- `v2/`: product API target, connectors, portal shell, shared contracts, authentication, migrations, and operational scripts. Existing supervisor code is legacy and not the target path.
+- `v2/`: product API target, workflows, portal shell, shared contracts, authentication, migrations, and operational scripts. Existing supervisor code is legacy and not the target path.
 - `tests/`: Python tests for V2 tooling and shared logic; `v2/tests/`: Worker contract tests.
 - `pages/`, `styles/`, `static/`: static source, canonical CSS, and generated assets.
 - `docs/`: operator, developer, API, support, and planning documentation.
 - Retired notebook guides remain recoverable in Git history and are not active instructions.
 
-Keep Workers, connectors, and Wrangler configs under `v2/`. Do not add a second platform root.
+Keep Workers, workflows, and Wrangler configs under `v2/`. Do not add a second platform root.
 
 ## Local checks
 

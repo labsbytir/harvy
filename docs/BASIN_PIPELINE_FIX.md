@@ -1,4 +1,6 @@
-# Basin pipeline fix — completion plan (plan only, nothing mutated)
+# Basin pipeline fix
+
+> **Superseded 2026-10-30:** Basin writes/queries are paused by user directive; `v2/api/basin-compiler.ts` was deleted and all cubes serve from Postgres/Hyperdrive. Kept as a historical record only. — completion plan (plan only, nothing mutated)
 
 Verified live state on 2026-10-30 (read-only commands run for this doc):
 

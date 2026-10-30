@@ -20,8 +20,8 @@ configuration:
     - DEPLOY_RUNBOOK.md
     - DEVELOPMENT.md
     - HOSTING.md
-    - IOS_APP_PLAN.md
-    - PLAN.md
+    - IOS_APP_ROADMAP.md
+    - ROADMAP.md
     - README.md
     - REPO_INDEX.md
     - SECURITY_VULNERABILITY_REPORTING.md

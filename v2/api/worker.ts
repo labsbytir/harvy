@@ -4,12 +4,10 @@ import { PostgresDatabase, type SqlDatabase } from "../shared/sql-database.ts";
 import { canTransitionAutomationRun, isSafeSourceUrl, parseAutomationRunRequest } from "../shared/automation-run.ts";
 import { harvyErrorResponse } from "../shared/errors.ts";
 import { parseHqlQuery } from "../shared/hql.ts";
-import { cubeByHqlName, cubeByMember } from "../shared/cubes.ts";
 import { isHarvyDexId } from "../shared/harvydex.ts";
 import { parseArtifactManifest, type ArtifactManifest } from "../shared/artifacts.ts";
 import { isDashboardConfig, isPersistedDashboardConfig } from "../shared/dashboard-config.ts";
 import { createAnalyticsLayer, hqlToSemanticQuery, normalizeCubeQuery } from "./analytics.ts";
-import { BasinError, compileHqlToBasinSql, compileSemanticToBasinSql, runBasinQuery } from "./basin-compiler.ts";
 import { handleInvestigations } from "./investigations.ts";
 
 interface Actor { id: string; tenantId: string; workspaceId: string; tenantName: string; role: string; harvyAdmin: boolean }
@@ -22,10 +20,6 @@ interface Env {
   AUTOMATION_CALLBACK_SECRET?: string;
   HARVY_RAW?: R2Bucket;
   HARVY_ARTIFACTS?: R2Bucket;
-  // Basin SQL is REST-only (no Workers binding); plain string vars/secrets, set via wrangler vars/secrets.
-  BASIN_ACCOUNT_ID?: string;
-  BASIN_BUCKET?: string;
-  BASIN_SQL_TOKEN?: string;
 }
 
 function databaseFor(env: Env): SqlDatabase | null {
@@ -46,12 +40,6 @@ const json = (data: unknown, status = 200, headers: HeadersInit = {}) => Respons
   status, headers: { "Cache-Control": "private, no-store", ...headers },
 });
 const fail = (code: string, message: string, status: number, trace: string) => harvyErrorResponse(code, message, status, trace);
-// Basin path: fail closed on missing credentials (503), typed compile errors as 400.
-const basinFailure = (error: unknown, trace: string): Response | null => {
-  if (error instanceof BasinError && error.code === "not_provisioned") return fail("unavailable", "Basin analytics is not provisioned for this deployment.", 503, trace);
-  if (error instanceof BasinError) return fail("invalid_query", error.message, 400, trace);
-  return null;
-};
 const likePattern = (value: string) => `%${value.replace(/[\\%_]/g, "\\$&")}%`;
 
 async function bodyJson(request: Request, maxBytes = 65_536): Promise<Record<string, unknown>> {
@@ -288,16 +276,6 @@ async function handleApiRequest(request: Request, env: Env, db: SqlDatabase | nu
       }
       const query = normalizeCubeQuery(rawQuery);
       if (!query) return fail("invalid_query", "Cube query is outside the supported, bounded query contract.", 400, trace);
-      const firstMember = query.measures?.[0] ?? query.dimensions?.[0];
-      const cubeDef = firstMember ? cubeByMember(firstMember) : null;
-      if (cubeDef?.engine === "basin") {
-        try {
-          const rows = await runBasinQuery(env, compileSemanticToBasinSql(query, scope).sql);
-          return json({ data: rows, annotation: null });
-        } catch (e) {
-          return basinFailure(e, trace) ?? fail("query_failed", "The authorized analytics query failed.", 400, trace);
-        }
-      }
       try { return json(await layer.execute(query, scope)); }
       catch { return fail("query_failed", "The authorized analytics query failed.", 400, trace); }
     }
@@ -814,15 +792,6 @@ async function handleApiRequest(request: Request, env: Env, db: SqlDatabase | nu
       const product = await entitledProduct(db, a.tenantId, query.product || null);
       if (!product) return fail("forbidden", "HQL requires one product enabled for this organization.", 403, trace);
       const scope = { tenantId: a.tenantId, workspaceId: a.workspaceId, products: [product] };
-      const cubeDef = cubeByHqlName(query.cube);
-      if (cubeDef?.engine === "basin") {
-        try {
-          const rows = await runBasinQuery(env, compileHqlToBasinSql(query, scope).sql);
-          return json({ rows, annotation: null, query, snapshot: null, trace_id: trace });
-        } catch (e) {
-          return basinFailure(e, trace) ?? fail("query_failed", "The authorized HQL query failed.", 400, trace);
-        }
-      }
       try {
         const result = await createAnalyticsLayer(db).execute(semantic, scope);
         return json({ rows: result.data, annotation: result.annotation, query, snapshot: null, trace_id: trace });

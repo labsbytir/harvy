@@ -17,7 +17,7 @@ Git root: this repository (`labsbytir/harvy`, `main` at `92aecaa` when inspected
 | API | `v2/api/worker.ts`, `analytics.ts`, `schema.ts`, `wrangler.jsonc` | Local D1-backed API; Better Auth service binding; explicit product entitlements; scoped events/evidence/stories/briefs/dashboards/actions/search; audited monitor and dashboard state changes; per-tenant run/page quotas; idempotent dispatch claims; signed callbacks. No live domain route, n8n webhook, or service binding is verified. |
 | Auth/database | `v2/auth/`, `v2/migrations/0007_harvy_product_core.sql` | Better Auth source and organization actor resolution are present. New scoped tables are only migration source; remote D1 was not migrated. |
 | Automation/n8n | User-reported VPS-hosted n8n executes approved source workflows; checked-in `v2/workflows/` are inactive run-submission starters | API dispatch and signed publication/status contracts exist locally. The live n8n instance and execution workflows were not inspected or connected. |
-| Tests/CI | `v2/tests/`, `v2/auth/*.test.mjs`, `.github/workflows/ci.yml` | Local API, analytics, contract, auth-consent tests, typechecks, and web build. No live connector, deployed tenant-isolation, or provider egress proof. |
+| Tests/CI | `v2/tests/`, `v2/auth/*.test.mjs`, `.github/workflows/ci.yml` | Local API, analytics, contract, auth-consent tests, typechecks, and web build. No live workflow, deployed tenant-isolation, or provider egress proof. |
 
 ## Required target stack and current account evidence
 
@@ -43,15 +43,15 @@ Git root: this repository (`labsbytir/harvy`, `main` at `92aecaa` when inspected
 2. News through Media Cloud (#26), SocketNews (#27), and approved Spider Cloud coverage (#8), surfaced in Newsk mode (#20). No RSS dependency.
 3. Weather ingestion/context (#29).
 
-The target uses all approved platform services as one Harvy system. Deployment can proceed in dependency order, but absence of a resource is tracked as a gap rather than a claim that it is unnecessary. Do not create one stack per mode or port excluded JudyRecords or Truth Social connectors; Telegram was approved on 2026-10-30, scoped to channels explicitly joined by the user's own approved Telegram app (configured channel list only). SAM.gov was un-excluded by direct user directive on 2026-10-30.
+The target uses all approved platform services as one Harvy system. Deployment can proceed in dependency order, but absence of a resource is tracked as a gap rather than a claim that it is unnecessary. Do not create one stack per mode or port excluded JudyRecords or Truth Social workflows; Telegram was approved on 2026-10-30, scoped to channels explicitly joined by the user's own approved Telegram app (configured channel list only). SAM.gov was un-excluded by direct user directive on 2026-10-30.
 
 ## Documentation drift to resolve
 
-- `docs/PLAN.md` remains the single delivery plan. Its hackathon gates require live Automation/source evidence beyond the local implementation summarized here.
+- `docs/ROADMAP.md` remains the single roadmap. Its hackathon gates require live Automation/source evidence beyond the local implementation summarized here.
 - `docs/DEVELOPMENT.md` describes target architecture as well as present code; do not treat target paths or acceptance requirements as implemented merely because they are documented.
 - `docs/BUILD_AGENT_PROMPT.md` has correct target bucket names after the latest correction, but it is a prompt, not an implementation.
 - The current Cloudflare account inventory is not proof of which actor created each resource; inspect audit logs and bindings before decommissioning anything.
 
 ## Reference repository review
 
-Read-only shallow revisions reviewed on 2026-10-28: `harvyalpha-deprecated` `c0d1d7e`, `civontology` `4367e90`, and `opentir` `09bf508`. The deprecated Harvy repo has no project-wide license declaration; Civic's inspected root also has no license file; OpenTIR declares AGPL-3.0-only. No connector or runtime code was copied from these three checkouts. Their manifests, catalogs, and source-specific adapters remain candidates for individually reviewed ports through the Automation boundary; the old runtimes and storage stacks do not match the V2 plan. The historical candidate file `docs/CONNECTOR-CANDIDATES.md` is not the canonical denominator: its source points to a separate legacy inventory, while the supplied `opentir` checkout and Civic/HarvyAlpha manifests overlap and use different identifiers. Do not claim an adoption percentage until the unified catalog ledger is reviewed.
+Read-only shallow revisions reviewed on 2026-10-28: `harvyalpha-deprecated` `c0d1d7e`, `civontology` `4367e90`, and `opentir` `09bf508`. The deprecated Harvy repo has no project-wide license declaration; Civic's inspected root also has no license file; OpenTIR declares AGPL-3.0-only. No workflow or runtime code was copied from these three checkouts. Their manifests, catalogs, and source-specific adapters remain candidates for individually reviewed ports through the Automation boundary; the old runtimes and storage stacks do not match the V2 plan. The historical candidate file `docs/CONNECTOR-CANDIDATES.md` is not the canonical denominator: its source points to a separate legacy inventory, while the supplied `opentir` checkout and Civic/HarvyAlpha manifests overlap and use different identifiers. Do not claim an adoption percentage until the unified catalog ledger is reviewed.

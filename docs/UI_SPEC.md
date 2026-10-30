@@ -1,6 +1,6 @@
 # Harvy web and analytics UI specification
 
-Status: implementation specification, 2026-10-29. The canonical delivery sequence is PLAN.md. The repository now has a public preview, Better Auth client integration, authenticated Newsk feed/story flow, explicit Harvy-admin-managed product grants, shared product event/evidence and analytics views, and an Ops handoff queue. These are local implementations, not deployed customer screens; product grants, sources, routes, R2 bindings, and the VPS n8n webhook/workflows remain unconfigured or unverified. Do not present the full specification as shipped.
+Status: implementation specification, 2026-10-29. The canonical delivery sequence is ROADMAP.md. The repository now has a public preview, Better Auth client integration, authenticated Newsk feed/story flow, explicit Harvy-admin-managed product grants, shared product event/evidence and analytics views, and an Ops handoff queue. These are local implementations, not deployed customer screens; product grants, sources, routes, R2 bindings, and the VPS n8n webhook/workflows remain unconfigured or unverified. Do not present the full specification as shipped.
 
 ## 1. Product experience and visual direction
 
@@ -26,7 +26,7 @@ Homepage sections in order:
 6. Short workflow walkthrough: monitor to event, event to query, query to evidence-backed brief. Offer a playable demo when it exists; otherwise show an honest static walkthrough.
 7. CTA/footer: demo/contact, docs, legal, accessibility, status/support links.
 
-Public elements: NavBar, ProductMenu, Hero, ProductPreview, WorkflowStep, ProductCard, EvidenceCard, CapabilityBadge, DemoNotice, CTA, Footer. Every marketing component has loading/error fallbacks only if it fetches live data. Do not place provider keys or connector internals in customer-facing copy.
+Public elements: NavBar, ProductMenu, Hero, ProductPreview, WorkflowStep, ProductCard, EvidenceCard, CapabilityBadge, DemoNotice, CTA, Footer. Every marketing component has loading/error fallbacks only if it fetches live data. Do not place provider keys or workflow internals in customer-facing copy.
 
 ## 3. Shared authenticated shell
 
@@ -36,7 +36,7 @@ Global header: product switcher, tenant/workspace switcher, global search, fresh
 
 Shared elements and semantic tags: Shell, ProductSwitcher, WorkspaceSwitcher, SearchBox, ScopeChip, FeatureGate, Breadcrumbs, PageHeader, ActionBar, StatusBadge, FreshnessBadge, CoverageBadge, SourceCitation, EvidenceDrawer, RunProgress, EmptyState, ErrorState, PermissionState, SaveDialog, ShareDialog, AuditLink, Toast, ConfirmDialog, and SupportLink. Customer data is view-only: do not add download/export affordances or expose raw object handles. Register stable tags in one catalog (for example harvy.newsk.query.analysis-builder); do not invent tags in each screen. Tags support tests, telemetry, help text, and UI agents, but contain no private values.
 
-All surfaces use explicit loading, ready, empty, stale, partial, error, denied, and unavailable states. A green connector run is distinct from a complete source result. An empty response shows requested source/time window and latest successful run. Stale/partial states show age, missing coverage, and a recovery action. Destructive and external actions use clear confirmation and server audit.
+All surfaces use explicit loading, ready, empty, stale, partial, error, denied, and unavailable states. A green workflow run is distinct from a complete source result. An empty response shows requested source/time window and latest successful run. Stale/partial states show age, missing coverage, and a recovery action. Destructive and external actions use clear confirmation and server audit.
 
 ### Shared component register
 
@@ -70,7 +70,7 @@ Component API shape: each asynchronous component receives an authorized context 
 |---|---|---|---|
 | Newsk Home | Notice a developing item and verify it | Monitored source list, event feed, source/time/keyword/status filters, evidence panel, saved story, cited extractive brief | Local first slice; no live sources |
 | Tower Business Desk | Track a market, company, competitor, sector, or risk topic | Product-scoped event/evidence feed, HQL analytics, saved source/time/keyword watchlists, and evidence-backed Ops handoff are available; entity watchlists/comparisons, scored signals, and intelligence briefs remain | Partial shared surface; no live sources |
-| Civic Monitoring | Follow civic and legislative events | Product-scoped approved-source feed, evidence, bounded filters, shared analytics, and evidence-backed Ops handoff | Partial shared surface; legislative domain views and live connectors pending |
+| Civic Monitoring | Follow civic and legislative events | Product-scoped approved-source feed, evidence, bounded filters, shared analytics, and evidence-backed Ops handoff | Partial shared surface; legislative domain views and live workflows pending |
 | Monitor setup | Define a scoped source watch | Only pre-approved source rows are visible; tenant owners/admins can pause/resume with revision checks and audit. Source drafting/approval, terms/coverage editor, cadence, and preview are not exposed. | Fixed configuration and safe state controls only |
 | Event detail | Trace an emerging event | Source citations, event status, self-assignment, activity history, brief action, and Tower/Civic handoff | Duplicate/contradiction flags, teammate selection, generic object links, and source-claim corrections remain |
 | Analysis Workbench | Build a bounded HQL-backed query | Drizzle Cube dashboard, ungrouped DataBrowser, and searchable Events/Evidence schema explorer over product-scoped cubes; bounded HQL API | Local tools exist; richer query authoring, drill-to-evidence, and live-source validation pending |
@@ -79,7 +79,7 @@ Component API shape: each asynchronous component receives an authorized context 
 | Schema Explorer | Understand analytical cubes | Searchable cube/field metadata and relationship details | Local tools exist; visual ERD and selected-field handoff pending |
 | Notebook | Ask and assemble grounded analysis | Prompt/chat panel, text/chart blocks, citations, budget/status, save as dashboard | Later, requires server agent |
 | Ontoly object | Examine a canonical event record | Event type, stable HarvyDex UUID, observed range, linked source observations and provenance | Partial event view; generic object relationships and source-claim correction history remain unimplemented; workflow status/assignment activity is available |
-| Ops/Admin | Manage runs and access | Product-scoped run list plus Newsk story and Tower/Civic event handoffs into an action queue with revision-checked status updates exist locally; tenant admins can pause/resume only pre-approved monitors; Harvy-admin-only entitlement controls and a bounded metadata-only audit view cover product access, monitor state, and dashboard lifecycle. Same-key retry is available for unconfirmed dispatches; source drafting/approval, connector registry editing, linked terminal retry, cancellation, and live health remain. | Partial operator surface; no live sources or hosted admin console |
+| Ops/Admin | Manage runs and access | Product-scoped run list plus Newsk story and Tower/Civic event handoffs into an action queue with revision-checked status updates exist locally; tenant admins can pause/resume only pre-approved monitors; Harvy-admin-only entitlement controls and a bounded metadata-only audit view cover product access, monitor state, and dashboard lifecycle. Same-key retry is available for unconfirmed dispatches; source drafting/approval, workflow registry editing, linked terminal retry, cancellation, and live health remain. | Partial operator surface; no live sources or hosted admin console |
 
 Tower, Ops, Civic, and Newsk can define landing presets, field labels, and allowed actions. They use the same underlying Shell, Analysis Workbench, dashboard, browser, evidence, and identity components. Product-specific components must consume registered object and query contracts, not bypass the shared API.
 
