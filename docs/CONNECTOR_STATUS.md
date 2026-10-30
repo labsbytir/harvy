@@ -571,3 +571,16 @@ Poller service_map on VPS extended: api-ninjas -> API_NINJAS_API_KEY (syntax ver
 Old direct creds (9.249.21.58:6392, user hhrndunk) got 407 on every endpoint incl. p.webshare.io backbone -> account auth rejected, not a stall. New sub-user creds supplied by user work ONLY in rotating mode: http://<user>-us-rotate:<pass>@p.webshare.io:80/ (plain username gets 407/56). Verified: 3 requests -> 3 rotating residential egress IPs; com-courtlistener-storage S3 via proxy = 200; courtlistener.com itself is CloudFront 403 (use S3 bulk path or Spider for the site).
 n8n variable WEBSHARE_PROXY_URL on VPS updated to the backbone rotating URL (56 chars, value never printed; stored /root/.ws_url_new 600 on VPS + local 600 file). First update attempt emptied the var (quoting) - fixed via psql -f file; verified SELECT length=56 backbone=t, egress rotates via stored value.
 SECURITY: old proxy password appeared in a curl -v log and both proxy passwords were pasted in chat - rotate the old sub-user in the webshare dashboard.
+
+## 2026-10-30 ~11:35 UTC — WEBSHARE_PROXY_URL rolled out to the direct-IP endpoint (crtsh session)
+
+User supplied the direct-IP proxy URL http://hhrndunk:***@87.86.25.212:5363/ and directed a global update.
+Verified 200 (egress 87.86.25.212), stored locally at ~/.config/harvy/webshare_proxy_url (600),
+and written into the single n8n variable WEBSHARE_PROXY_URL via psql on the VPS
+(n8n-public-API variables endpoint is license-blocked, feat:variables; MCP has no variables tool).
+Post-update row check: length=47, has_new_ip=t, has_old_ip=f. All workflows resolve $vars.WEBSHARE_PROXY_URL,
+so this is the one write that covers every worker; no wrangler configs hold a proxy literal.
+Live n8n exec 156 (crtsh) confirmed the new value resolves: no 407; Fetch now surfaces upstream
+crt.sh flakiness instead (intermittent 502/timeout/404 through rotating exits — control query
+%.example.com also flapped 502/000/200 within seconds). Old 407 outage is over; remaining
+failures are crt.sh-side, not credentials.

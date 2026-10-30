@@ -1,4 +1,4 @@
-[![Harvy banner](v2/web/docs-site/assets/harvy-github-banner.png)](https://docs.harvy.dev)
+[![Harvy banner](docs/assets/harvy-github-banner.png)](https://docs.harvy.dev)
 
 # Harvy
 

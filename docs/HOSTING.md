@@ -1,16 +1,20 @@
 # Documentation site hosting
 
-The public documentation landing site is built from `v2/web/docs-site/` and emitted to `dist/docs` by:
+The developer documentation is authored in the repository `docs/` directory and built with Quartz 5. The build reads those Markdown files directly; there is no second hand-edited content tree.
 
 ```sh
-npm run build:docs
+npm run docs:build
 ```
 
-The site is deployed as the Cloudflare Pages project `harvy-docs`. The current Pages deployment is available at `https://harvy-docs.pages.dev`.
+The output is `dist/docs`, deployed as the Cloudflare Pages project `harvy-docs` at `https://docs.harvy.dev`. For local preview, run `npm run docs:dev`.
+
+## Site features
+
+The Quartz build provides full-text search, a document explorer, table of contents, syntax highlighting, dark mode, graph view, and backlinks. The landing page is `docs/index.md`; add developer-facing content to `docs/` and link it from that index when it is part of the supported documentation set.
 
 ## Custom domain
 
-`docs.harvy.dev` is attached to the Pages project but remains pending until DNS is present. The required record is:
+The Pages project uses this DNS record:
 
 ```text
 Type: CNAME
@@ -19,8 +23,8 @@ Target: harvy-docs.pages.dev
 Proxy: Proxied
 ```
 
-After the record is created in the `harvy.dev` zone, verify both `https://docs.harvy.dev` and the Pages deployment URL. Do not report the custom domain as live while DNS or Pages validation is pending.
+Verify both `https://docs.harvy.dev` and the Pages deployment URL after deployment.
 
-## Source boundary
+## Publishing rule
 
-The site intentionally migrates only the old repository's public landing page, banner, logo, and changelog generator. Retired application pages and generated bundles are not part of the new documentation deployment. Markdown engineering documentation remains canonical in `docs/` and is linked from the repository until a dedicated Markdown renderer is adopted.
+Do not publish a marketing landing page in place of the developer docs. Documentation must describe the codebase, API endpoints, standards, contracts, infrastructure, and evidence-backed implementation status. Distinguish implemented, partial, planned, blocked, and unverified work.

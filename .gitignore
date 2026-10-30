@@ -1,5 +1,6 @@
 node_modules/
 dist/
+public/
 .env
 .env.*
 !.env.example
@@ -14,3 +15,7 @@ dist/
 
 .cortexkit/
 gdacs/
+
+# Quartz generated plugin cache
+.quartz/
+quartz/.quartz-cache/

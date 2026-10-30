@@ -11,3 +11,13 @@ This directory is the current documentation set for the new Harvy repository.
 - [SECURITY_VULNERABILITY_REPORTING.md](SECURITY_VULNERABILITY_REPORTING.md): private vulnerability reporting route.
 
 The moved legacy repository is a reference source. Its older guides are not active instructions here.
+
+## Developer documentation site
+
+The published developer docs are built with Quartz from this `docs/` directory:
+
+```sh
+npm run docs:build
+```
+
+Start at [[index|Harvy Developer Documentation]], then see [[CODEBASE|Codebase map]], [[API_REFERENCE|API reference]], [[STATUS|Implementation status]], and [[DATASET_ENGINEERING|Dataset engineering]]. The build output is `dist/docs` and the published host is `https://docs.harvy.dev`.
