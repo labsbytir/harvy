@@ -537,3 +537,15 @@ until token supplied; GDELT covers news attention meanwhile.
   profile Harvy Proctor / personal use. keyless entries marked not_needed.
 - api.data.gov signup: page is JS+reCAPTCHA, does not mount headless -> marked blocked; do it in a
   real browser with trytir@agentmail.to, poller captures the key email automatically.
+
+## 2026-10-30 ~11:25 UTC — publicapis.dev merged into api-registry (supervisor)
+
+Parsed marcelscruz/public-apis README (1,944 rows) -> merged 898 new entries into
+v2/catalog/reference/api-registry.json (total 946 APIs) across 25 Harvy-relevant categories
+(Government, Open Data, Security, Anti-Malware, Geocoding, Finance, Currency, Health,
+Transportation, Tracking, Business, Science&Math, Weather, News, Patent, Data Validation, Events,
+Jobs, Email, Text Analysis, Phone, Blockchain, Sports). Deduped against existing 48 by URL.
+All: signup_email=trytir@agentmail.to, free_tier_only, profile Harvy Proctor/personal.
+Keyless (~40%) marked not_needed; apiKey/OAuth entries pending signup with derived key_var names.
+AgentMail poller on VPS maps incoming key emails -> n8n variables (extend service_map as new
+providers confirm). No keys in repo/chat.
