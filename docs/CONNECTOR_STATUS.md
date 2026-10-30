@@ -521,3 +521,19 @@ NoSuchBucket/AccessDenied — verified); API-only with token + tight quotas (v4 
 2 req/min; v2 1000 calls/7d). So backfill was impossible without MEDIACLOUD_API_TOKEN.
 Ledger n=56 added; builder ses_e738f352dffdhgR6xjmk9PZ8MM (src_mediacloud, newsk) — builds inactive
 until token supplied; GDELT covers news attention meanwhile.
+
+## 2026-10-30 ~11:15 UTC — AgentMail inbox + api-registry stood up (supervisor)
+
+- AgentMail: key stored ONLY at local 600-perm file + /root/.agentmail_key on VPS (never in repo/chat).
+  whoami confirms inbox trytir@agentmail.to (org 8a9932e6...). Inbox currently EMPTY (0 messages).
+- Poller live on VPS: /root/am_poll.py via cron */5 — reads new mail, maps sender->key_var
+  (data.gov->DATA_GOV_API_KEY, sam.gov->SAM_GOV_API_KEY, fec, bls, govinfo, regs, airnow, eia,
+  uspto-odp, epo, lens, gnews, currents, newsdata, newsapi, guardian, nyt, openaq, iqair, lob,
+  cloudmersive, veriphone, carbon, climatiq, mediacloud), writes keys into n8n variables table
+  (values never printed), logs redacted sender/subject/links/OTPs to /root/am_inbox_log.txt,
+  labels messages 'processed'.
+- api-registry.json created: 48 APIs (12 keyed official, 14 validation, 2+2 patent, 15 environment,
+  6 news aggregators w/ license caveats), all signup_email=trytir@agentmail.to, free_tier_only,
+  profile Harvy Proctor / personal use. keyless entries marked not_needed.
+- api.data.gov signup: page is JS+reCAPTCHA, does not mount headless -> marked blocked; do it in a
+  real browser with trytir@agentmail.to, poller captures the key email automatically.
