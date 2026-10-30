@@ -93,3 +93,25 @@ Workflow `8q9kYIHCQqoB7xMk` "GDACS Continuous Ingestion" (inactive; last run exe
   its slug in the description (setWorkflowMetadata) and use src_<slug> as source_id.
 - OpenObserve query per connector: service="n8n" AND body contains "<workflowId>" (or source_id).
 - CKAN workflow msNQRk0FLpHzfhMq already has the description pattern applied.
+
+## 2026-10-30 ~09:15 UTC — USGS Earthquakes proven and published (builder)
+
+- USGS Earthquakes Ingestion `PHhaeSYwwAVhRwk1` PROVEN + PUBLISHED (active: true): exec 55 success (10 nodes, 25 USGS earthquake events fetched via Webshare proxy, S3 artifacts with `additionalFields.contentType: "application/json"`, Basin via `$vars.BASIN_SEND_TOKEN`).
+- Basin SQL count: `SELECT count(*) FROM default.evidence WHERE source_id='src_usgs-earthquakes'` = 25 rows verified after 300s flush.
+- R2 check: `harvy-artifacts/usgs-earthquakes/ci41569536.json` verified with `wrangler r2 object get`.
+- Idempotency: re-run (exec 57) success, 0 items passed dedupe dataTable `XfZVxmlnXYIwBgMd` (`usgs_earthquakes_ingested`), Basin count remained 25 (did not double).
+
+## 2026-10-30 ~09:12 UTC — NWS Alerts Ingestion proven + published (builder)
+
+- NWS Alerts Ingestion `8Z2JslS7PbaCMbP5` PROVEN + PUBLISHED (active:true): exec 58 success 09:08:33 (9 nodes, 25 active NWS alerts fetched via Webshare proxy, S3 artifacts to harvy-artifacts with contentType application/json, Basin via $vars.BASIN_SEND_TOKEN). Basin count: src_nws-alerts = 26 rows (25 initial batch + 1 subsequent alert).
+- Idempotency verified: re-run (exec 65) processed 0 items past deduplication table `nws_alerts_ingested` (id tp0zOdLVu4DvExfO).
+- R2 object verified: `harvy-artifacts/nws-alerts/urn:oid:2.49.0.1.840.0-KEEPALIVE-39455.json` retrieved and validated.
+- Concurrency note recorded: "spider-concurrency<=50", slug nws-alerts, source_id src_nws-alerts.
+
+## 2026-10-30 ~09:18 UTC — ArcGIS Hub proven and published (builder)
+
+- ArcGIS Hub Ingestion `ckUdJjP8SL0b8ZFP` PROVEN + PUBLISHED (active: true): exec 50 success (20 items ingested via Webshare proxy), exec 61 success (4 items, S3 artifacts with `additionalFields.contentType: "application/json"`, Basin via `$vars.BASIN_SEND_TOKEN`).
+- Basin SQL count: `SELECT count(*) FROM default.evidence WHERE source_id=src_arcgis-hub` = 25 rows verified in `default.evidence`.
+- R2 check: `harvy-artifacts/arcgis-hub/72c2365101cb4a8d8c6bd1567279874a.json` and `harvy-artifacts/arcgis-hub/f5d1c71dfcc947849a0f585916b067f5.json` verified with `wrangler r2 object get`.
+- Idempotency: re-run (exec 62) success, 0 items passed dedupe dataTable `sKSIQ4k4Iynkd7Dk` (`arcgis_hub_ingested`), 0 downstream S3 uploads/Basin posts, Basin count did not double.
+- Workflow notes include `spider-concurrency<=50`.
