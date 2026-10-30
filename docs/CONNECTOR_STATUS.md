@@ -224,3 +224,41 @@ Workflow `8q9kYIHCQqoB7xMk` "GDACS Continuous Ingestion" (inactive; last run exe
 - Basin: 1141 rows / 10+ sources (gdacs 360, wikidata 200, poweroutage_us 162, owid 100, opensky 100, worldbank 50, nws 26, aemo 25, fema 25, usgs 25, ...).
 - Workflows: 25 total, 10 ACTIVE (added OWID, OpenSky; more publishing).
 - Spider cap 50; proxy $vars.WEBSHARE_PROXY_URL; S3 contentType application/json; OpenObserve slug metadata per workflow.
+
+## 2026-10-30 ~09:40 UTC — energydata_info proven, publish BLOCKED (builder)
+
+- energydata_info Ingestion `CP70bgI3eOvR21o2` ("Harvy — energydata_info Ingestion") PROVEN but NOT PUBLISHED: exec 97 success (12 nodes, CKAN package_search rows=25 via Webshare proxy `={{ $vars.WEBSHARE_PROXY_URL }}`, deterministic `src_energydata_info_<name>` ids, S3 `energydata_info/<id>.json` contentType application/json, Basin direct via `$vars.BASIN_SEND_TOKEN`, Error Trigger -> `energydata_info_errors` dataTable `h8tUygIyOmMmYXis`, dedupe dataTable `d1mMYCOmGUtqOY3W`).
+- Basin SQL count: `SELECT count(*) FROM default.evidence WHERE source_id='src_energydata_info'` = 25 rows verified in `default.evidence` (~6 min commit lag).
+- R2 check: `harvy-artifacts/energydata_info/src_energydata_info_burkina-faso-population-density-2014.json` verified with `wrangler r2 object get`.
+- BLOCKER: MCP `automation` server began returning HTTP 401 "requires user authorization" then "Invalid resource indicator (invalid_target)" after exec 97; idempotent re-run and publish_workflow not executed (3 attempts capped). Re-authorize connector.harvy.dev MCP, then re-run for idempotency and publish.
+
+## 2026-10-30 ~10:05 UTC — legistar (builder): BLOCKED on MCP auth
+
+- Source VERIFIED public & keyless: `https://webapi.legistar.com/v1/seattle/Matters?$top=25&$orderby=MatterLastModifiedUtc%20desc` returns flat JSON array (MatterId, MatterTitle, MatterStatusName, MatterIntroDate, MatterLastModifiedUtc). No API key required. Mapping ready: id/event_id=src_legistar_<MatterId>, publisher="Legistar (Seattle)", headline=title+" ("+status+")", product=civic, tenant/workspace=shared.
+- Data tables created in project FqfK5dzjTKUzamjO: `legistar_ingested` (c6vwDPzRCRE94Pvy, col event_id), `legistar_errors` (lijlcp0AbTLQAvQx, cols workflowId/error/ts).
+- BLOCKER: n8n MCP OAuth expired mid-session; every automation.* call now returns "requires user authorization" / "Invalid resource indicator (invalid_target)". Workflow not created/run/published. Needs interactive re-auth of connector.harvy.dev MCP, then rebuild proceeds (pattern copied from proven OpenSky LM5tPQfYunwxCAUU).
+
+## 2026-10-30 ~09:40 UTC — DBpedia proven, publish BLOCKED (builder)
+
+- DBpedia Ingestion `a7K31FCjWdsT5pSY` PROVEN, NOT published: exec 96 success 09:26:30 (SPARQL via Webshare proxy, timeout patched 30s->60s, normalize+dedupe, S3 `additionalFields.contentType: "application/json"`, Basin direct via `$vars.BASIN_SEND_TOKEN` committed>=1). Basin SQL `SELECT count(*) FROM default.evidence WHERE source_id='src_dbpedia'` = 28 (after ~6min flush). R2 verified: `harvy-artifacts/dbpedia/src_dbpedia_Independent_State_of_Raqqa.json`. BLOCKED at idempotent re-run + publish: n8n MCP connector.harvy.dev requires user re-authorization (all calls fail after 09:35; browser lands on n8n sign-in). Re-authorize MCP, then re-run manual (expect 0 items past dataTable `Eet1Gla9ICcL4rRn` `dbpedia_ingested`), then publish_workflow.
+
+## 2026-10-30 ~10:05 UTC — owid_datasets BLOCKED (builder, mimo-flash)
+
+- owid_datasets (src_owid_datasets): SDK build complete, saved at owid-datasets/owid_datasets_sdk.ts (mirrors proven CKAN pattern; data tables owid_datasets_ingested=I53AZa8obhi4jtJE and owid_datasets_errors=A5GNAdOVATFlintz already exist; Error Trigger wired; proxy on both fetch nodes; Basin keypair+Bearer direct; S3 contentType application/json). BLOCKED before create: connector.harvy.dev MCP session expired mid-build — every tools.automation.* call returns "requires user authorization" (needs user re-auth). Basin src_owid_datasets=0 at 10:05 UTC. Note: brief URLs co2.csv / co2-per-capita / total-co2-emissions all 404; SDK uses working successors annual-co2-emissions.csv?csvType=full (primary) + co2-emissions-per-capita.csv?csvType=full (fallback). Resume: validate_workflow + create_workflow_from_code from the SDK file, then execute/verify/publish.
+- openflights | BLOCKER: workflow NOT created/run/published. All node configs validated (11/11) and full SDK code ready (pattern: USGS PHhaeSYwwAVhRwk1; tables openflights_ingested hRkyPzXY7vOuGo8A, openflights_errors 3WnojbOEHfcjEopW exist). Blocked at validate_workflow: n8n MCP connector.harvy.dev requires user re-authorization. After re-auth: validate_workflow -> create_workflow_from_code -> manual exec -> Basin count src_openflights -> R2 openflights/<id>.json -> idempotent re-run -> publish.
+
+## 2026-10-30 ~09:45 UTC — OpenObserve tracing: logs VERIFIED, spans CONFIGURED
+
+- LOGS (verified via collector self-metrics on automation VPS):
+  filelog/n8n receiver accepted 6,505 records; exporter sent 14,886 log records to
+  OpenObserve /v1/logs (200 OK). Root cause of earlier silence was filesystem perms:
+  /var/lib/docker* were 0711 root-only; fixed with chmod o+x/o+r, added openobserve-agent
+  to docker group. All container logs (n8n, runners, postgres) now ship under service=n8n.
+- TRACES (spans): n8n 2.45.4 has a built-in OTel module. Set 11 N8N_OTEL_* env vars on the
+  n8n container (restarted 09:41): endpoint eu1-api.openobserve.ai/api/3LOzR02TywfzyWfDySBb0aS1DrE,
+  /v1/traces, http/protobuf, sample 1.0, workflow+node spans ON, PRODUCTION_ONLY=false.
+  Verified /v1/traces ingest accepts the collector token (200). No OTLP export errors in n8n logs.
+  NOT yet verified: actual span arrival in OpenObserve — the token is ingest-only (_multi 200,
+  _search 401), so verification must happen in the OpenObserve UI (Traces tab) or with a
+  read-capable API key.
+- Correlation: execution id (n8n logs, service=n8n) <-> Basin source_id per connector.
