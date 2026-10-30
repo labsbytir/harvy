@@ -156,7 +156,7 @@ The envelope deliberately leaks nothing: codes match a strict pattern (unknown o
 | Product routes, capability gates, run dispatch | API Worker | `v2/api/worker.ts` |
 | Investigations, entities, relationships | API Worker (module) | `v2/api/investigations.ts` |
 | Shared error envelope, HQL, cubes, artifact manifests | Shared contracts | `v2/shared/` |
-| Semantic analytics queries | Analytics layer / Basin compiler | `v2/api/analytics.ts`, `v2/api/basin-compiler.ts` |
+| Semantic analytics queries | Analytics layer / Basin compiler | `v2/api/analytics.ts` |
 | Transactional records (events, evidence, runs…) | PostgreSQL via Hyperdrive | migrations + `sql-database.ts` |
 
 For storage-boundary rules (PostgreSQL vs R2 vs Basin), see [[DATASET_ENGINEERING|Dataset engineering]].

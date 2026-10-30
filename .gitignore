@@ -14,7 +14,6 @@ public/
 !.dev.vars.example
 
 .cortexkit/
-gdacs/
 
 # Quartz generated plugin cache
 .quartz/

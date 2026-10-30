@@ -13,7 +13,7 @@ tags: [guide, standards]
 
 1. Confirm the root (`git rev-parse --show-toplevel`) and record `git status --short`. Preserve unrelated changes.
 2. Read every caller, the shared contract, tests, migrations and bindings before changing behavior.
-3. Put runtime code under `v2/`, canonical docs under `docs/`, and delivery decisions in the single `docs/PLAN.md`. Do not hand-edit `dist/`.
+3. Put runtime code under `v2/`, canonical docs under `docs/`, and delivery decisions in the single `docs/ROADMAP.md`. Do not hand-edit `dist/`.
 4. Keep external payloads and credentials out of source, logs and public docs. Review the publication boundary before publishing operational notes.
 
 ## Names and contracts
@@ -44,7 +44,7 @@ npm run docs:build
 git diff --check
 ```
 
-These are **local checks**, not a full release preflight: unified lint, OpenAPI drift detection, production multi-tenant isolation and live connector checks are not established by these commands. Mark missing release gates BLOCKED, not passing. Do not commit, deploy, activate workflows or run remote migrations without authorization.
+These are **local checks**, not a full release preflight: unified lint, OpenAPI drift detection, production multi-tenant isolation and live workflow checks are not established by these commands. Mark missing release gates BLOCKED, not passing. Do not commit, deploy, activate workflows or run remote migrations without authorization.
 
 - `docs/DEVELOPMENT.md` (repository) — coding, data ownership, tests, security, Automation and docs.
 - [[CODEBASE|Codebase map]] — module and request boundaries.

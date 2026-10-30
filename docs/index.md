@@ -12,7 +12,7 @@ tags:
 Harvy is a source-grounded intelligence system. This site documents the **actual repository**, its contracts, its standards, and the difference between local implementation and verified deployment.
 
 > [!warning]
-> A green local check is not proof of a deployed service, live connector, proxy egress, tenant isolation, or production data path. Every page must distinguish **implemented**, **partial**, **planned**, **blocked**, and **unverified**.
+> A green local check is not proof of a deployed service, live workflow, proxy egress, tenant isolation, or production data path. Every page must distinguish **implemented**, **partial**, **planned**, **blocked**, and **unverified**.
 
 ## Start building
 
@@ -50,7 +50,7 @@ These pages are curated from repository-owned Markdown. Operational plans and ru
 
 ## Working rules
 
-1. Read the repository’s `docs/DEVELOPMENT.md` and `docs/PLAN.md` before changing behavior.
+1. Read the repository’s `docs/DEVELOPMENT.md` and `docs/ROADMAP.md` before changing behavior.
 2. Read callers, tests, migrations, and Wrangler configuration before editing a boundary.
 3. Preserve tenant, workspace, product, and shared-record scope at every read and write.
 4. Keep provenance, source URLs, timestamps, collection method, coverage gaps, and evidence limitations.

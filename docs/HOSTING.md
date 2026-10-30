@@ -1,6 +1,6 @@
 # Documentation site hosting
 
-The developer documentation is authored in the repository `docs/` directory and built with Quartz 5. The build reads a curated set of those Markdown files directly; there is no second hand-edited content tree. `quartz.config.yaml` excludes operational plans, runbooks, connector ledgers and private reporting guidance from the public output. A page additionally needs `publish: true` in its frontmatter. The docs build writes harmless replacement HTML at previously published operational paths because Pages may preserve removed assets for a week. Review the ignore list whenever adding or renaming a file under `docs/`; an unreviewed Markdown file must not receive `publish: true`.
+The developer documentation is authored in the repository `docs/` directory and built with Quartz 5. The build reads a curated set of those Markdown files directly; there is no second hand-edited content tree. `quartz.config.yaml` excludes operational plans, runbooks, workflow ledgers and private reporting guidance from the public output. A page additionally needs `publish: true` in its frontmatter. The docs build writes harmless replacement HTML at previously published operational paths because Pages may preserve removed assets for a week. Review the ignore list whenever adding or renaming a file under `docs/`; an unreviewed Markdown file must not receive `publish: true`.
 
 ```sh
 npm run docs:build

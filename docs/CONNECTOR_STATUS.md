@@ -1,6 +1,8 @@
-# Connector status log (live)
+# Workflow status log (live) — file kept as CONNECTOR_STATUS.md for link stability
 
-Running log per Connector Operations Manager mission. All times UTC. Secrets never recorded here.
+> Terminology note (2026-10-30): "connector" in dated entries below means the n8n **workflow** for that source, and `connector.harvy.dev` refers to the n8n MCP endpoint now documented as `https://n8n.harvy.dev`. Entries are historical evidence and are not rewritten.
+
+Running log per workflow operations mission. All times UTC. Secrets never recorded here.
 
 ## 2026-10-30 — Basin pipe diagnosis (mission step 1-2)
 
@@ -17,7 +19,7 @@ Workflow `8q9kYIHCQqoB7xMk` "GDACS Continuous Ingestion" (inactive; last run exe
 - FIXED Ingest GDACS Event node: url -> harvy_evidence_stream endpoint, Authorization: Bearer {{ $vars.BASIN_SEND_TOKEN }} (n8n variable, stored in n8n `variables` table, not in workflow JSON), body -> `[basin_event]`.
 - FIXED Normalize GDACS Report node: basin_event now emits the 9-column evidence schema (id/event_id = gdacs_<type>_<eventid>_<episodeid>, source_id=src_gdacs, publisher=GDACS, headline=name, product=ops, tenant_id=shared, workspace_id=shared, captured_at=datemodified).
 - Nodes updated directly in n8n Postgres (workflow_entity.nodes) while workflow inactive.
-- n8n variables added: BASIN_SEND_TOKEN, WEBSHARE_PROXY_URL (WEBSHARE_PROXY_URL inserted empty: the var is NOT present in this shell env; only WEBSHARE_API_KEY is. Webshare proxy URL still needs to be provided -> proxy preflight for connectors remains a gap, see below).
+- n8n variables added: BASIN_SEND_TOKEN, WEBSHARE_PROXY_URL (WEBSHARE_PROXY_URL inserted empty: the var is NOT present in this shell env; only WEBSHARE_API_KEY is. Webshare proxy URL still needs to be provided -> proxy preflight for workflows remains a gap, see below).
 - Trigger method: n8n Public API keys all 401; `docker exec n8n execute` fails while main instance runs (task broker port 5679 conflict). Workaround: `docker compose stop n8n` then `docker compose run --rm --entrypoint n8n n8n execute --id=8q9kYIHCQqoB7xMk`. Execution 41 (mode cli) started 08:14:18. Main container restart pending after run.
 - R2 check: `harvy-artifacts/gdacs/events/EQ/2026-10/EQ-1574161-1743038.json` -> "key does not exist" (wrangler). The 35 rows marked ingested on Oct 27 did NOT produce R2 objects at those keys (S3 upload may have failed silently or written elsewhere). Verify after the new run.
 
@@ -48,12 +50,12 @@ Workflow `8q9kYIHCQqoB7xMk` "GDACS Continuous Ingestion" (inactive; last run exe
 
 ## 2026-10-30 ~09:00 UTC — manager loop turn 1 (wave 2 spawned)
 
-- Builder sessions: all 8 wave-1 sessions alive (busy): gdacs ses_e73fa906effeW2aSnJv4coc5pp, fema_openfema ses_e73fa9083ffelfxxOoBJKoikgE, data-gov-apis ses_e73fa906effdygDbgU9fnG33l4, usgs-earthquakes ses_e73fa905affeIUI5Aa2UU7x66c, ckan-generic ses_e73fa905dffebVIeUMATxooxEt, arcgis-hub ses_e73fa905dffdWJUgp4ift1hbuA, opencorporates ses_e73fa905dffcIN1TKnQeCNa2Dk, nws-alerts ses_e73fa906effcl86JywnqeH4hle. No connector workflows created by them yet (still 6 workflows total).
+- Builder sessions: all 8 wave-1 sessions alive (busy): gdacs ses_e73fa906effeW2aSnJv4coc5pp, fema_openfema ses_e73fa9083ffelfxxOoBJKoikgE, data-gov-apis ses_e73fa906effdygDbgU9fnG33l4, usgs-earthquakes ses_e73fa905affeIUI5Aa2UU7x66c, ckan-generic ses_e73fa905dffebVIeUMATxooxEt, arcgis-hub ses_e73fa905dffdWJUgp4ift1hbuA, opencorporates ses_e73fa905dffcIN1TKnQeCNa2Dk, nws-alerts ses_e73fa906effcl86JywnqeH4hle. No workflow workflows created by them yet (still 6 workflows total).
 - Wave 2 spawned (target 10 builders): poweroutage_us ses_e73f5fbdfffeNiHqRY5nLN2U8Y (feed: ORNL ODIN odin-real-time-outages-county OData, public no-auth; poweroutage.us itself has no no-auth API), aemo_outages ses_e73f5fbdeffeKuP1aXJ7ZjtGfX (feed: data.wa.aemo.com.au/datafiles/realtime-outages/realtime-outages.csv, public no-auth). entso_e_outages skipped this wave (ENTSO-E requires a security token, not no-auth); eumetsat likewise auth-gated.
 - Workflows: 6 total. GDACS Backfill 2fUjRZpYizNc2evD active:true (schedule every 90 min). Exec 46 success (08:55), exec 47 now error (supervisor force-marked 08:58:02 after stuck >30 min). No "running" executions older than 30 min remain. NOAA NCEI qLP2FI5uqmP9Pozk untouched, inactive.
 - Basin 09:00 UTC: default.evidence = 62 rows (src_gdacs 59, src_diag 3). Token sourced from ~/.config/harvy/basin_sql_token (not in shell env).
 - R2 harvy-artifacts: 20 objects under gdacs/; newest (gdacs/events/DR/1015915-5/46.json) still content-type text/html — expected: exec 46 ran pre-patch; the contentType=application/json patch lands on the next scheduled run of 2fUjRZpYizNc2evD. harvy-raw and harvy-production still empty.
-- Next: collect builder final reports, verify Basin+R2 per connector, publish proven ones, add error handling, log.
+- Next: collect builder final reports, verify Basin+R2 per workflow, publish proven ones, add error handling, log.
 
 ## 2026-10-30 ~09:05 UTC — scale-up to 20 builders + QA loop + VPS check
 
@@ -80,7 +82,7 @@ Workflow `8q9kYIHCQqoB7xMk` "GDACS Continuous Ingestion" (inactive; last run exe
 - Basin default.evidence total 440 rows. By source: src_gdacs 296, src_fema_openfema 25, src_arcgis-hub 25, src_usgs-earthquakes 25, src_ckan-generic 20, src_data-gov-apis 20, src_diag 3 (verified via SQL GROUP BY source_id, 09:09-09:10).
 - PROVEN + published (active): CKAN Generic Ingestion `msNQRk0FLpHzfhMq` (exec 49 success, re-run 51 idempotent count stayed 20, R2 ckan-generic/...json verified, schedule 6h, Error Trigger -> connector_errors added) and ArcGIS Hub Ingestion `ckUdJjP8SL0b8ZFP` (execs 50/61/62 success, 25 rows, R2 arcgis-hub/*.json verified, Error Trigger added 09:11). QA on both: external fetch via options.proxy = $vars.WEBSHARE_PROXY_URL, Basin ingest direct, S3 credential, no hardcoded secrets.
 - Builder sessions completed so far: ckan ses_e73fa905dffebVIeUMATxooxEt, arcgis ses_e73fa905dffdWJUgp4ift1hbuA. Replacement wave-2 builder spawned: ses_e73ee731affe4v2kzB6OFj095A -> crt_sh_certificate_transparency.
-- connector_errors data table id 92T2flIyNQfnxntj (workflow_id, workflow_name, execution_id, error_message, occurred_at) — shared failure audit for all connector workflows.
+- connector_errors data table id 92T2flIyNQfnxntj (workflow_id, workflow_name, execution_id, error_message, occurred_at) — shared failure audit for all workflow workflows.
 - Exec 47 (GDACS backfill, post-fix) ended ERROR 08:58 — failing node detail pending (MCP 429 at the time); exec 45 (continuous) also ended error. src_gdacs rows still climbing (296), so ingestion works; gdacs builder ses_e73fa906effeW2aSnJv4coc5pp owns the diagnosis.
 
 ## 2026-10-30 — Wave 1 complete, all builder reports QA'd (09:15 UTC)
@@ -96,7 +98,7 @@ Workflow `8q9kYIHCQqoB7xMk` "GDACS Continuous Ingestion" (inactive; last run exe
   - NWS 8Z2JslS7PbaCMbP5 (execs 58/65, 26 rows, R2 verified) — ses_e73fa906effcl86JywnqeH4hle
   - PowerOutage US PPMnjFEv8uG02ZDe (pre-existing, QA'd: proxy on fetch, Basin direct, no hardcoded secrets; execs 67/71 success; src_poweroutage_us=131 rows after the 300s sink flush, confirmed 09:20)
 - BLOCKED: OpenCorporates dHaVwGlVcakMtYEA — upstream now returns HTTP 401 "Invalid Api Token" on /v0.4 (token-gated; no token provisioned). Builder hit 3-attempt ceiling with 0 rows. UNPUBLISHED 09:10 (stopped failing schedule; workflow kept, not deleted). Needs an OpenCorporates API token in an n8n credential to proceed. — ses_e73fa905dffcIN1TKnQeCNa2Dk
-- Error handling pattern: each connector workflow has Error Trigger -> Log Workflow Error (insert into connector_errors data table 92T2flIyNQfnxntj). Fires on production failures only.
+- Error handling pattern: each workflow workflow has Error Trigger -> Log Workflow Error (insert into connector_errors data table 92T2flIyNQfnxntj). Fires on production failures only.
 - Builder quota: 10 logical slots (8 wave-1 + crt_sh + dbpedia). dbpedia first spawn (ses_e73e8b653ffeoNHe8VeDggdeYZ) died instantly on a model 429 quota error and was respawned as ses_e73e44425ffeesGNeIj0pCYT4y. Active builders now: crt_sh + dbpedia.
 - 09:20 UTC Basin snapshot: 12 sources in default.evidence — src_gdacs 344 (still climbing via schedule), src_poweroutage_us 131, src_owid 100, src_opensky 50, src_nws-alerts 26, src_aemo_outages 25, src_fema_openfema 25, src_arcgis-hub 25, src_usgs-earthquakes 25, src_ckan-generic 20, src_data-gov-apis 20, src_diag 3. (owid/opensky/aemo landed by earlier pre-existing sessions, not wave-1 builders.)
 - 09:23 UTC Basin: 1141 rows / 999 distinct ids total.
@@ -110,7 +112,7 @@ Workflow `8q9kYIHCQqoB7xMk` "GDACS Continuous Ingestion" (inactive; last run exe
 - Basin ~09:25: src_gdacs 296, src_nws 26, src_fema_openfema 25, src_usgs-earthquakes 25, src_arcgis-hub 25, src_ckan-generic 20, src_data-gov-apis 20, src_diag 3 (~440 rows, 7 sources).
 - R2: harvy-artifacts has gdacs/ckan/arcgis objects (contentType mixed text/html pre-patch + application/json post-patch — verify per new run); harvy-raw = 0 objects, harvy-production = 0 objects. CourtListener builder ses_e73f2b336ffdiSFqpnzq7Z710k still mid-build, reminded twice that raw bulk file + sha256 manifest MUST land in harvy-raw/courtlistener/.
 - Reddit 6NrHM5uC0ePlOhP3: has a "Manual Sample" manualTrigger node; exec 83 started (manual) to verify clean run with $vars.WEBSHARE_PROXY_URL before publishing.
-- OpenObserve: collector active on VPS, filelog/n8n receiver added; BUT querying eu1-api.openobserve.ai/api/<org>/ with the config's Authorization header returns HTTP 401 from this host (both header tokens tried), while collector logs show 0 export errors in the last hour — ingestion may be fine; API-side verification blocked on auth. Correlation key for traces: service="n8n" AND body contains "<workflowId>" or "<source_id>". Per-connector OTel query logged in each builder's CONNECTOR_STATUS.md line. Flagged to supervisor: check the OpenObserve token/org in the UI.
+- OpenObserve: collector active on VPS, filelog/n8n receiver added; BUT querying eu1-api.openobserve.ai/api/<org>/ with the config's Authorization header returns HTTP 401 from this host (both header tokens tried), while collector logs show 0 export errors in the last hour — ingestion may be fine; API-side verification blocked on auth. Correlation key for traces: service="n8n" AND body contains "<workflowId>" or "<source_id>". Per-workflow OTel query logged in each builder's CONNECTOR_STATUS.md line. Flagged to supervisor: check the OpenObserve token/org in the UI.
 - Codestral QA ses_e73f2b32bffd4EaUJItHn86Ks3 re-pinged with updated checklist (spider 50, contentType=json, OpenObserve slug metadata, proven-but-unpublished) + REVIEW pass.
 - OpenCorporates dHaVwGlVcakMtYEA: fetch now uses Authorization: Token token={{ $vars.OPENCORPORATES_TOKEN }} (user must set the variable; 401s without key are expected/honest, workflow stays active).
 
@@ -150,9 +152,9 @@ Workflow `8q9kYIHCQqoB7xMk` "GDACS Continuous Ingestion" (inactive; last run exe
   added to the logs pipeline; validated and restarted, service active.
   n8n application logs (every execution + node error) ship to OpenObserve under service="n8n",
   alongside journald, docker container logs, and hostmetrics.
-- Correlation key: n8n execution id <-> Basin source_id. Every connector workflow must carry
+- Correlation key: n8n execution id <-> Basin source_id. Every workflow workflow must carry
   its slug in the description (setWorkflowMetadata) and use src_<slug> as source_id.
-- OpenObserve query per connector: service="n8n" AND body contains "<workflowId>" (or source_id).
+- OpenObserve query per workflow: service="n8n" AND body contains "<workflowId>" (or source_id).
 - CKAN workflow msNQRk0FLpHzfhMq already has the description pattern applied.
 
 ## 2026-10-30 ~09:15 UTC — USGS Earthquakes proven and published (builder)
@@ -230,22 +232,22 @@ Workflow `8q9kYIHCQqoB7xMk` "GDACS Continuous Ingestion" (inactive; last run exe
 - energydata_info Ingestion `CP70bgI3eOvR21o2` ("Harvy — energydata_info Ingestion") PROVEN but NOT PUBLISHED: exec 97 success (12 nodes, CKAN package_search rows=25 via Webshare proxy `={{ $vars.WEBSHARE_PROXY_URL }}`, deterministic `src_energydata_info_<name>` ids, S3 `energydata_info/<id>.json` contentType application/json, Basin direct via `$vars.BASIN_SEND_TOKEN`, Error Trigger -> `energydata_info_errors` dataTable `h8tUygIyOmMmYXis`, dedupe dataTable `d1mMYCOmGUtqOY3W`).
 - Basin SQL count: `SELECT count(*) FROM default.evidence WHERE source_id='src_energydata_info'` = 25 rows verified in `default.evidence` (~6 min commit lag).
 - R2 check: `harvy-artifacts/energydata_info/src_energydata_info_burkina-faso-population-density-2014.json` verified with `wrangler r2 object get`.
-- BLOCKER: MCP `automation` server began returning HTTP 401 "requires user authorization" then "Invalid resource indicator (invalid_target)" after exec 97; idempotent re-run and publish_workflow not executed (3 attempts capped). Re-authorize connector.harvy.dev MCP, then re-run for idempotency and publish.
+- BLOCKER: MCP `automation` server began returning HTTP 401 "requires user authorization" then "Invalid resource indicator (invalid_target)" after exec 97; idempotent re-run and publish_workflow not executed (3 attempts capped). Re-authorize workflow.harvy.dev MCP, then re-run for idempotency and publish.
 
 ## 2026-10-30 ~10:05 UTC — legistar (builder): BLOCKED on MCP auth
 
 - Source VERIFIED public & keyless: `https://webapi.legistar.com/v1/seattle/Matters?$top=25&$orderby=MatterLastModifiedUtc%20desc` returns flat JSON array (MatterId, MatterTitle, MatterStatusName, MatterIntroDate, MatterLastModifiedUtc). No API key required. Mapping ready: id/event_id=src_legistar_<MatterId>, publisher="Legistar (Seattle)", headline=title+" ("+status+")", product=civic, tenant/workspace=shared.
 - Data tables created in project FqfK5dzjTKUzamjO: `legistar_ingested` (c6vwDPzRCRE94Pvy, col event_id), `legistar_errors` (lijlcp0AbTLQAvQx, cols workflowId/error/ts).
-- BLOCKER: n8n MCP OAuth expired mid-session; every automation.* call now returns "requires user authorization" / "Invalid resource indicator (invalid_target)". Workflow not created/run/published. Needs interactive re-auth of connector.harvy.dev MCP, then rebuild proceeds (pattern copied from proven OpenSky LM5tPQfYunwxCAUU).
+- BLOCKER: n8n MCP OAuth expired mid-session; every automation.* call now returns "requires user authorization" / "Invalid resource indicator (invalid_target)". Workflow not created/run/published. Needs interactive re-auth of workflow.harvy.dev MCP, then rebuild proceeds (pattern copied from proven OpenSky LM5tPQfYunwxCAUU).
 
 ## 2026-10-30 ~09:40 UTC — DBpedia proven, publish BLOCKED (builder)
 
-- DBpedia Ingestion `a7K31FCjWdsT5pSY` PROVEN, NOT published: exec 96 success 09:26:30 (SPARQL via Webshare proxy, timeout patched 30s->60s, normalize+dedupe, S3 `additionalFields.contentType: "application/json"`, Basin direct via `$vars.BASIN_SEND_TOKEN` committed>=1). Basin SQL `SELECT count(*) FROM default.evidence WHERE source_id='src_dbpedia'` = 28 (after ~6min flush). R2 verified: `harvy-artifacts/dbpedia/src_dbpedia_Independent_State_of_Raqqa.json`. BLOCKED at idempotent re-run + publish: n8n MCP connector.harvy.dev requires user re-authorization (all calls fail after 09:35; browser lands on n8n sign-in). Re-authorize MCP, then re-run manual (expect 0 items past dataTable `Eet1Gla9ICcL4rRn` `dbpedia_ingested`), then publish_workflow.
+- DBpedia Ingestion `a7K31FCjWdsT5pSY` PROVEN, NOT published: exec 96 success 09:26:30 (SPARQL via Webshare proxy, timeout patched 30s->60s, normalize+dedupe, S3 `additionalFields.contentType: "application/json"`, Basin direct via `$vars.BASIN_SEND_TOKEN` committed>=1). Basin SQL `SELECT count(*) FROM default.evidence WHERE source_id='src_dbpedia'` = 28 (after ~6min flush). R2 verified: `harvy-artifacts/dbpedia/src_dbpedia_Independent_State_of_Raqqa.json`. BLOCKED at idempotent re-run + publish: n8n MCP workflow.harvy.dev requires user re-authorization (all calls fail after 09:35; browser lands on n8n sign-in). Re-authorize MCP, then re-run manual (expect 0 items past dataTable `Eet1Gla9ICcL4rRn` `dbpedia_ingested`), then publish_workflow.
 
 ## 2026-10-30 ~10:05 UTC — owid_datasets BLOCKED (builder, mimo-flash)
 
-- owid_datasets (src_owid_datasets): SDK build complete, saved at owid-datasets/owid_datasets_sdk.ts (mirrors proven CKAN pattern; data tables owid_datasets_ingested=I53AZa8obhi4jtJE and owid_datasets_errors=A5GNAdOVATFlintz already exist; Error Trigger wired; proxy on both fetch nodes; Basin keypair+Bearer direct; S3 contentType application/json). BLOCKED before create: connector.harvy.dev MCP session expired mid-build — every tools.automation.* call returns "requires user authorization" (needs user re-auth). Basin src_owid_datasets=0 at 10:05 UTC. Note: brief URLs co2.csv / co2-per-capita / total-co2-emissions all 404; SDK uses working successors annual-co2-emissions.csv?csvType=full (primary) + co2-emissions-per-capita.csv?csvType=full (fallback). Resume: validate_workflow + create_workflow_from_code from the SDK file, then execute/verify/publish.
-- openflights | BLOCKER: workflow NOT created/run/published. All node configs validated (11/11) and full SDK code ready (pattern: USGS PHhaeSYwwAVhRwk1; tables openflights_ingested hRkyPzXY7vOuGo8A, openflights_errors 3WnojbOEHfcjEopW exist). Blocked at validate_workflow: n8n MCP connector.harvy.dev requires user re-authorization. After re-auth: validate_workflow -> create_workflow_from_code -> manual exec -> Basin count src_openflights -> R2 openflights/<id>.json -> idempotent re-run -> publish.
+- owid_datasets (src_owid_datasets): SDK build complete, saved at owid-datasets/owid_datasets_sdk.ts (mirrors proven CKAN pattern; data tables owid_datasets_ingested=I53AZa8obhi4jtJE and owid_datasets_errors=A5GNAdOVATFlintz already exist; Error Trigger wired; proxy on both fetch nodes; Basin keypair+Bearer direct; S3 contentType application/json). BLOCKED before create: workflow.harvy.dev MCP session expired mid-build — every tools.automation.* call returns "requires user authorization" (needs user re-auth). Basin src_owid_datasets=0 at 10:05 UTC. Note: brief URLs co2.csv / co2-per-capita / total-co2-emissions all 404; SDK uses working successors annual-co2-emissions.csv?csvType=full (primary) + co2-emissions-per-capita.csv?csvType=full (fallback). Resume: validate_workflow + create_workflow_from_code from the SDK file, then execute/verify/publish.
+- openflights | BLOCKER: workflow NOT created/run/published. All node configs validated (11/11) and full SDK code ready (pattern: USGS PHhaeSYwwAVhRwk1; tables openflights_ingested hRkyPzXY7vOuGo8A, openflights_errors 3WnojbOEHfcjEopW exist). Blocked at validate_workflow: n8n MCP workflow.harvy.dev requires user re-authorization. After re-auth: validate_workflow -> create_workflow_from_code -> manual exec -> Basin count src_openflights -> R2 openflights/<id>.json -> idempotent re-run -> publish.
 
 ## 2026-10-30 ~09:45 UTC — OpenObserve tracing: logs VERIFIED, spans CONFIGURED
 
@@ -261,18 +263,18 @@ Workflow `8q9kYIHCQqoB7xMk` "GDACS Continuous Ingestion" (inactive; last run exe
   NOT yet verified: actual span arrival in OpenObserve — the token is ingest-only (_multi 200,
   _search 401), so verification must happen in the OpenObserve UI (Traces tab) or with a
   read-capable API key.
-- Correlation: execution id (n8n logs, service=n8n) <-> Basin source_id per connector.
+- Correlation: execution id (n8n logs, service=n8n) <-> Basin source_id per workflow.
 
 ## 2026-10-30 ~09:45 UTC — UNHCR (src_unhcr) BLOCKED at build (builder)
 
 - API probed OK (no key): /years/ latest-with-data=2025; per-country via /population/?year=2025&coo=<ISO> (coa= and bulk dump unsupported); /countries/?limit=500 returns all 232 in one page. Full workflow design prepared (mirror of proven PowerOutage PPMnjFEv8uG02ZDe; 9-col Civic schema; proxy $vars.WEBSHARE_PROXY_URL; S3 harvy-artifacts/unhcr/<id>.json; Basin DIRECT; dedupe unhcr_ingested).
-- BLOCKER: connector.harvy.dev n8n MCP failed 429 -> HTTP 502 (origin_bad_gateway) -> persistent "requires user authorization"; automation server then withdrawn from the tool catalog. No tools.automation.* reachable. REST API is disallowed, so create/validate/execute/publish could not run. Nothing created, nothing published. Needs user to re-authorize the n8n MCP, then rebuild from session note #18.
+- BLOCKER: workflow.harvy.dev n8n MCP failed 429 -> HTTP 502 (origin_bad_gateway) -> persistent "requires user authorization"; automation server then withdrawn from the tool catalog. No tools.automation.* reachable. REST API is disallowed, so create/validate/execute/publish could not run. Nothing created, nothing published. Needs user to re-authorize the n8n MCP, then rebuild from session note #18.
 
 ## 2026-10-30 ~09:50 UTC — Cloudflare/proxy blocking audit (supervisor)
 
 Question: is Cloudflare blocking agent traffic via the proxies?
 Answer, from evidence:
-- OUR zone (harvy.dev): connector.harvy.dev is proxied (CF edge IPs). No custom WAF rules,
+- OUR zone (harvy.dev): workflow.harvy.dev is proxied (CF edge IPs). No custom WAF rules,
   no IP access rules, no UA rules (verified via cf CLI). n8n logs show zero 403/blocked vs harvy.dev
   in last 2h. -> our Cloudflare is NOT blocking the agents.
 - TARGET sites via Webshare proxy (egress 9.249.21.58, datacenter IP): 1454x HTTP 200 across
@@ -287,7 +289,7 @@ Answer, from evidence:
 ## 2026-10-30 ~10:10 UTC — n8n MCP auth outage + recovery (restart manager)
 
 - OUTAGE: n8n (container n8n-n8n-1) restarted cleanly 09:41:46 UTC (restartCount 0; cause not
-  crash — likely deploy/restart). After restart, connector.harvy.dev/mcp-server/http began
+  crash — likely deploy/restart). After restart, workflow.harvy.dev/mcp-server/http began
   returning 401 to every unauthenticated call (tools.automation.* dead for manager AND all 20
   mimo builders). Sequence observed: 429 (pre-restart rate limit) -> 404 (warmup) -> 401
   (auth now enforced). Earlier the same morning MCP worked with NO auth header.
@@ -353,7 +355,7 @@ Reference catalog: v2/catalog/reference/factcheck-toolbox-catalog.json (feeds vs
 Reachability verified via proxy: fullfact.org 200 (nginx, JS listing -> Spider), scamsearch.io 200
 (Apache, direct proxy OK), toolbox.google.com factcheck explorer 200 (ESF -> Spider only),
 centralops.net 200, osintcurio.us 301.
-Builder dispatched: ses_e73ac75b1ffesr01pB5u9nmCKh (mimo-v2.6-flash) to build 3 connectors:
+Builder dispatched: ses_e73ac75b1ffesr01pB5u9nmCKh (mimo-v2.6-flash) to build 3 workflows:
 - src_fullfact (ClaimReview JSON-LD from fullfact.org articles via Spider)
 - src_scamsearch (scam reports via proxy)
 - src_claimreview-explorer (Google Fact Check Explorer recent via Spider)
@@ -362,7 +364,7 @@ error trigger, publish-on-proof.
 
 ## 2026-10-30 ~10:10 UTC — expansion sprint + weather/proxy root causes (supervisor)
 
-1. WHY NOT MORE DATA: search connectors were capped at 5-10 rows/run with a single fixed query.
+1. WHY NOT MORE DATA: search workflows were capped at 5-10 rows/run with a single fixed query.
    Dispatched expansion builder ses_e73a9f087ffewT19GMR2ii4bg1 (mimo-flash): algorithmic term
    fan-out (seed x modifiers x years, ~200 terms, Split In Batches, caps >=100/term) on CKAN/
    data.gov/Socrata/OpenCorporates; full-catalog pagination instead of samples; GHCN station cap
@@ -388,7 +390,7 @@ Workflow a7K31FCjWdsT5pSY "Harvy — dbpedia Ingestion" (source_id src_dbpedia, 
 
 ## 2026-10-30 ~10:20 UTC — proxy IP forensics + "is OUR cloudflare blocking the server?" NO (supervisor)
 
-Q2 answered live FROM the VPS: connector.harvy.dev/healthz direct -> 200 (Caddy);
+Q2 answered live FROM the VPS: workflow.harvy.dev/healthz direct -> 200 (Caddy);
 through the webshare proxy -> 200 with cf-ray (Cloudflare served it fine); harvy.dev -> 200 cf-ray.
 => Our zone does NOT block the server or the proxy. No WAF/IP-access rules exist on harvy.dev.
 Blocks happen only on THIRD-PARTY CF-fronted sites (courtlistener.com via proxy = 403 Request blocked).
@@ -475,9 +477,9 @@ Design: GET /years/ -> probe last 5y -> newest with data (2025) -> /countries/?l
 
 User instruction overrides prior repo rule. Updated: AGENTS.md (directive line), docs/BUILD_AGENT_PROMPT.md,
 docs/CONNECTOR_PLAN.md, docs/CONNECTOR-CANDIDATES.md (3 sam_* candidates now rollout candidates),
-docs/REPO_INDEX.md, docs/PLAN.md (annotated), v2/catalog/reference/official-sources-ledger.json
+docs/REPO_INDEX.md, docs/ROADMAP.md (annotated), v2/catalog/reference/official-sources-ledger.json
 (n=15 -> key_required, base api.sam.gov/prod/opps/v2/opportunities),
-v2/catalog/reference/harvy-connector-scopes.json (sam-gov: enabled=true, excluded=false,
+v2/catalog/reference/harvy-workflow-scopes.json (sam-gov: enabled=true, excluded=false,
 directive_change recorded). Telegram/JudyRecords/Truth Social remain excluded.
 Onboarding gate: SAM_GOV_API_KEY (api.data.gov) into secrets, then bounded verification before publish.
 
@@ -512,8 +514,8 @@ SAM.gov: site is istio-envoy (NOT CF), direct from VPS 200. Demo searches DONE k
 GET https://sam.gov/api/prod/sgs/v1/search/?index=opp&q=<term>&size=25&page=N&sort=-modifiedDate
 (q=water -> live solicitations; q=cybersecurity -> 9,736 hits / 1,948 pages). Rendered UI at
 sam.gov/search/?index=opp is a SPA (main.*.js) — Spider fallback if API rate-limits.
-Builders: SAM.gov search connector ses_e738f352dffeT9jo0Px6K04MGU (src_sam_gov_search, term fan-out
-from v2/catalog/reference/sam-search-terms.json); keyed API connector ses_e73919eaaffenQC4yscPYYjZXw
+Builders: SAM.gov search workflow ses_e738f352dffeT9jo0Px6K04MGU (src_sam_gov_search, term fan-out
+from v2/catalog/reference/sam-search-terms.json); keyed API workflow ses_e73919eaaffenQC4yscPYYjZXw
 (src_sam_gov, blocked on SAM_GOV_API_KEY); search-terms generator dispatched (90 days of news).
 
 MediaCloud "why no backfill": NO public S3 bucket exists (mediacloud-files/database-* all
@@ -605,7 +607,7 @@ failures are crt.sh-side, not credentials.
 
 ## 2026-10-30 ~13:10 UTC — [unhcr]+[owid] PROVEN row deltas (unhcr+owid agent)
 
-- Proxy precondition cleared: WEBSHARE_PROXY_URL healthy (direct-IP roll ~11:35 UTC; VPS curl egress 87.86.25.212) — the ~10:39 407 that blocked both connectors is over.
+- Proxy precondition cleared: WEBSHARE_PROXY_URL healthy (direct-IP roll ~11:35 UTC; VPS curl egress 87.86.25.212) — the ~10:39 407 that blocked both workflows is over.
 - [unhcr] qIhzJsVY8KB9Zzwy "UNHCR Population Displacement Connector" activated (was inactive). Proof run via playbook 1-min-cron → poll → restore; end state active + `0 */6 * * *`. Basin src_unhcr: 0 → 1164 rows / 119 distinct event_ids (src_unhcr_2025_<ISO>; 232-country coo=<ISO> loop, only countries with 2025 records emit). Sample src_unhcr_2025_ECU verified in Basin and harvy-artifacts/unhcr/src_unhcr_2025_ECU.json fetched via wrangler r2 object get --remote (real UNHCR record).
 - [owid] lJKHQLDM1Rqs7WyA "OWID Datasets Ingestion" extended + activated: CO2 catalog CSV parse window 100→500 rows; basin_event.source_id retagged 'src_owid_datasets' → 'src_owid' (fleet verify id); event_id namespace kept (src_owid_datasets_co2_*) so the 100 pre-ingested rows keep deduping. Basin src_owid: 100 → 1700 rows / 500 distinct (100 pre-existing src_owid_lifeexp_* + 400 new co2). Sample src_owid_datasets_co2_OWID_AFR_1909 verified in Basin and its harvy-artifacts/owid_datasets/ artifact fetched. src_owid_datasets unchanged at 100 (dedupe held).
 - DUPLICATE CAVEAT: the 1-min-cron window stacked 19 concurrent executions before restore; racing rowNotExists checks appended the SAME event_id multiple times into default.evidence (append-only; basin sql query is read-only — no cleanup path). count(DISTINCT event_id) is true inventory (119 unhcr / 500 owid); raw row counts inflate. Once stacked runs drain, 6h runs dedupe-skip to 0 new rows (idempotent). R2 writes same key per id (idempotent overwrite).
@@ -647,7 +649,7 @@ failures are crt.sh-side, not credentials.
 - [dbpedia] wf a7K31FCjWdsT5pSY: SPARQL LIMIT 100 -> 300, retryOnFail(3) added to S3+Basin nodes. Run: Basin src_dbpedia 28 -> 103 (+75; the LIMIT-300 binding set only yields ~103 unique resource tails — bindings are heavily duplicated per ?s, Normalize `seen` collapses them). Deeper growth needs higher LIMIT/offset paging.
 - [energydata] (actual source_id `src_energydata_info`, NOT `src_energydata`) wf CP70bgI3eOvR21o2: CKAN package_search rows 25 -> 300 (catalog count 1191; needs `start` paging for the rest). Run: Basin src_energydata_info 25 -> 300 (+275; dedupe table 300 rows = clean 1:1). Errors dataTable empty.
 - End state: all three active + continuous 6h cronExpression at offset minutes per the worldbank note (:00 fires get missed): openflights "20 */6 * * *", dbpedia "10 */6 * * *", energydata "40 */6 * * *"; each re-POSTed /activate after the PUT. Verified Basin counts via basin sql query (300/103/300, stable re-query). n8n success not used as proof.
-- Housekeeping: VPS scratch (/tmp/patch*.py, /tmp/wf*.json, exec dumps) removed. MCP connector.harvy.dev still 403 from agent sessions (needs user re-auth) — manual runs used the sanctioned 1-min cron trick instead. Execution rows on this box are purged from execution_entity within minutes (261/266/269 gone post-run) — audit via dataTables + Basin counts.
+- Housekeeping: VPS scratch (/tmp/patch*.py, /tmp/wf*.json, exec dumps) removed. MCP workflow.harvy.dev still 403 from agent sessions (needs user re-auth) — manual runs used the sanctioned 1-min cron trick instead. Execution rows on this box are purged from execution_entity within minutes (261/266/269 gone post-run) — audit via dataTables + Basin counts.
 
 ## 2026-10-30 - Telegram exclusion LIFTED by direct user directive
 
@@ -664,18 +666,18 @@ Files changed (this directive only; line 481 history above intentionally NOT rew
 - docs/CONNECTOR_PLAN.md (Telegram removed from do-not-reintroduce list; approval + scope sentence added)
 - docs/BUILD_AGENT_PROMPT.md ("user excludes Telegram" replaced with approval + scope; JudyRecords/Truth Social exclusion kept)
 - docs/REPO_INDEX.md (two spots: queue-inventory wording; port-exclusions wording)
-- docs/IOS_APP_PLAN.md (5.1.1 enforcement wording: Telegram approved w/ configured-channel-list scope; JudyRecords/Truth Social permanent)
+- docs/IOS_APP_ROADMAP.md (5.1.1 enforcement wording: Telegram approved w/ configured-channel-list scope; JudyRecords/Truth Social permanent)
 - docs/CONNECTOR-CANDIDATES.md (do-not-implement sentence: Telegram removed; approval + scope added)
-- v2/catalog/reference/harvy-connector-scopes.json (new named_connectors entry id "telegram": enabled=false, excluded=false, exclusion_reason=null, api_documentation_url https://core.telegram.org/api, implementation_status "approved by direct user directive 2026-10-30; configured channel list only; not implemented"; sam-gov entry's dated directive_change left as history)
-- docs/PLAN.md: checked — contains no explicit Telegram exclusion sentence; left untouched per directive
-Status: not implemented; no workflow, connector, or credential created or run by this change.
+- v2/catalog/reference/harvy-workflow-scopes.json (new named_connectors entry id "telegram": enabled=false, excluded=false, exclusion_reason=null, api_documentation_url https://core.telegram.org/api, implementation_status "approved by direct user directive 2026-10-30; configured channel list only; not implemented"; sam-gov entry's dated directive_change left as history)
+- docs/ROADMAP.md: checked — contains no explicit Telegram exclusion sentence; left untouched per directive
+Status: not implemented; no workflow, workflow, or credential created or run by this change.
 
 ## 2026-10-30 ~17:30 UTC — batch-1 RUN agent: HARD STOP, fleet unreachable (no runs)
 
 - SCOPE: batch-1 open/keyless APIs only (Federal Register, SEC EDGAR, CDC PLACES, openFDA, api.weather.gov, USAspending POST, USGS, OpenFEMA, CMS, NHTSA, CFPB). Excluded sources untouched (JudyRecords, Truth Social, Telegram; SAM.gov skipped — no key in scope of this run). No workflows created/modified/deleted; no commit/push.
 - PREFLIGHT (presence only, no values): env N8N_API_KEY / N8N_URL / WEBSHARE_PROXY_URL / SPIDER_API_KEY / BASIN_SEND_TOKEN / SAM_GOV_API_KEY / WRANGLER_BASIN_SQL_AUTH_TOKEN all UNSET; ~/.config/harvy/ does not exist on this host; this worker is an agent box (local fresh n8n, 0 workflows/0 vars/0 keys), not the fleet VPS.
 - GATE 1 (proxy): FAIL — no Webshare URL anywhere on this host, so egress preflight `curl --proxy ... ipv4.webshare.io` not runnable. Not improvised.
-- GATE 2 (fleet n8n): FAIL — connector.harvy.dev DNS -> 85.9.199.60, HTTPS times out (15s) from here; SSH to 85.9.199.60 and 85.9.194.73 both time out; SSH to 194.113.74.92 works but its n8n is a FRESH instance (0 workflows, 0 variables, 0 executions, 0 api_keys — DB copied and counted read-only), not the fleet runner; local n8n (localhost:5678, this box) is also fresh (0 workflows) with Unauthorized REST and no usable key. No MCP automation tool in this session's catalog. No new workflows created anywhere.
+- GATE 2 (fleet n8n): FAIL — workflow.harvy.dev DNS -> 85.9.199.60, HTTPS times out (15s) from here; SSH to 85.9.199.60 and 85.9.194.73 both time out; SSH to 194.113.74.92 works but its n8n is a FRESH instance (0 workflows, 0 variables, 0 executions, 0 api_keys — DB copied and counted read-only), not the fleet runner; local n8n (localhost:5678, this box) is also fresh (0 workflows) with Unauthorized REST and no usable key. No MCP automation tool in this session's catalog. No new workflows created anywhere.
 - GATE 3 (Basin): FAIL for writes/reads — `wrangler basin sql query` errors `Missing WRANGLER_BASIN_SQL_AUTH_TOKEN` (no token on this host); ingest POST needs Bearer token likewise absent. Catalog itself verified active via wrangler OAuth: warehouse `9061d93166998cf39e011a52b369b812_harvy-basin`. R2 buckets listed via OAuth (harvy-basin/inbox/production/public/raw) but no objects written — without the fleet runner + Basin token the verify chain cannot close, so nothing was written.
 - OPEN-API READ-ONLY REACHABILITY (direct single GETs from this worker; open keyless JSON APIs, no crawling, no proxy — allowed per ledger notes): Federal Register 200, SEC EDGAR 200, CDC PLACES 200, openFDA 200, weather.gov 200 (only without `limit` param; `?limit=1` is 400), USAspending POST 200 (live spending payload returned), USGS water + earthquake 200, NHTSA 200, CFPB complaints 200, CMS 200 via `/api/v1/dataset` and `/data.json` (404 only on wrong `/data-api/v1/dataset/` path). OpenFEMA timed out from here (000) on 2 attempts — needs a fleet-side retry, not a verdict.
 - OUTCOME: 0 bounded runs, 0 new workflows, 0 Basin rows. Table below records reachability only — not ingestion.

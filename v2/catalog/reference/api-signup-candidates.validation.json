@@ -460,7 +460,7 @@
   "notes": [
     "No file other than this validation file was created or modified; the original candidates file is untouched.",
     "All registry matches are exact base_url matches; five name variants are documented and are not hallucinations.",
-    "GDELT was not suggested: v2/connectors/gdelt.workflow.ts already exists (mid-flight).",
+    "GDELT was not suggested: v2/workflows/gdelt.workflow.ts already exists (mid-flight).",
     "Live-source duplication baseline from docs/CONNECTOR_STATUS.md src_* inventory: ofac_sdn, worldbank, owid, owid_datasets, nws, noaa_spc, gdacs, usgs, fema_openfema, poweroutage_us, opensky, arcgis, courtlistener, crtsh, wayback, gadm, unhcr, who, mediacloud, claimreview, fullfact, legistar, openflights, dbpedia, energydata_info, sam_gov, ghcn, aemo_outages, ckan, opendatasoft, wikidata, scamsearch, nasa_snowmodel, datagov.",
     "No credentials, secrets, or signup actions were involved in this validation."
   ]

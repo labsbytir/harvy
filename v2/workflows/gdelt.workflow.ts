@@ -1,6 +1,6 @@
 import { workflow, node, trigger, expr } from '@n8n/workflow-sdk';
 
-// GDELT DOC 2.0 news connector (source_id src_gdelt, product newsk).
+// GDELT DOC 2.0 news workflow (source_id src_gdelt, product newsk).
 // spider-concurrency<=50 (GDELT is a direct structured API; no Spider used).
 
 const every6h = trigger({
@@ -170,7 +170,7 @@ const logErr = node({
   },
 });
 
-export default workflow('gdelt', 'gdelt - GDELT DOC 2.0 news connector')
+export default workflow('gdelt', 'gdelt - GDELT DOC 2.0 news workflow')
   .add(every6h).to(fetch)
   .add(manual).to(fetch)
   .to(build).to(uploadR2).to(collect).to(ingestBasin).to(verifyBasin).to(markIngested)

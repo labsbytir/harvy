@@ -22,7 +22,7 @@ import { BrutalistLinks } from "./BrutalistLinks";
 const products = MODES;
 
 const steps = [
-  { index: "01", code: "MONITOR", title: "Monitor", text: "Collect from approved sources through registered connectors with verified proxy egress." },
+  { index: "01", code: "MONITOR", title: "Monitor", text: "Collect from approved sources through registered workflows with verified proxy egress." },
   { index: "02", code: "ONTOLY", title: "Connect", text: "Resolve observations and entities in Ontoly with immutable HarvyDex IDs and provenance." },
   { index: "03", code: "HQL_ANALYTICS", title: "Analyze", text: "Execute bounded semantic HQL views with visible freshness and recorded coverage gaps." },
   { index: "04", code: "OPERATIONAL_ACT", title: "Act", text: "Produce attributed intelligence briefs or hand off authorized Ops actions." }
@@ -353,7 +353,7 @@ function MarketingHome() {
                   : infoPage === "security"
                   ? "The local build has signed Automation callbacks and tenant-scoped query checks. Live authorization, R2 permissions, secret injection, and two-tenant deployment checks are still pending."
                   : infoPage === "docs"
-                  ? "Canonical product, engineering, connector, and UI documents are kept in the repository docs folder. A public documentation site has not been deployed."
+                  ? "Canonical product, engineering, workflow, and UI documents are kept in the repository docs folder. A public documentation site has not been deployed."
                   : "This preview has no contact form or external demo booking integration."}
               </Typography>
             </TacticalPanel>
@@ -451,7 +451,7 @@ function MarketingHome() {
                           [ SOURCE PROVENANCE ]
                         </Typography>
                         <Typography color="text.secondary" sx={{ fontSize: "0.9rem" }}>
-                          Approved connector registry · verified proxy egress
+                          Approved workflow registry · verified proxy egress
                         </Typography>
                       </Box>
                       <Divider />

@@ -1,17 +1,17 @@
-# Harvy v2 API and connector adoption plan
+# Harvy v2 API and workflow adoption plan
 
-This is the connector execution plan for the [master plan](PLAN.md). Harvy is one ontology and one system. Ontoly is the raw dataset product; Civic, Tower, Ops, and Newsk are modes. Every external API, download, crawl, scrape, search, transformation, and ingestion connector runs in **Automation**. n8n schedules and observes internal Automation jobs. Every connector requires the approved Webshare proxy route; Spider Cloud Unlimited is required for crawl/scrape/link discovery. No mode gets a separate connector infrastructure stack.
+This is the workflow execution plan for the [roadmap](ROADMAP.md). Harvy is one ontology and one system. Ontoly is the raw dataset product; Civic, Tower, Ops, and Newsk are modes. Every external API, download, crawl, scrape, search, transformation, and ingestion workflow runs in **Automation**. n8n schedules and observes internal Automation jobs. Every workflow requires the approved Webshare proxy route; Spider Cloud Unlimited is required for crawl/scrape/link discovery. No mode gets a separate workflow infrastructure stack.
 
 ## Complete candidate sources now in this repository
 
 | Input | Location | Meaning |
 |---|---|---|
-| OpenTIR source inventory | [CONNECTOR-CANDIDATES.md](CONNECTOR-CANDIDATES.md) | Source-by-source inventory, including publisher/API locations, initial scopes, and access notes. Historical candidates, not implemented connectors. |
-| Prior Harvy manifest | [`v2/catalog/reference/harvy-upstream-manifest.json`](../v2/catalog/reference/harvy-upstream-manifest.json) | Prior connector/source definitions and metadata. Reference snapshot only. |
-| Prior Harvy scopes | [`v2/catalog/reference/harvy-connector-scopes.json`](../v2/catalog/reference/harvy-connector-scopes.json) | Streams, requested scopes, portals, bulk sources, named connectors, and references. Reference snapshot only. |
+| OpenTIR source inventory | [CONNECTOR-CANDIDATES.md](CONNECTOR-CANDIDATES.md) | Source-by-source inventory, including publisher/API locations, initial scopes, and access notes. Historical candidates, not implemented workflows. |
+| Prior Harvy manifest | [`v2/catalog/reference/harvy-upstream-manifest.json`](../v2/catalog/reference/harvy-upstream-manifest.json) | Prior workflow/source definitions and metadata. Reference snapshot only. |
+| Prior Harvy scopes | [`v2/catalog/reference/harvy-workflow-scopes.json`](../v2/catalog/reference/harvy-workflow-scopes.json) | Streams, requested scopes, portals, bulk sources, named workflows, and references. Reference snapshot only. |
 | Civic source directory | [`v2/catalog/reference/civic-source-catalog.json`](../v2/catalog/reference/civic-source-catalog.json) | Seven Civic source-directory entries. Reference snapshot only. |
 
-The files overlap and mix implemented adapters, source scopes, bulk datasets, and references. The OpenTIR inventory's heading says 150 upstream records/149 IDs, while the master plan records a later local 147-entry/146-ID snapshot. **Neither is the combined denominator.** Freeze a deduplicated canonical ledger from all four inputs before claiming the user's 50% adoption target. The ledger must show source-file origin and aliases so no candidate disappears silently.
+The files overlap and mix implemented adapters, source scopes, bulk datasets, and references. The OpenTIR inventory's heading says 150 upstream records/149 IDs, while the roadmap records a later local 147-entry/146-ID snapshot. **Neither is the combined denominator.** Freeze a deduplicated canonical ledger from all four inputs before claiming the user's 50% adoption target. The ledger must show source-file origin and aliases so no candidate disappears silently.
 
 ## Priority order
 
@@ -20,13 +20,13 @@ The files overlap and mix implemented adapters, source scopes, bulk datasets, an
 3. **Weather** ([issue #29](https://github.com/labsbytir/harvy/issues/29)): choose the first approved weather source from the inventory (e.g. NWS/NOAA), preserve units/location/valid time and provenance, and join context through the shared ontology. WeatherNext is a separate model/context integration, not the weather observation source.
 4. **Remaining full catalog:** configure the best reusable adapter families across Civic, Tower, Ops, Newsk, and Ontoly after the first end-to-end path works. The 50% target applies to the deduplicated full legacy catalog, not a hand-picked shortlist.
 
-## One connector contract
+## One workflow contract
 
-Each canonical ledger row must record: canonical ID; original IDs/paths; source publisher; source type (API, bulk, crawl, stream, directory/reference); access terms and allowed use; product modes served; query/geography/time scope; API/download operation; auth secret reference; Webshare egress verification; Spider mode when applicable; rate/concurrency limits; expected cadence; schema mapping; original source ID; HarvyDex ID strategy; raw/processed/query artifact paths; attribution; license/retention; owner; last verified time; run IDs; status; and exclusion reason. A directory/reference row is not an executable connector.
+Each canonical ledger row must record: canonical ID; original IDs/paths; source publisher; source type (API, bulk, crawl, stream, directory/reference); access terms and allowed use; product modes served; query/geography/time scope; API/download operation; auth secret reference; Webshare egress verification; Spider mode when applicable; rate/concurrency limits; expected cadence; schema mapping; original source ID; HarvyDex ID strategy; raw/processed/query artifact paths; attribution; license/retention; owner; last verified time; run IDs; status; and exclusion reason. A directory/reference row is not an executable workflow.
 
-Status progression is `inventoried → mapped → runnable → live_verified → adopted`, with separate `blocked`, `failed`, and `excluded`. A source counts as adopted only after two bounded real runs, verified proxy path, normalized output with provenance, idempotent replay, authorized API/HQL read, UI evidence, health/freshness, and independent review. A JSON manifest, n8n template, or imported catalog row alone counts as zero adopted connectors.
+Status progression is `inventoried → mapped → runnable → live_verified → adopted`, with separate `blocked`, `failed`, and `excluded`. A source counts as adopted only after two bounded real runs, verified proxy path, normalized output with provenance, idempotent replay, authorized API/HQL read, UI evidence, health/freshness, and independent review. A JSON manifest, n8n template, or imported catalog row alone counts as zero adopted workflows.
 
-The runtime path is: approved scope → Harvy `/api/v1/` or internal n8n trigger → canonical run registration → Automation connector → Webshare and (for crawling) Spider preflight → bounded source response → immutable R2 raw artifact → validated Ontoly/HarvyDex record and R2 processed artifact → optional Basin Iceberg/Parquet release → scoped HQL/API/UI. Keep provider credentials inside approved secret systems and outside n8n exports.
+The runtime path is: approved scope → Harvy `/api/v1/` or internal n8n trigger → canonical run registration → Automation workflow → Webshare and (for crawling) Spider preflight → bounded source response → immutable R2 raw artifact → validated Ontoly/HarvyDex record and R2 processed artifact → optional Basin Iceberg/Parquet release → scoped HQL/API/UI. Keep provider credentials inside approved secret systems and outside n8n exports.
 
 ## Batch implementation
 
@@ -40,13 +40,13 @@ The runtime path is: approved scope → Harvy `/api/v1/` or internal n8n trigger
 | F | Public-page crawl | Approved source pages through Spider Unlimited | Allowed targets, page caps, Webshare egress proof, extraction completeness. |
 | G | Gated/social | Scoped Facebook, X, Reddit and other approved sources | Platform access/terms and scope, credential ownership, retention, quota. |
 
-These are adapter families, not claims that every example is ready. Use the source-by-source inventory to build configurations, and record blocked access explicitly. Do not reintroduce JudyRecords, Truth Social, RSS/RSSHub, or Cloudflare Search into the active plan. Telegram was approved by direct user directive on 2026-10-30, scoped exactly to channels explicitly joined by the user's own approved Telegram app (a configured channel list); no discovery or expansion beyond that list, no member-list or profile harvesting, and the user's approved app session is the only access path. SAM.gov was un-excluded by direct user directive on 2026-10-30 (AGENTS.md updated); onboard via the Get Opportunities Public API with SAM_GOV_API_KEY and bounded verification. Do not count reference-only rows as connectors.
+These are adapter families, not claims that every example is ready. Use the source-by-source inventory to build configurations, and record blocked access explicitly. Do not reintroduce JudyRecords, Truth Social, RSS/RSSHub, or Cloudflare Search into the active plan. Telegram was approved by direct user directive on 2026-10-30, scoped exactly to channels explicitly joined by the user's own approved Telegram app (a configured channel list); no discovery or expansion beyond that list, no member-list or profile harvesting, and the user's approved app session is the only access path. SAM.gov was un-excluded by direct user directive on 2026-10-30 (AGENTS.md updated); onboard via the Get Opportunities Public API with SAM_GOV_API_KEY and bounded verification. Do not count reference-only rows as workflows.
 
 ## Immediate repo work
 
-1. Generate `v2/catalog/connector-ledger.json` from the four snapshots with stable IDs and source provenance; review duplicate aliases and exclusions. Freeze `N` and `T = ceil(N/2)` with a revision and publish the full list.
-2. Implement shared connector manifest/schema and Python Automation adapter contract; build one real CourtListener bulk run and then Media Cloud/SocketNews news runs. Keep source-specific code in Automation.
+1. Generate `v2/catalog/workflow-ledger.json` from the four snapshots with stable IDs and source provenance; review duplicate aliases and exclusions. Freeze `N` and `T = ceil(N/2)` with a revision and publish the full list.
+2. Implement shared workflow manifest/schema and Python Automation adapter contract; build one real CourtListener bulk run and then Media Cloud/SocketNews news runs. Keep source-specific code in Automation.
 3. Replace the untracked RSS n8n starter with inactive CourtListener/news/weather dispatch templates that call Automation, and verify them against the installed n8n version before activation.
 4. Record per-source run evidence, then expand reusable families in batches. Report `adopted/N`, blocked reasons, and cost/latency daily. Never substitute candidate count or registration count for live adoption.
 
-No external connector in this clean repo is currently live verified. The copied inventories are planning inputs, not deployed integrations.
+No external workflow in this clean repo is currently live verified. The copied inventories are planning inputs, not deployed integrations.

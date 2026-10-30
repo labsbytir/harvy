@@ -75,7 +75,7 @@ export function isExcludedConnectorId(value: string): boolean {
 }
 
 /**
- * Shape and bounds check only. Automation must still authorize the connector,
+ * Shape and bounds check only. Automation must still authorize the workflow,
  * registered source scope, access scope, target URL, provider, and proxy egress.
  */
 export function parseAutomationRunRequest(value: unknown): AutomationRunRequest | null {

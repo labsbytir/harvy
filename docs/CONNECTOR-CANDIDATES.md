@@ -1,14 +1,14 @@
-# Harvy connector candidates from OpenTIR
+# Harvy workflow candidates from OpenTIR
 
-The cited `opentir-development/sources.yaml` revision returned 404 from the public repository endpoint when rechecked on 2026-10-29, so its original 150-record/149-ID count is not independently verified. This file currently has 147 numbered entries and 146 unique IDs: `entso_e_outages` appears twice, and numbers 61, 112, and 145 are absent without a recorded disposition. Treat this as a candidate reference, not an approved or implemented connector catalog; no entry here proves live verification or enablement.
+The cited `opentir-development/sources.yaml` revision returned 404 from the public repository endpoint when rechecked on 2026-10-29, so its original 150-record/149-ID count is not independently verified. This file currently has 147 numbered entries and 146 unique IDs: `entso_e_outages` appears twice, and numbers 61, 112, and 145 are absent without a recorded disposition. Treat this as a candidate reference, not an approved or implemented workflow catalog; no entry here proves live verification or enablement.
 
-## Harvy-wide connector scope
+## Harvy-wide workflow scope
 
-- Route third-party API, scraping, crawling, searching, and ingestion through **Automation**. Use Spider Cloud for applicable extraction and the required Webshare proxy for every connector, including API requests. Keep credentials in Harvy Secrets Store.
+- Route third-party API, scraping, crawling, searching, and ingestion through **Automation**. Use Spider Cloud for applicable extraction and the required Webshare proxy for every workflow, including API requests. Keep credentials in Harvy Secrets Store.
 - Normalize results into Harvy's shared observation, event, entity, document, and evidence model. Preserve source identity, original source URL, retrieval time, attribution, terms/license, and provenance.
 - Start with the narrowest useful collection: named collection/query, watchlist, time window, geographic boundary, threshold, or catalog metadata. Do not mirror a provider's complete dataset by default.
-- Source-file tiers are upstream labels only; they do not mean Harvy has approved, implemented, or verified a connector.
-- Before activation, record owner, data classes, allowed scope, terms/license, credential/proxy requirements, rate/retention limits, failure behavior, and validation plan in the connector catalog.
+- Source-file tiers are upstream labels only; they do not mean Harvy has approved, implemented, or verified a workflow.
+- Before activation, record owner, data classes, allowed scope, terms/license, credential/proxy requirements, rate/retention limits, failure behavior, and validation plan in the workflow catalog.
 
 ## Rollout scope
 
@@ -36,7 +36,7 @@ Add further hazard, climate, energy, outage, infrastructure, transit, procuremen
 
 Do not implement or activate JudyRecords or Truth Social sources. Telegram was un-excluded by direct user directive on 2026-10-30, scoped exactly to channels explicitly joined by the user's own approved Telegram app (a configured channel list); no discovery or expansion beyond that list, no member-list or profile harvesting, and the user's approved app session is the only access path. SAM.gov was un-excluded by direct user directive on 2026-10-30; the three SAM.gov records below are now rollout candidates (pending SAM_GOV_API_KEY and bounded verification), kept here so the history of the exclusion stays visible.
 
-## Source-by-source connector catalog
+## Source-by-source workflow catalog
 
 Each item corresponds to one source record, including both configured `entso_e_outages` records. **Get** links the publisher site and API/download base from the YAML; a `catalog_endpoint` appears as a complete route when possible. **Initial scope** reproduces configured collection names and filters/endpoints. If none is configured, the entry calls for a bounded query or watchlist before implementation. Verify endpoint availability, terms, auth, rate limits, licenses, cadence, and retention with the publisher.
 
@@ -1219,4 +1219,4 @@ Each item corresponds to one source record, including both configured `entso_e_o
 
 ## Source-file cleanup notes
 
-The YAML repeats `entso_e_outages`; resolve that duplicate before using it as an import manifest. The `example` and `no_public_api` entries are placeholders, not active upstream sources. Records such as `realtime_osint_roadmap`, `owid_lc_reconcile`, `owid_legal_use_summary`, `owid_browser_semantic_search`, `owid_cartograms`, `owid_chartbook`, and `owid_tech_radar` should be reviewed as processing/research artifacts rather than automatically implemented as connectors.
+The YAML repeats `entso_e_outages`; resolve that duplicate before using it as an import manifest. The `example` and `no_public_api` entries are placeholders, not active upstream sources. Records such as `realtime_osint_roadmap`, `owid_lc_reconcile`, `owid_legal_use_summary`, `owid_browser_semantic_search`, `owid_cartograms`, `owid_chartbook`, and `owid_tech_radar` should be reviewed as processing/research artifacts rather than automatically implemented as workflows.
