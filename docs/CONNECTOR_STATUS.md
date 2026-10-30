@@ -340,3 +340,22 @@ Q: does the weather.gov/NOAA backfill work? NO.
   Plan: station manifest (US, PRCP/TMAX/TMIN, >=40y coverage, cap 200) -> raw .dly to harvy-raw ->
   parse fixed-width -> normalized (degC/mm) to harvy-artifacts -> Basin src_ghcn-daily ->
   queryable via Basin SQL. Schedule 6h, error trigger, idempotent station+date+element IDs.
+
+## 2026-10-30 ~10:20 UTC — legistar (builder): config fixed, needs session restart
+
+- Fixed ~/.config/opencode/opencode.json MCP config (backup opencode.json.bak-legistar): `automation` was nested under a bogus `servers` wrapper key inside `mcp` and used `disabled:false` instead of `enabled:true`. Now a direct `mcp` child with `enabled:true`; URL + Authorization token left unchanged.
+- Despite the fix, this session cannot load the automation MCP: OpenCode connects MCP at session start, and `automation` was dropped from the catalog during the outage. No in-session reconnect tool. Restart the session (or reconnect the automation MCP) to pick up the corrected config.
+- Legistar build state unchanged & ready to resume: source endpoint verified public/keyless; data tables legistar_ingested=c6vwDPzRCRE94Pvy, legistar_errors=lijlcp0AbTLQAvQx created; workflow code written (mirrors proven OpenSky LM5tPQfYunwxCAUU). Remaining once MCP is live: validate_workflow -> create_workflow_from_code -> execute_workflow(manual) -> verify Basin count(source_id=src_legistar)>=1 + R2 object -> idempotent re-run -> publish_workflow.
+
+## 2026-10-30 ~10:05 UTC — factchecking source family onboarded (supervisor)
+
+Reference catalog: v2/catalog/reference/factcheck-toolbox-catalog.json (feeds vs tool directories).
+Reachability verified via proxy: fullfact.org 200 (nginx, JS listing -> Spider), scamsearch.io 200
+(Apache, direct proxy OK), toolbox.google.com factcheck explorer 200 (ESF -> Spider only),
+centralops.net 200, osintcurio.us 301.
+Builder dispatched: ses_e73ac75b1ffesr01pB5u9nmCKh (mimo-v2.6-flash) to build 3 connectors:
+- src_fullfact (ClaimReview JSON-LD from fullfact.org articles via Spider)
+- src_scamsearch (scam reports via proxy)
+- src_claimreview-explorer (Google Fact Check Explorer recent via Spider)
+All: R2 raw->harvy-raw, artifacts->harvy-artifacts, Basin evidence 9-col schema, 6h schedule,
+error trigger, publish-on-proof.

@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "kind": "reference_catalog",
+  "title": "Fact-checking & verification tool directory",
+  "note": "These are tool/resource directories, not data feeds. The live ingestion connectors are fullfact.org (ClaimReview), scamsearch.io, and the ClaimReview/Google Fact Check Explorer harvest — see docs/CONNECTOR_STATUS.md. This file is the canonical reference list so adoption targets are not guessed.",
+  "entries": [
+    { "id": "fullfact-factchecks", "name": "Full Fact — fact-check articles", "url": "https://fullfact.org/fact-checks/", "kind": "feed", "structured_data": "schema.org ClaimReview JSON-LD on article pages", "connector": "src_fullfact" },
+    { "id": "google-factcheck-explorer", "name": "Google Fact Check Explorer", "url": "https://toolbox.google.com/factcheck/explorer/search/list:recent;hl=en", "kind": "feed", "structured_data": "ClaimReview-indexed results (ESF-fronted; scrape via Spider Cloud)", "connector": "src_claimreview-explorer" },
+    { "id": "scamsearch", "name": "ScamSearch.io — scam reports", "url": "https://scamsearch.io/", "kind": "feed", "structured_data": "HTML listing + report pages (Apache-fronted; proxy OK)", "connector": "src_scamsearch" },
+    { "id": "firstdraft-verification-toolbox", "name": "First Draft — Verification Toolbox", "url": "https://firstdraftnews.org/verification-toolbox/", "kind": "tool_directory", "use": "verification methods & tools reference" },
+    { "id": "osintcurio", "name": "OSINT Curious", "url": "https://osintcurio.us/", "kind": "tool_directory", "use": "OSINT techniques reference (redirects to GitHub Pages)" },
+    { "id": "claimreviewproject-user-guide", "name": "ClaimReview Project — user guide", "url": "https://www.claimreviewproject.com/user-guide", "kind": "spec", "use": "ClaimReview markup spec — governs parser for all fact-check feeds" },
+    { "id": "nordishub-factchecking-tools", "name": "Nordic Hub — fact-checking tools database", "url": "https://nordishub.eu/2022/10/13/fact-checking-tools-database/", "kind": "tool_directory", "use": "EU fact-checking tools inventory" },
+    { "id": "centralops", "name": "CentralOps — domain/IP lookup", "url": "https://centralops.net/co/", "kind": "tool", "use": "domain/whois/IP attribution for source verification" },
+    { "id": "journaliststoolbox-urban-legends", "name": "Journalist's Toolbox — urban legends / fact-checking", "url": "https://www.journaliststoolbox.org/2023/05/25/urban_legendsfact-checking/", "kind": "tool_directory", "use": "rumor/debunk references" }
+  ],
+  "excluded": [],
+  "verified_reachable_2026_10_30": ["fullfact.org 200 (nginx; listing is JS-rendered -> use Spider)", "scamsearch.io 200 (Apache)", "toolbox.google.com factcheck explorer 200 (ESF/Google)", "centralops.net 200 (IIS)", "osintcurio.us 301 GitHub Pages"]
+}
