@@ -359,3 +359,25 @@ Builder dispatched: ses_e73ac75b1ffesr01pB5u9nmCKh (mimo-v2.6-flash) to build 3 
 - src_claimreview-explorer (Google Fact Check Explorer recent via Spider)
 All: R2 raw->harvy-raw, artifacts->harvy-artifacts, Basin evidence 9-col schema, 6h schedule,
 error trigger, publish-on-proof.
+
+## 2026-10-30 ~10:10 UTC — expansion sprint + weather/proxy root causes (supervisor)
+
+1. WHY NOT MORE DATA: search connectors were capped at 5-10 rows/run with a single fixed query.
+   Dispatched expansion builder ses_e73a9f087ffewT19GMR2ii4bg1 (mimo-flash): algorithmic term
+   fan-out (seed x modifiers x years, ~200 terms, Split In Batches, caps >=100/term) on CKAN/
+   data.gov/Socrata/OpenCorporates; full-catalog pagination instead of samples; GHCN station cap
+   200 -> all US stations with >=40y PRCP/TMAX/TMIN + by_year global CSVs 1763-2026 filtered to
+   those stations; GDACS backfill cap check. Provenance kept on every row.
+2. WEATHER.GOV CANNOT BACKDATE — verified: api.weather.gov/stations/KTOP/observations?start=1985
+   returns 0 features; API only holds recent obs (latest=now). 75+ years (actually 1763+) lives in
+   NCEI GHCN-Daily (by_year 1763..2026 verified 200/206 via proxy) — GHCN builder
+   ses_e73af62f5ffeaFRKIrNmoFz7dt owns it. Do not spend calls on weather.gov history.
+3. WEBSHARE PROXY vs CLOUDFLARE root cause: proxy egress 9.249.21.58 is in 9.249.16.0/21, AS5650
+   (hosting ASN) = Webshare DATACENTER product. Cloudflare Bot Fight Mode blocks hosting ASNs
+   (verified live: courtlistener.com via proxy -> 403 "Request blocked"; ncei non-CF -> 206 OK).
+   Webshare RESIDENTIAL pool uses a DIFFERENT endpoint: p.webshare.io port 80/1080/3128 with
+   backbone credentials from the dashboard Endpoint Generator (80M residential IPs, ISP ASNs).
+   FIX: generate residential backbone creds in Webshare dashboard, set n8n var
+   WEBSHARE_PROXY_URL_RESIDENTIAL, route CF-fronted targets (courtlistener, reddit, fullfact
+   JS, google ESF) through it; keep datacenter var for tolerant targets. p.webshare.io DNS
+   unresolved from this Mac (expected — needs the backbone creds); test from the VPS.
