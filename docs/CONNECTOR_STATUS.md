@@ -443,3 +443,18 @@ CF-fronted -> fetch DIRECT from VPS, no proxy (the fixed Webshare IP can't even 
 catalog.data.gov). Builder: ses_e739810fdffeajsK9FSf44R4nZ (mimo-flash). Per-dataset source_ids
 src_datagov_*/src_nasa_snowmodel_1980_2020; raw->harvy-raw, normalized->harvy-artifacts, Basin
 9-col evidence, dedupe sha1(slug+resource_url), 6h schedule, publish-on-proof.
+
+## 2026-10-30 ~10:35 UTC — official-sources ledger: all 55 classified (supervisor)
+
+Ledger: v2/catalog/reference/official-sources-ledger.json. Answer to "why not use these": we WOULD —
+they are the highest-trust structured sources. Classification per source:
+- open_api_verified (onboard now, tested 200 from VPS): Federal Register, SEC EDGAR (needs UA hdr),
+  CDC PLACES (Socrata), openFDA, api.weather.gov (current only), USGS, OpenFEMA, CMS, NHTSA, CFPB.
+- post_api: USAspending (POST JSON; 405 on GET = alive).
+- key_required (need user-supplied keys in secrets before onboarding): Congress.gov, FEC, Census,
+  BLS, GovInfo, Regulations.gov, AirNow, FBI CDE, EIA, USPTO, College Scorecard.
+- scrape (HTML-only, via VPS-direct or Spider; rate-limited): EPA, Open States, GAO, OpenSecrets,
+  Senate LDA, OSHA, BJS, DOJ CRT, NLRB, NTSB, FERC, TRAC, EOIR, FTC, EEOC, FSIS, FERC... etc.
+- geo_bounded (Overpass / per-state extracts only): TIGER/Line, OpenStreetMap.
+- EXCLUDED by repo rule: SAM.gov (#15) — do not reintroduce. PACER (#27) -> CourtListener instead.
+Batch 1 builder dispatched: ses_e7393b408ffeHE5nPtZrBdLd3s (mimo-flash) for the ~11 no-key APIs.
