@@ -18,7 +18,9 @@ import Stripe from "stripe";
 import { withCloudflare } from "better-auth-cloudflare";
 
 export interface HarvyAuthEnv {
-  HARVY_D1: D1Database;
+  // Local/test fallback only; production reaches PostgreSQL through Hyperdrive.
+  HARVY_D1?: D1Database;
+  HYPERDRIVE_PRIVATE?: Hyperdrive;
   BETTER_AUTH_SECRET?: string;
   BETTER_AUTH_URL?: string;
   BETTER_AUTH_BASE_PATH?: string;

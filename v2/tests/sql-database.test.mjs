@@ -59,3 +59,30 @@ test("PostgreSQL statements reject non-scalar bind values", () => {
   const db = new PostgresDatabase("postgres://test.invalid/db", () => ({ connect: async () => {}, query: async () => ({ rows: [], rowCount: 0 }) }));
   assert.throws(() => db.prepare("SELECT ?").bind({ unexpected: true }), /Unsupported SQL bind value/);
 });
+
+test("PostgreSQL batches run on a dedicated client so an interleaved query cannot join the transaction", async () => {
+  const clients = [];
+  let db;
+  const factory = () => {
+    const calls = [];
+    const client = {
+      calls,
+      async connect() { calls.push("CONNECT"); },
+      async query(sql, values = []) {
+        calls.push(sql);
+        // Simulate another request's query arriving mid-batch on the shared client.
+        if (sql.startsWith("UPDATE") && db) await db.prepare("SELECT ?").bind(1).first();
+        return { rows: [], rowCount: 1 };
+      },
+      async end() { calls.push("END"); },
+    };
+    clients.push(client);
+    return client;
+  };
+  db = new PostgresDatabase("postgres://test.invalid/db", factory);
+  await db.batch([db.prepare("UPDATE records SET active = 1")]);
+  assert.equal(clients.length, 2);
+  const [sharedClient, batchClient] = clients;
+  assert.deepEqual(batchClient.calls, ["CONNECT", "BEGIN", "UPDATE records SET active = 1", "COMMIT", "END"]);
+  assert.deepEqual(sharedClient.calls, ["CONNECT", "SELECT $1"]);
+});

@@ -1,5 +1,11 @@
 import { createAuth, authFeatures, type HarvyAuthEnv } from "./auth";
 import { hasPrivacyAcceptance, signPrivacyConsent, verifyPrivacyConsent } from "./privacy-consent.mts";
+import { PostgresDatabase, type SqlDatabase } from "../shared/sql-database.ts";
+
+function databaseFor(env: HarvyAuthEnv): SqlDatabase | null {
+  if (env.HYPERDRIVE_PRIVATE?.connectionString) return new PostgresDatabase(env.HYPERDRIVE_PRIVATE.connectionString);
+  return env.HARVY_D1 ? env.HARVY_D1 as unknown as SqlDatabase : null;
+}
 
 export default {
   async fetch(request: Request, env: HarvyAuthEnv, ctx: ExecutionContext): Promise<Response> {
@@ -19,22 +25,24 @@ export default {
 };
 
 async function resolveActor(request: Request, env: HarvyAuthEnv, auth: ReturnType<typeof createAuth>) {
+  const db = databaseFor(env);
+  if (!db) return Response.json({ error: "Database is not configured." }, { status: 503 });
   const harvyAdminIds = new Set((env.HARVY_ADMIN_USER_IDS || "").split(",").map((id) => id.trim()).filter(Boolean));
   const session = await auth.api.getSession({ headers: request.headers });
   if (session?.user) {
     const user = session.user as typeof session.user & { role?: string; twoFactorEnabled?: boolean };
     const tenantId = (session.session as typeof session.session & { activeOrganizationId?: string }).activeOrganizationId;
     if (!tenantId) return Response.json({ error: "Select an organization." }, { status: 403 });
-    const member = await env.HARVY_D1.prepare(
+    const member = await db.prepare(
       "SELECT role FROM member WHERE organization_id = ? AND user_id = ? LIMIT 1",
     ).bind(tenantId, user.id).first<{ role: string }>();
     if (!member) return Response.json({ error: "Organization membership required." }, { status: 403 });
-    const organization = await env.HARVY_D1.prepare(
+    const organization = await db.prepare(
       "SELECT name FROM organization WHERE id = ? LIMIT 1",
     ).bind(tenantId).first<{ name: string }>();
     if (!organization) return Response.json({ error: "Organization not found." }, { status: 403 });
     const now = Date.now();
-    await env.HARVY_D1.prepare(
+    await db.prepare(
       "INSERT OR IGNORE INTO harvy_v2_workspaces (id, tenant_id, name, created_at) VALUES (?, ?, ?, ?)",
     ).bind(tenantId, tenantId, `${organization.name} workspace`, now).run();
     return Response.json({
@@ -57,7 +65,7 @@ async function resolveActor(request: Request, env: HarvyAuthEnv, auth: ReturnTyp
   if (!verified.valid || !verified.key?.referenceId) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const user = await env.HARVY_D1.prepare(
+  const user = await db.prepare(
     "SELECT id, name, role, two_factor_enabled AS twoFactorEnabled FROM user WHERE id = ?",
   ).bind(verified.key.referenceId).first<{
     id: string;
@@ -69,13 +77,13 @@ async function resolveActor(request: Request, env: HarvyAuthEnv, auth: ReturnTyp
   const isHarvyAdmin = harvyAdminIds.has(user.id);
   const tenantId = request.headers.get("x-harvy-organization-id");
   if (!tenantId) return Response.json({ error: "Organization scope required." }, { status: 403 });
-  const member = await env.HARVY_D1.prepare(
+  const member = await db.prepare(
     "SELECT role FROM member WHERE organization_id = ? AND user_id = ? LIMIT 1",
   ).bind(tenantId, user.id).first<{ role: string }>();
   if (!member && !isHarvyAdmin) return Response.json({ error: "Organization membership required." }, { status: 403 });
-  const organization = await env.HARVY_D1.prepare("SELECT name FROM organization WHERE id = ? LIMIT 1").bind(tenantId).first<{ name: string }>();
+  const organization = await db.prepare("SELECT name FROM organization WHERE id = ? LIMIT 1").bind(tenantId).first<{ name: string }>();
   if (!organization) return Response.json({ error: "Organization not found." }, { status: 403 });
-  await env.HARVY_D1.prepare("INSERT OR IGNORE INTO harvy_v2_workspaces (id, tenant_id, name, created_at) VALUES (?, ?, ?, ?)")
+  await db.prepare("INSERT OR IGNORE INTO harvy_v2_workspaces (id, tenant_id, name, created_at) VALUES (?, ?, ?, ?)")
     .bind(tenantId, tenantId, `${organization.name} workspace`, Date.now()).run();
   return Response.json({ id: user.id, tenantId, workspaceId: tenantId, tenantName: organization.name, role: member?.role || "platform_admin", harvyAdmin: isHarvyAdmin }, { headers: { "Cache-Control": "no-store" } });
 }
@@ -84,6 +92,7 @@ const POLICY_VERSION = "2026-10-v1";
 const CONSENT_COOKIE = "harvy_privacy_consent";
 
 async function handleAuthRequest(request: Request, env: HarvyAuthEnv, auth: ReturnType<typeof createAuth>) {
+  const db = databaseFor(env);
   const url = new URL(request.url);
   const basePath = env.BETTER_AUTH_BASE_PATH || "/api/better-auth";
   const route = url.pathname.slice(basePath.length) || "/";
@@ -107,8 +116,9 @@ async function handleAuthRequest(request: Request, env: HarvyAuthEnv, auth: Retu
     acceptedAt = Date.now();
     consentId = crypto.randomUUID();
     const source = isEmailSignup ? "email_signup" : isAnonymousSignup ? "anonymous_signup" : "social_signin";
+    if (!db) return Response.json({ error: "Privacy consent storage is unavailable." }, { status: 503 });
     try {
-      await env.HARVY_D1.prepare(
+      await db.prepare(
         "INSERT INTO harvy_auth_privacy_consents (id, accepted_at, policy_version, source) VALUES (?, ?, ?, ?)",
       ).bind(consentId, acceptedAt, POLICY_VERSION, source).run();
     } catch {
@@ -144,8 +154,8 @@ async function handleAuthRequest(request: Request, env: HarvyAuthEnv, auth: Retu
   const response = await auth.handler(forwarded);
   if (consentId) {
     const result = await response.clone().json().catch(() => null) as { user?: { id?: string } } | null;
-    if (result?.user?.id) {
-      await env.HARVY_D1.prepare("UPDATE harvy_auth_privacy_consents SET user_id = ? WHERE id = ?")
+    if (result?.user?.id && db) {
+      await db.prepare("UPDATE harvy_auth_privacy_consents SET user_id = ? WHERE id = ?")
         .bind(result.user.id, consentId).run();
     }
   }

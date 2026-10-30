@@ -135,12 +135,16 @@ class PostgresStatement implements SqlStatement {
 
 export class PostgresDatabase implements SqlDatabase {
   private clientPromise?: Promise<PgClient>;
+  private readonly connectionString: string;
+  private readonly clientFactory: PgClientFactory;
   private readonly pgClient: PgClient;
 
   constructor(
     connectionString: string,
     clientFactory: PgClientFactory = (connection) => new Client({ connectionString: connection }),
   ) {
+    this.connectionString = connectionString;
+    this.clientFactory = clientFactory;
     this.pgClient = clientFactory(connectionString);
   }
 
@@ -155,14 +159,21 @@ export class PostgresDatabase implements SqlDatabase {
 
   async batch(statements: SqlStatement[]) {
     if (!statements.length) return [];
-    const client = await this.client();
+    const pgStatements = statements.map((statement) => {
+      if (!(statement instanceof PostgresStatement)) throw new Error("A database batch cannot mix drivers.");
+      return statement;
+    });
+    // Dedicated client per batch: the shared client may serve another request on this
+    // isolate, so a transaction must never run on it.
+    const client = this.clientFactory(this.connectionString);
+    await client.connect();
     await client.query("BEGIN");
     const results: Array<{ meta: { changes: number } }> = [];
     let previousChanges = 0;
     try {
-      for (const statement of statements) {
-        if (!(statement instanceof PostgresStatement)) throw new Error("A database batch cannot mix drivers.");
-        const result = await this.execute(statement.sql, statement.boundValues, previousChanges);
+      for (const statement of pgStatements) {
+        const compiled = compilePostgresSql(statement.sql, statement.boundValues, previousChanges);
+        const result = await client.query(compiled.sql, compiled.values);
         previousChanges = result.rowCount ?? 0;
         results.push({ meta: { changes: previousChanges } });
       }
@@ -171,6 +182,8 @@ export class PostgresDatabase implements SqlDatabase {
     } catch (error) {
       try { await client.query("ROLLBACK"); } catch { /* Preserve the original statement error. */ }
       throw error;
+    } finally {
+      await client.end?.();
     }
   }
 

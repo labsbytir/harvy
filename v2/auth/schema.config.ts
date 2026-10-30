@@ -1,13 +1,12 @@
-import { createAuth, type HarvyAuthEnv } from "./auth";
+import { createAuth } from "./auth";
 
 const variables = ((globalThis as any).process?.env || {}) as Record<string, string | undefined>;
 if (!variables.BETTER_AUTH_SECRET) {
   throw new Error("Set a temporary BETTER_AUTH_SECRET when generating the auth schema.");
 }
 
-// The Better Auth CLI only inspects options/plugins; it must never connect to D1.
+// The Better Auth CLI only inspects options/plugins; it must never connect to a database.
 export const auth = createAuth({
-  HARVY_D1: undefined as unknown as HarvyAuthEnv["HARVY_D1"],
   BETTER_AUTH_SECRET: variables.BETTER_AUTH_SECRET,
   BETTER_AUTH_URL: "https://harvy.dev",
   BETTER_AUTH_API_KEY: variables.BETTER_AUTH_API_KEY,
