@@ -404,3 +404,17 @@ home-device IPs), NOT this fixed IP:port.
 Fix paths: (a) generate rotating-residential backbone creds (p.webshare.io:80) and set n8n var
 WEBSHARE_PROXY_URL_RESIDENTIAL for CF-fronted targets; (b) route CF-fronted targets via Spider Cloud
 (approved path, already wired); (c) datacenter var stays for tolerant targets (ncei 206 OK).
+
+## 2026-10-30 ~10:20 UTC — energydata_info PUBLISH RESOLVED (builder resume)
+
+- energydata_info Ingestion `CP70bgI3eOvR21o2` now PROVEN + PUBLISHED (active: true, activeVersionId `e3cd14cc-a9a7-4f90-9e74-e7d9d4c57ef6`), superseding the MCP-outage blocker above.
+- Idempotency: re-run exec 103 success, `Filter Already Ingested` output 0 items; `Upload Artifact to S3`/`Ingest to Basin`/`Record Ingested Event` never executed; Basin count stayed 25 (no double-ingest).
+- Basin SQL re-verified: `SELECT count(*) FROM default.evidence WHERE source_id='src_energydata_info'` = 25.
+
+## 2026-10-30 ~10:25 UTC — "just retry" does NOT work on this proxy (tested)
+
+8/8 egress checks via 9.249.21.58:6392 returned the SAME IP 9.249.21.58 (sticky exit, not rotating).
+6/6 courtlistener.com attempts through it -> 403 "Request blocked". Retrying reuses the same
+reputation-flagged IP, so retry loops cannot fix CF blocks here. Rotation only exists on the
+rotating-residential backbone (p.webshare.io:80, per-request exit) — use that var for CF-fronted
+targets, or Spider Cloud.
