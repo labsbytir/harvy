@@ -1,4 +1,5 @@
 ---
+publish: true
 title: Codebase map
 description: Repository boundaries, ownership, callers, tests, and configuration.
 tags:
@@ -17,6 +18,7 @@ This map describes the clean V2 repository. Paths are authoritative; diagrams an
 | Web | `v2/web/` | React product shell, public preview, worker routing, UI data access | `docs/UI_SPEC.md`, web callers, `v2/web/wrangler.jsonc` |
 | API | `v2/api/` | authenticated HTTP routes, actor scope, analytics, investigations, callbacks | `v2/api/worker.ts`, route tests, shared contracts |
 | Auth | `v2/auth/` | Better Auth server/client integration and organization membership | auth worker, auth schema, auth tests, bindings |
+| Email inbox | `v2/email-inbox/` | receive-only inbound MIME storage (R2) with an authenticated read-only read API | `v2/email-inbox/worker.ts` + worker tests (`v2/tests/email-inbox-worker.test.mjs`); local implementation, deployment/route unverified; scoping fix in progress (unverified) |
 | Shared | `v2/shared/` | HarvyDex, HQL, automation, artifacts, errors, cache policy, cubes | all callers and contract tests |
 | Migrations | `v2/migrations/` | database schema source | migration order, adapter, isolation tests |
 | Catalog | `v2/catalog/` | source and API registry/reference ledgers | connector policy, source permissions, provenance rules |
@@ -44,7 +46,7 @@ POST /api/v1/runs
   -> registered approved source snapshot
   -> bounded signed Automation envelope
   -> VPS Automation workflow
-  -> approved Spider Unlimited or registered API path + required proxy
+  -> approved Unlimited-scrape provider or registered API path + required approved proxy
   -> normalized artifact in R2 + historical ingest
   -> signed callback/publication to the API Worker
 ```

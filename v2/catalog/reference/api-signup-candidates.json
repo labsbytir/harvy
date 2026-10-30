@@ -1,0 +1,1061 @@
+{
+  "schema_version": "1.0",
+  "kind": "api_signup_candidates",
+  "title": "Harvy API Signup Candidates \u2014 100 Ranked Shortlist & Risk Exclusions",
+  "total_candidates": 100,
+  "total_excluded_risky": 25,
+  "candidates": [
+    {
+      "name": "AbuseIPDB",
+      "base_url": "https://docs.abuseipdb.com",
+      "category": "OSINT & Cybersecurity",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 1,
+      "rationale": "Crowdsourced IP reputation and abuse reporting database providing IP risk confidence scores; 1,000 free checks/day with instant key."
+    },
+    {
+      "name": "adsbdb",
+      "base_url": "https://www.adsbdb.com",
+      "category": "Transportation & Aviation OSINT",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 1,
+      "rationale": "Open aircraft database linking ICAO 24-bit transponder hex codes to aircraft registrations, manufacturer, model, and operator; keyless."
+    },
+    {
+      "name": "AlienVault Open Threat Exchange (OTX)",
+      "base_url": "https://otx.alienvault.com/api",
+      "category": "OSINT & Threat Intel",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 1,
+      "rationale": "Crowdsourced threat intelligence pulses, IoCs (hashes, malicious IPs, domains), and adversary campaigns; instant free API key."
+    },
+    {
+      "name": "Alpha Vantage",
+      "base_url": "https://www.alphavantage.co",
+      "category": "Finance & Market Intel",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 1,
+      "rationale": "Historical and real-time equity quotes, forex exchange rates, crypto pairs, and 50+ technical indicators; instant free developer key."
+    },
+    {
+      "name": "AviationWeather (NOAA AWC)",
+      "base_url": "https://www.aviationweather.gov/dataserver",
+      "category": "Weather & Operations",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 1,
+      "rationale": "Authoritative NOAA aviation weather center data server providing real-time METARs, TAFs, PIREPs, SIGMETs, and AIRMETs for tactical ops mapping."
+    },
+    {
+      "name": "Census.gov",
+      "base_url": "https://www.census.gov/data/developers/data-sets.html",
+      "category": "Government & Demographics",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 1,
+      "rationale": "Official US Census Bureau APIs providing decennial census, American Community Survey (ACS), and economic census data; keyless access."
+    },
+    {
+      "name": "Chronicling America (Library of Congress)",
+      "base_url": "https://chroniclingamerica.loc.gov/about/api",
+      "category": "News & Historical OSINT",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 1,
+      "rationale": "Searchable full-text directory and digitized page images of historic US newspapers (1777-1963); keyless open access for deep historical investigation."
+    },
+    {
+      "name": "FBI Wanted API",
+      "base_url": "https://www.fbi.gov/wanted/api",
+      "category": "OSINT & Law Enforcement",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 1,
+      "rationale": "Direct public API for FBI most wanted fugitives, terrorism suspects, cyber criminals, and missing persons; keyless public domain data."
+    },
+    {
+      "name": "Fed Treasury (Fiscal Data)",
+      "base_url": "https://fiscaldata.treasury.gov/api-documentation",
+      "category": "Finance & Government",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 1,
+      "rationale": "Official US Treasury data on national debt, federal spending, revenue, and daily Treasury statement cash balances; keyless public REST API."
+    },
+    {
+      "name": "Financial Modeling Prep",
+      "base_url": "https://site.financialmodelingprep.com/developer/docs",
+      "category": "Finance & Fundamentals",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 1,
+      "rationale": "Deep company financial statements (10-K/10-Q), real-time stock quotes, valuation multiples, and SEC filings; instant free tier."
+    },
+    {
+      "name": "Finnhub",
+      "base_url": "https://finnhub.io/docs/api",
+      "category": "Finance & Market Intel",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 1,
+      "rationale": "Institutional-grade real-time market data, insider transactions, corporate earnings calendars, and financial sentiment; instant key."
+    },
+    {
+      "name": "FRED (Federal Reserve Economic Data)",
+      "base_url": "https://fred.stlouisfed.org/docs/api/fred",
+      "category": "Finance & Economics",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 1,
+      "rationale": "Premier macroeconomic time series repository (800,000+ indicators across CPI, GDP, interest rates, employment); instant free API key with no credit card."
+    },
+    {
+      "name": "Guardian Open Platform",
+      "base_url": "https://content.guardianapis.com/",
+      "category": "News & Media OSINT",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 1,
+      "rationale": "Full-text news articles, section tags, and historical archive from The Guardian; instant developer key with generous free tier."
+    },
+    {
+      "name": "MalwareBazaar",
+      "base_url": "https://bazaar.abuse.ch/api",
+      "category": "OSINT & Malware Intelligence",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 1,
+      "rationale": "Abuse.ch repository of known malware samples, payload hashes, malware families, and Yara rule matches; free developer API key."
+    },
+    {
+      "name": "Meteorologisk Institutt",
+      "base_url": "https://api.met.no/weatherapi/documentation",
+      "category": "Weather & Operations",
+      "auth_type": "api_key",
+      "signup_difficulty": "none",
+      "priority": 1,
+      "rationale": "MET Norway official open weather API delivering high-accuracy location forecasts, ocean currents, and precipitation without API keys."
+    },
+    {
+      "name": "Nominatim",
+      "base_url": "https://nominatim.org/release-docs/latest/api/Overview",
+      "category": "Geocoding & Spatial Intel",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 1,
+      "rationale": "OpenStreetMap search engine providing forward and reverse geocoding with granular address hierarchy down to building level; keyless."
+    },
+    {
+      "name": "NYT Developer APIs",
+      "base_url": "https://api.nytimes.com/svc/",
+      "category": "News & Media OSINT",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 1,
+      "rationale": "Authoritative New York Times article search, top stories, newswire, and book reviews; instant free developer key."
+    },
+    {
+      "name": "Open Government, Australia",
+      "base_url": "https://www.data.gov.au",
+      "category": "Government & Open Data",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 1,
+      "rationale": "Australian government open data portal (data.gov.au) publishing public sector datasets, geographic boundaries, and registries; keyless CKAN."
+    },
+    {
+      "name": "Open Government, Canada",
+      "base_url": "https://open.canada.ca/en",
+      "category": "Government & Open Data",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 1,
+      "rationale": "Government of Canada open data portal providing federal procurement, proactive disclosure, and national datasets; keyless CKAN API."
+    },
+    {
+      "name": "Open Government, UK",
+      "base_url": "https://data.gov.uk",
+      "category": "Government & Open Data",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 1,
+      "rationale": "UK government official open data portal (data.gov.uk) publishing public expenditure, organograms, and national statistics; keyless CKAN."
+    },
+    {
+      "name": "Open-Meteo",
+      "base_url": "https://api.open-meteo.com/v1/",
+      "category": "Weather & Environment",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 1,
+      "rationale": "Comprehensive global numerical weather forecasting, historical reanalysis back to 1940, flood, marine, and air quality feeds; keyless with high rate limits."
+    },
+    {
+      "name": "OpenAQ",
+      "base_url": "https://api.openaq.org/v3/",
+      "category": "Weather & Environment",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 1,
+      "rationale": "World's premier open physical air quality sensor network tracking PM2.5, PM10, ozone, and NO2 across 100+ countries; instant key."
+    },
+    {
+      "name": "OpenSanctions",
+      "base_url": "https://www.opensanctions.org/docs/api",
+      "category": "OSINT & Compliance",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 1,
+      "rationale": "Authoritative global sanctions, PEPs (politically exposed persons), and trade debarments; completely keyless open data essential for entity screening in Newsk and Tower desks."
+    },
+    {
+      "name": "UK Parliament API",
+      "base_url": "https://explore.data.parliament.uk",
+      "category": "Government & Civic",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 1,
+      "rationale": "Structured parliamentary data covering bills, legislative votes, statutory instruments, committee inquiries, and members; keyless public API."
+    },
+    {
+      "name": "URLhaus (abuse.ch)",
+      "base_url": "https://urlhaus-api.abuse.ch",
+      "category": "OSINT & Cybersecurity",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 1,
+      "rationale": "Real-time malicious URL feeds, botnet C2 infrastructure, and malware distribution tracking from abuse.ch; keyless and high-frequency."
+    },
+    {
+      "name": "7Timer!",
+      "base_url": "https://www.7timer.info/doc.php",
+      "category": "Weather & Operations",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 2,
+      "rationale": "Global numerical weather prediction model based on NOAA GFS delivering atmospheric transparency, cloud cover, and surface conditions; keyless."
+    },
+    {
+      "name": "adresse.data.gouv.fr",
+      "base_url": "https://adresse.data.gouv.fr",
+      "category": "Geocoding & Civic",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 2,
+      "rationale": "Base Adresse Nationale (France) official open address search resolving French street addresses to exact building coordinates; keyless."
+    },
+    {
+      "name": "airportsapi",
+      "base_url": "https://airport-web.appspot.com/api/docs",
+      "category": "Transportation & Aviation",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 2,
+      "rationale": "Worldwide airport registry providing IATA/ICAO codes, geographic coordinates, runway configurations, and elevation; keyless."
+    },
+    {
+      "name": "AQICN",
+      "base_url": "https://aqicn.org/api",
+      "category": "Weather & Environment",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 2,
+      "rationale": "World Air Quality Index project providing real-time standardized AQI feeds across 30,000+ monitoring stations worldwide; instant free key."
+    },
+    {
+      "name": "Aviation Safety Data",
+      "base_url": "https://himaxym.com/developers",
+      "category": "Transportation & Safety OSINT",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 2,
+      "rationale": "Structured historical aircraft accident and incident investigation records with operator, airframe, and narrative summaries; keyless."
+    },
+    {
+      "name": "AviationAPI",
+      "base_url": "https://docs.aviationapi.com",
+      "category": "Transportation & Aviation OSINT",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 2,
+      "rationale": "Authoritative FAA airspace and aeronautical data including airport diagrams, navigational aids, terminal procedures, and preferred routes; keyless."
+    },
+    {
+      "name": "Bargo Congress Trades",
+      "base_url": "https://www.bargo.ai/free-apis/congress",
+      "category": "Civic & Financial Intelligence",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 2,
+      "rationale": "Tracks US Congressional stock transactions disclosed under the STOCK Act; clean keyless endpoint connecting civic actors to financial movements."
+    },
+    {
+      "name": "Boston MBTA Transit",
+      "base_url": "https://www.mbta.com/developers/v3-api",
+      "category": "Transportation & Civic",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 2,
+      "rationale": "Massachusetts Bay Transportation Authority live transit API delivering vehicle positions, schedule alerts, and route geometries; instant key."
+    },
+    {
+      "name": "City, New York Open Data",
+      "base_url": "https://opendata.cityofnewyork.us",
+      "category": "Government & Civic",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 2,
+      "rationale": "NYC Open Data portal hosting city agency datasets (311 complaints, building permits, police incidents, tax assessments); keyless Socrata."
+    },
+    {
+      "name": "Currents API",
+      "base_url": "https://api.currentsapi.services/v1/",
+      "category": "News & Media OSINT",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 2,
+      "rationale": "Real-time curated news feed with category tagging, language detection, and deduplication; instant email key."
+    },
+    {
+      "name": "EconDB",
+      "base_url": "https://www.econdb.com/api",
+      "category": "Finance & Macroeconomics",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 2,
+      "rationale": "Macroeconomic time-series database aggregating official statistical agencies across 90+ countries (CPI, GDP, policy rates, labor statistics); keyless."
+    },
+    {
+      "name": "EmailRep",
+      "base_url": "https://docs.emailrep.io",
+      "category": "OSINT & Risk Screening",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 2,
+      "rationale": "Reputation engine for email addresses assessing deliverability, breach history, domain age, and social profile links; keyless."
+    },
+    {
+      "name": "GeoNames",
+      "base_url": "https://www.geonames.org/export/web-services.html",
+      "category": "Geocoding & Place Names",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 2,
+      "rationale": "Global geographical database with over 11 million place names, administrative boundaries, population figures, and elevation; free tier."
+    },
+    {
+      "name": "GNews",
+      "base_url": "https://gnews.io/api/v4/",
+      "category": "News & Media OSINT",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 2,
+      "rationale": "Aggregated global breaking news search with topic filtering and multilingual coverage across 60,000+ sources; instant key."
+    },
+    {
+      "name": "Google Safe Browsing",
+      "base_url": "https://developers.google.com/safe-browsing",
+      "category": "OSINT & Cybersecurity",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 2,
+      "rationale": "Authoritative client-side lookup for URLs identified as malware, social engineering/phishing, or unwanted software; instant Google Cloud key."
+    },
+    {
+      "name": "GreyNoise",
+      "base_url": "https://docs.greynoise.io/reference/get_v3-community-ip",
+      "category": "OSINT & Threat Intel",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 2,
+      "rationale": "Internet background noise analyzer identifying mass scanners, benign research crawlers, and targeted malicious probes; instant community key."
+    },
+    {
+      "name": "GridVigil",
+      "base_url": "https://gridvigil.com/",
+      "category": "Operations & Infrastructure",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 2,
+      "rationale": "Real-time power grid demand, generation fuel mix, and grid strain telemetry across 10 major US ISO/RTO electrical interconnects; keyless."
+    },
+    {
+      "name": "Hacker News API",
+      "base_url": "https://hacker-news.firebaseio.com/v0/",
+      "category": "News & Tech OSINT",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 2,
+      "rationale": "Official Firebase REST API for Hacker News frontpage, new submissions, item comments, and top stories; keyless."
+    },
+    {
+      "name": "Inshorts News",
+      "base_url": "https://github.com/cyberboysumanjay/Inshorts-News-API",
+      "category": "News & Media OSINT",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 2,
+      "rationale": "Keyless rapid news summary endpoint delivering concise 60-word fact-checked breaking news briefs across major topics."
+    },
+    {
+      "name": "Interpol Red Notices",
+      "base_url": "https://interpol.api.bund.dev",
+      "category": "OSINT & Law Enforcement",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 2,
+      "rationale": "Global international arrest warrants and wanted persons notices across 195 member states; open standardized wrapper without authentication requirements."
+    },
+    {
+      "name": "ip-api",
+      "base_url": "https://ip-api.com/docs",
+      "category": "Geocoding & Network OSINT",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 2,
+      "rationale": "High-speed IP address geolocation resolving city, region, country, coordinates, ISP, and ASN without authentication; keyless."
+    },
+    {
+      "name": "IQAir",
+      "base_url": "https://api.airvisual.com/",
+      "category": "Weather & Environment",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 2,
+      "rationale": "Global air quality data network tracking major city pollution rankings, weather, and pollutant concentration levels; free community tier."
+    },
+    {
+      "name": "Kanari Wildfires",
+      "base_url": "https://kanari.io/",
+      "category": "Weather & Disaster Ops",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 2,
+      "rationale": "Satellite-derived near-real-time global wildfire and thermal anomaly tracking feeds, ideal for tactical hazard monitoring in Ops desk."
+    },
+    {
+      "name": "LocationIQ",
+      "base_url": "https://locationiq.org/docs",
+      "category": "Geocoding & Spatial Intel",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 2,
+      "rationale": "OpenStreetMap-powered geocoding and reverse geocoding API with generous 5,000 requests/day free developer allowance; instant key."
+    },
+    {
+      "name": "Nasdaq Data Link",
+      "base_url": "https://docs.data.nasdaq.com",
+      "category": "Finance & Macroeconomics",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 2,
+      "rationale": "Quandl core financial, economic, and alternative datasets including central bank balances, commodity prices, and yield curves; instant key."
+    },
+    {
+      "name": "National Park Service, US",
+      "base_url": "https://www.nps.gov/subjects/developer",
+      "category": "Government & Operations",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 2,
+      "rationale": "National Park Service developer API publishing park alerts, road closures, visitor centers, and campground availability; instant API key."
+    },
+    {
+      "name": "National Vulnerability Database (NIST NVD)",
+      "base_url": "https://nvd.nist.gov/vuln/Data-Feeds/JSON-feed-changelog",
+      "category": "OSINT & Cybersecurity",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 2,
+      "rationale": "Authoritative US government CVE database with CVSS severity scoring, vendor advisory mappings, and vulnerability telemetry; public keyless endpoints."
+    },
+    {
+      "name": "NewsAPI.org",
+      "base_url": "https://newsapi.org/v2/",
+      "category": "News & Media OSINT",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 2,
+      "rationale": "Live headlines and article search across 80,000+ worldwide news outlets and blogs; instant free developer tier."
+    },
+    {
+      "name": "NewsData.io",
+      "base_url": "https://newsdata.io/api/1/",
+      "category": "News & Media OSINT",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 2,
+      "rationale": "Global news API capturing articles and archive content across 80+ countries and 50+ languages; instant free tier."
+    },
+    {
+      "name": "Open Government, France",
+      "base_url": "https://www.data.gouv.fr",
+      "category": "Government & Open Data",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 2,
+      "rationale": "French national open data platform (data.gouv.fr) covering public procurement, public institutions, and economic indicators; free API."
+    },
+    {
+      "name": "Open Government, Germany",
+      "base_url": "https://www.govdata.de/daten/-/details/govdata-metadatenkatalog",
+      "category": "Government & Open Data",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 2,
+      "rationale": "GovData.de German federal and state metadata catalog for open government datasets, legal registries, and administrative data; keyless."
+    },
+    {
+      "name": "Open Government, New Zealand",
+      "base_url": "https://www.data.govt.nz",
+      "category": "Government & Open Data",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 2,
+      "rationale": "New Zealand government open data portal (data.govt.nz) indexing public agency datasets, environmental monitoring, and public records; keyless."
+    },
+    {
+      "name": "Open Government, Singapore",
+      "base_url": "https://data.gov.sg/developer",
+      "category": "Government & Open Data",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 2,
+      "rationale": "Singapore public sector data portal (data.gov.sg) providing high-frequency transport, real-time environment, and economic APIs; keyless."
+    },
+    {
+      "name": "OpenCage",
+      "base_url": "https://opencagedata.com",
+      "category": "Geocoding & Spatial Intel",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 2,
+      "rationale": "High-accuracy worldwide forward and reverse geocoding aggregating OpenStreetMap, open data, and gazetteers; 2,500 free requests/day."
+    },
+    {
+      "name": "PhishStats",
+      "base_url": "https://phishstats.info",
+      "category": "OSINT & Cybersecurity",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 2,
+      "rationale": "Real-time zero-day phishing telemetry feed with threat scores, target brands, and IP/ASN correlation; keyless public CSV/JSON API."
+    },
+    {
+      "name": "Polygon",
+      "base_url": "https://polygon.io",
+      "category": "Finance & Market Intel",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 2,
+      "rationale": "Real-time and historical US stock market data, market tickers, dividends, and company financial reference data; 5 free calls/min."
+    },
+    {
+      "name": "Polymarket",
+      "base_url": "https://docs.polymarket.com",
+      "category": "Finance & Sentiment OSINT",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 2,
+      "rationale": "Decentralized prediction market data tracking probability distributions for geopolitical, economic, and electoral events; public API."
+    },
+    {
+      "name": "Pulsedive",
+      "base_url": "https://pulsedive.com/api",
+      "category": "OSINT & Threat Intel",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 2,
+      "rationale": "Community threat intelligence platform analyzing IOCs, threat feeds, and risk scoring across domains, IPs, and hashes; free tier."
+    },
+    {
+      "name": "RainViewer",
+      "base_url": "https://www.rainviewer.com/api.html",
+      "category": "Weather & Operations",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 2,
+      "rationale": "Real-time composite weather radar imagery, precipitation coverage, and satellite infrared tiles for live map overlays; keyless."
+    },
+    {
+      "name": "SecurityTrails",
+      "base_url": "https://securitytrails.com/corp/api",
+      "category": "OSINT & Infrastructure",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 2,
+      "rationale": "Comprehensive historical DNS records, domain whois, IP history, and subdomain enumeration; free developer tier."
+    },
+    {
+      "name": "Spaceflight News API (SNAPI)",
+      "base_url": "https://spaceflightnewsapi.net",
+      "category": "News & Aerospace OSINT",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 2,
+      "rationale": "Structured news, blogs, and reports covering space missions, orbital launches, aerospace defense, and satellite telemetry; keyless public API."
+    },
+    {
+      "name": "StockData",
+      "base_url": "https://www.StockData.org",
+      "category": "Finance & Market Intel",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 2,
+      "rationale": "Real-time global stock quotes, historical prices, market index movements, and financial news sentiment analysis; instant key."
+    },
+    {
+      "name": "Twelve Data",
+      "base_url": "https://twelvedata.com",
+      "category": "Finance & Market Intel",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 2,
+      "rationale": "Financial market API covering global stocks, forex, cryptocurrency, ETFs, and indices with low-latency REST endpoints; free tier."
+    },
+    {
+      "name": "UK Police Data API",
+      "base_url": "https://data.police.uk/docs",
+      "category": "Civic & Public Safety",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 2,
+      "rationale": "Granular street-level crime reports, outcomes, stop-and-search records, and neighborhood policing force data across England and Wales; keyless open government API."
+    },
+    {
+      "name": "URLScan.io",
+      "base_url": "https://urlscan.io/about-api",
+      "category": "OSINT & Threat Intel",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 2,
+      "rationale": "Automated website scanner and URL threat analyzer extracting DOM, IP, SSL, screenshot, and HTTP transaction details; instant free key."
+    },
+    {
+      "name": "WallstreetBets",
+      "base_url": "https://dashboard.nbshare.io/apps/reddit/api",
+      "category": "Finance & Social Sentiment",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 2,
+      "rationale": "Tracks discussion velocity, positive/negative sentiment, and ticker mentions on retail investor forums; keyless REST endpoint."
+    },
+    {
+      "name": "AIS Hub",
+      "base_url": "https://www.aishub.net/api",
+      "category": "Transportation & Maritime OSINT",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 3,
+      "rationale": "Crowdsourced maritime AIS vessel positioning network tracking commercial ships, vessel coordinates, IMO numbers, and destinations; free tier."
+    },
+    {
+      "name": "Aletheia",
+      "base_url": "https://aletheiaapi.com",
+      "category": "Finance & Fundamentals",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 3,
+      "rationale": "Financial data API providing standardized income statements, balance sheets, cash flow metrics, and SEC insider trades; instant key."
+    },
+    {
+      "name": "AZ511",
+      "base_url": "https://www.az511.com/developers/doc",
+      "category": "Transportation & Operations",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 3,
+      "rationale": "Arizona Department of Transportation 511 traveler API with road closures, highway incidents, construction, and traffic cameras; free tier."
+    },
+    {
+      "name": "BC Ferries",
+      "base_url": "https://www.bcferriesapi.ca",
+      "category": "Transportation & Infrastructure",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 3,
+      "rationale": "Real-time marine ferry terminal operational status, vessel departure times, deck space capacity, and cancellations; keyless."
+    },
+    {
+      "name": "BCLaws",
+      "base_url": "https://www.bclaws.gov.bc.ca/civix/template/complete/api/index.html",
+      "category": "Government & Legal",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 3,
+      "rationale": "Official British Columbia Queen's Printer legislative API providing full text of provincial statutes, regulations, and historical orders; keyless."
+    },
+    {
+      "name": "Carbon Interface",
+      "base_url": "https://api.carboninterface.com/v1/",
+      "category": "Environment & Energy",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 3,
+      "rationale": "Calculates greenhouse gas carbon emissions for electricity consumption, flights, shipping, and fuel usage; free developer tier."
+    },
+    {
+      "name": "Code.gov",
+      "base_url": "https://code.gov",
+      "category": "Government & Technology",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 3,
+      "rationale": "Federal open source software repository index tracking US government code assets, agency releases, and open technology projects; instant key."
+    },
+    {
+      "name": "CTS",
+      "base_url": "https://api.cts-strasbourg.eu",
+      "category": "Transportation & Civic",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 3,
+      "rationale": "Compagnie des Transports Strasbourgeois public transit API publishing real-time European tram/bus vehicle arrivals and disruptions; free key."
+    },
+    {
+      "name": "DolarAPI",
+      "base_url": "https://dolarapi.com/docs",
+      "category": "Finance & FX Markets",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 3,
+      "rationale": "Real-time tracking of Argentine official, blue-market, and financial foreign exchange rate quotations; keyless public API."
+    },
+    {
+      "name": "FilterLists",
+      "base_url": "https://api.filterlists.com",
+      "category": "OSINT & Cybersecurity",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 3,
+      "rationale": "Directory and catalog API tracking thousands of public filter lists, IP blocklists, adblock rules, and malware DNS domains; keyless."
+    },
+    {
+      "name": "Hong Kong Obervatory",
+      "base_url": "https://www.hko.gov.hk/en/abouthko/opendata_intro.htm",
+      "category": "Weather & Hazards",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 3,
+      "rationale": "Official Hong Kong Observatory open data for tropical cyclone warnings, extreme weather alerts, and regional radar; keyless."
+    },
+    {
+      "name": "Met Office DataPoint",
+      "base_url": "https://www.metoffice.gov.uk/services/data/datapoint",
+      "category": "Weather & Operations",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 3,
+      "rationale": "UK Met Office official weather forecasts, severe weather warnings, and marine coastal observation feeds; instant developer key."
+    },
+    {
+      "name": "NASA POWER",
+      "base_url": "https://power.larc.nasa.gov/api/",
+      "category": "Weather & Climate",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 3,
+      "rationale": "NASA satellite-derived solar irradiance, surface meteorology, and climate datasets for renewable energy and agricultural monitoring; keyless public API."
+    },
+    {
+      "name": "OilPriceAPI",
+      "base_url": "https://www.oilpriceapi.com",
+      "category": "Finance & Commodities",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 3,
+      "rationale": "Real-time and historical global crude oil benchmark pricing (Brent Crude, WTI, natural gas, heating oil); free developer tier."
+    },
+    {
+      "name": "Open Government, Netherlands",
+      "base_url": "https://data.overheid.nl/en/ondersteuning/data-publiceren/api",
+      "category": "Government & Open Data",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 3,
+      "rationale": "Official Dutch government open data portal (data.overheid.nl) offering structured public administration registers and statistical data; keyless."
+    },
+    {
+      "name": "Open Government, Switzerland",
+      "base_url": "https://handbook.opendata.swiss/de/content/nutzen/api-nutzen.html",
+      "category": "Government & Open Data",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 3,
+      "rationale": "Swiss federal open data portal (opendata.swiss) cataloging official Swiss statistical registers, geodata, and public finance; keyless."
+    },
+    {
+      "name": "OpenFIGI (Bloomberg)",
+      "base_url": "https://www.openfigi.com/api",
+      "category": "Finance & Entity Mapping",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 3,
+      "rationale": "Open financial instrument identifier standard mapping ISIN, CUSIP, SEDOL, and ticker symbols to FIGI entity identifiers; instant free key with no CC."
+    },
+    {
+      "name": "OpenPLZ API",
+      "base_url": "https://www.openplzapi.org",
+      "category": "Geocoding & Postal Boundaries",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 3,
+      "rationale": "Open postal code and administrative boundary lookup API for Germany, Austria, Switzerland, and Liechtenstein; keyless."
+    },
+    {
+      "name": "openSenseMap",
+      "base_url": "https://api.opensensemap.org",
+      "category": "Weather & Environment",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 3,
+      "rationale": "Global citizen-science environmental sensor network measuring temperature, humidity, particulate matter, and UV radiation; keyless."
+    },
+    {
+      "name": "Postcodes.io",
+      "base_url": "https://postcodes.io",
+      "category": "Geo & Civic Boundaries",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 3,
+      "rationale": "UK postcode and geographic lookup API resolving administrative divisions, parliamentary constituencies, and coordinates; keyless and open source."
+    },
+    {
+      "name": "Represent by Open North",
+      "base_url": "https://represent.opennorth.ca",
+      "category": "Government & Civic",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 3,
+      "rationale": "Canadian elected officials, electoral district boundaries, and contact directories across federal, provincial, and municipal tiers; keyless open data."
+    },
+    {
+      "name": "REST Countries",
+      "base_url": "https://restcountries.com",
+      "category": "Geo & Reference Data",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 3,
+      "rationale": "Comprehensive geopolitical reference dataset providing border adjacencies, ISO codes, currencies, languages, and coordinates for all countries; keyless."
+    },
+    {
+      "name": "ScanMalware",
+      "base_url": "https://scanmalware.com",
+      "category": "OSINT & Cybersecurity",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 3,
+      "rationale": "Automated multi-engine file and URL malware reputation scanner for rapid IoC verification; keyless public endpoint."
+    },
+    {
+      "name": "TheNews",
+      "base_url": "https://www.thenewsapi.com",
+      "category": "News & Media OSINT",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 3,
+      "rationale": "Global multi-source news aggregator supporting keyword search, similarity clustering, and sentiment indicators; free tier."
+    },
+    {
+      "name": "Tradestie",
+      "base_url": "https://tradestie.com",
+      "category": "Finance & Sentiment",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 3,
+      "rationale": "Real-time retail investor sentiment analysis tracking ticker mention frequencies and sentiment scores across social financial forums; keyless."
+    },
+    {
+      "name": "Trove",
+      "base_url": "https://trove.nla.gov.au/about/create-something/using-api",
+      "category": "News & Historical OSINT",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 3,
+      "rationale": "National Library of Australia digitized historical newspaper archives, gazettes, and parliamentary records; instant key."
+    },
+    {
+      "name": "UK Carbon Intensity (NESO)",
+      "base_url": "https://api.carbonintensity.org.uk/",
+      "category": "Operations & Energy",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 3,
+      "rationale": "Official National Grid ESO regional electricity carbon intensity forecasts and generation fuel mix; keyless open data API for infrastructure tracking."
+    },
+    {
+      "name": "VulDB",
+      "base_url": "https://vuldb.com",
+      "category": "OSINT & Vulnerability Intel",
+      "auth_type": "api_key",
+      "signup_difficulty": "instant_key",
+      "priority": 3,
+      "rationale": "Vulnerability database cataloging zero-days, exploit availability, threat actor attribution, and CVSS scores; free tier."
+    },
+    {
+      "name": "Zippopotam.us",
+      "base_url": "https://www.zippopotam.us",
+      "category": "Geocoding & Postal Boundaries",
+      "auth_type": "none",
+      "signup_difficulty": "none",
+      "priority": 3,
+      "rationale": "Postal code lookup service returning geographic coordinates, state names, and municipal divisions for 60+ countries; keyless."
+    }
+  ],
+  "excluded_risky": [
+    {
+      "name": "Plaid",
+      "base_url": "https://plaid.com",
+      "category": "Finance",
+      "reason": "Strict corporate business underwriting, banking KYC, and developer agreements that explicitly forbid automated or synthetic account creation."
+    },
+    {
+      "name": "Stripe",
+      "base_url": "https://stripe.com/docs/api",
+      "category": "Finance",
+      "reason": "Requires verified legal entity details, tax identification, and representative identity verification; automated account provisioning triggers fraud bans."
+    },
+    {
+      "name": "Klarna",
+      "base_url": "https://docs.klarna.com/klarna-payments/api/payments-api",
+      "category": "Finance",
+      "reason": "Merchant-only onboarding with rigorous commercial contract review and credit underwriting; automated signups prohibited by terms."
+    },
+    {
+      "name": "Citi Developer Hub",
+      "base_url": "https://sandbox.developerhub.citi.com/api-catalog-list",
+      "category": "Finance",
+      "reason": "Enterprise banking partner evaluation required; Terms of Service forbid programmatic or scripted credential registration."
+    },
+    {
+      "name": "Privacy.com",
+      "base_url": "https://privacy.com/developer/docs",
+      "category": "Security / Finance",
+      "reason": "Consumer financial compliance mandates US SSN, physical address, and individual identity KYC; synthetic signups violate federal AML regulations."
+    },
+    {
+      "name": "FingerprintJS Pro",
+      "base_url": "https://dev.fingerprintjs.com/docs",
+      "category": "Security",
+      "reason": "Commercial bot and fraud detection platform that actively detects and blocks disposable email addresses and scripted trial registrations."
+    },
+    {
+      "name": "FraudLabs Pro",
+      "base_url": "https://www.fraudlabspro.com/developer/api/screen-order",
+      "category": "Security",
+      "reason": "Transaction fraud screening provider that validates registrant authenticity and automatically suspends accounts created via automated workflows."
+    },
+    {
+      "name": "HackerOne",
+      "base_url": "https://api.hackerone.com",
+      "category": "Security",
+      "reason": "Security researcher platform requiring mandatory 2FA, identity screening, and background checks; automated bulk account creation is strictly banned."
+    },
+    {
+      "name": "Bugcrowd",
+      "base_url": "https://docs.bugcrowd.com/api/getting-started",
+      "category": "Security",
+      "reason": "Researcher Terms of Service require manual identity verification and tax documentation; bulk or automated signup is grounds for immediate termination."
+    },
+    {
+      "name": "Complete Criminal Checks",
+      "base_url": "https://completecriminalchecks.com/Developers",
+      "category": "Security / Public Records",
+      "reason": "Regulated under FCRA and state privacy statutes; requires verified permissible purpose and business credentials before access is granted."
+    },
+    {
+      "name": "Webz.io News API",
+      "base_url": "https://webz.io",
+      "category": "News",
+      "reason": "Commercial media intelligence provider requiring enterprise sales qualification; actively screens out automated trial creation and disposable email domains."
+    },
+    {
+      "name": "Associated Press",
+      "base_url": "https://developer.ap.org",
+      "category": "News",
+      "reason": "Commercial syndicate API restricted to licensed media publishers; terms explicitly prohibit automated credential provisioning."
+    },
+    {
+      "name": "Shodan",
+      "base_url": "https://developer.shodan.io",
+      "category": "Security",
+      "reason": "Cyber asset search engine that actively monitors, rate-limits, and suspends accounts registered via automated scripts or disposable mailboxes."
+    },
+    {
+      "name": "VirusTotal",
+      "base_url": "https://www.virustotal.com/en/documentation/public-api",
+      "category": "Anti-Malware",
+      "reason": "Strict multi-accounting and bot detection policies enforce community rate limits; automated account creation to bypass quotas violates Google ToS."
+    },
+    {
+      "name": "Lob.com",
+      "base_url": "https://www.lob.com",
+      "category": "Data Validation",
+      "reason": "Physical mail and address API requiring credit card pre-authorization and business verification to prevent mail fraud and spam abuse."
+    },
+    {
+      "name": "MercadoPago",
+      "base_url": "https://www.mercadopago.com.br/developers/es/reference",
+      "category": "Finance",
+      "reason": "Latin American payment processor requiring corporate taxpayer registry (CNPJ/RFC), commercial underwriting, and banking KYC."
+    },
+    {
+      "name": "Kite Connect (Zerodha)",
+      "base_url": "https://kite.trade/docs/connect/v3",
+      "category": "Finance",
+      "reason": "Retail stock brokerage API requiring an active funded trading account, Aadhaar/PAN KYC verification, and paid subscription fees."
+    },
+    {
+      "name": "BitWarden",
+      "base_url": "https://bitwarden.com/help/api",
+      "category": "Security",
+      "reason": "Encrypted credential vault service; automated programmatic account provisioning violates anti-abuse and anti-bot vault policies."
+    },
+    {
+      "name": "LoginRadius",
+      "base_url": "https://www.loginradius.com/docs",
+      "category": "Security / CIAM",
+      "reason": "Enterprise identity management platform requiring corporate business email validation and sales consultation for production access."
+    },
+    {
+      "name": "APIXU",
+      "base_url": "https://www.apixu.com/doc/request.aspx",
+      "category": "Weather",
+      "reason": "Deprecated service acquired and absorbed into Weatherstack; registrations redirect through commercial paywalls with strict credit card trials."
+    },
+    {
+      "name": "Foreca",
+      "base_url": "https://developer.foreca.com",
+      "category": "Weather",
+      "reason": "Commercial meteorological data provider requiring OAuth application approval and commercial sales contract; no self-serve free tier."
+    },
+    {
+      "name": "Amadeus for Developers",
+      "base_url": "https://developers.amadeus.com/self-service",
+      "category": "Transportation",
+      "reason": "Global distribution system (GDS) for air travel with strict quota monitoring, phone verification, and anti-scraping fraud penalties."
+    },
+    {
+      "name": "BIC-Boxtech",
+      "base_url": "https://docs.bic-boxtech.org",
+      "category": "Transportation",
+      "reason": "Bureau International des Conteneurs international freight container registry requiring authorized maritime operator credentials."
+    },
+    {
+      "name": "Censys",
+      "base_url": "https://search.censys.io/api",
+      "category": "Security / OSINT",
+      "reason": "Internet scanner platform that strictly prohibits disposable email providers and suspends multi-account automations bypassing community quotas."
+    },
+    {
+      "name": "Intelligence X",
+      "base_url": "https://github.com/IntelligenceX/SDK/blob/master/Intelligence%20X%20API.pdf",
+      "category": "OSINT",
+      "reason": "Dark web and OSINT search engine enforcing strict IP tracking, manual developer review, and immediate termination for automated multi-accounting."
+    }
+  ]
+}

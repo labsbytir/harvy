@@ -1,4 +1,5 @@
 ---
+publish: true
 title: API reference
 description: API Worker routes, access rules, scope, and implementation sources.
 tags:
@@ -10,6 +11,8 @@ tags:
 
 This is a source-derived reference for the routes currently implemented in `v2/api/worker.ts` and `v2/api/investigations.ts`. It is not an OpenAPI document and it does not claim that the API Worker is deployed.
 
+For copyable, source-checked requests and error handling, start with [[GETTING_STARTED|Get started]] and [[API_EXAMPLES|API examples]]. For per-endpoint parameter tables and request/response examples in three languages, see [[API_ENDPOINTS|API endpoints]].
+
 ## Common behavior
 
 - `/health` is public and returns `Cache-Control: no-store`.
@@ -20,13 +23,9 @@ This is a source-derived reference for the routes currently implemented in `v2/a
 - Errors have a stable code, an HTTP status, and a trace identifier.
 - Private or tenant-scoped responses must not be publicly cached.
 
-## Public and internal routes
+## Availability
 
-| Method | Path | Access | Source |
-|---|---|---|---|
-| `GET` | `/health` | Public; no account state | [`worker.ts:259`](https://github.com/labsbytir/harvy/blob/main/v2/api/worker.ts#L259) |
-| `POST` | `/internal/v1/automation-callback` | Signed Automation callback | [`worker.ts:260`](https://github.com/labsbytir/harvy/blob/main/v2/api/worker.ts#L260) |
-| `POST` | `/internal/v1/automation-publications` | Signed Automation publication | [`worker.ts:261`](https://github.com/labsbytir/harvy/blob/main/v2/api/worker.ts#L261) |
+The API Worker implements `GET /health` as a public health endpoint. Product requests under `/api/v1/` require an authenticated actor and configured storage; Automation callbacks are internal-only and are intentionally omitted from the public route inventory. See the repository source for those private contracts.
 
 ## Context and administration
 
@@ -113,7 +112,10 @@ Implemented in [`v2/api/investigations.ts`](https://github.com/labsbytir/harvy/b
 
 ## Related contracts
 
-- [[DEVELOPMENT|Engineering standard]]
+- [[API_ENDPOINTS|API endpoints]] — per-endpoint parameter tables and examples.
+- [[AUTH|Authentication and authorization]] — keys, sessions, roles.
+- [[QUERY_GUIDE|Query guide]] — HQL and cube query contracts.
+- [[DEVELOPER_STANDARDS|Developer standards]]
 - [[CODEBASE|Codebase map]]
 - [[STATUS|Implementation status]]
 - `v2/shared/errors.ts` — error taxonomy and response shape.

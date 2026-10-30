@@ -1,0 +1,467 @@
+{
+  "schema_version": "1.0",
+  "kind": "api_signup_candidates_validation",
+  "title": "Independent validation of api-signup-candidates.json",
+  "reviewer": "mimo-v2.6-flash",
+  "date": "2026-10-30",
+  "source_file": "v2/catalog/reference/api-signup-candidates.json",
+  "method": "Read-only cross-check against v2/catalog/reference/api-registry.json (1010 entries) and docs/CONNECTOR_STATUS.md live source inventory; no signup activity, no credential handling, no writes outside this file.",
+  "summary": {
+    "candidates_total": 25,
+    "registry_matched": 25,
+    "hallucinated_or_mismatched": 0,
+    "auth_type_corrections": 0,
+    "signup_difficulty_corrections": 0,
+    "approved_count": 22,
+    "dropped_count": 3,
+    "excluded_risky_total": 15,
+    "excluded_upheld": 14,
+    "excluded_removed": 1,
+    "missed_high_value_suggestions": 5
+  },
+  "corrections": [
+    {
+      "field": "auth_type / signup_difficulty",
+      "result": "No corrections required. All 25 entries agree with registry auth metadata (23 keyless/none, 2 api_key/instant_key: FRED, OpenFIGI)."
+    },
+    {
+      "field": "name",
+      "result": "5 name variants vs registry, all confirmed by exact base_url match: 'UK Parliament API'=data-parliament-uk, 'Fed Treasury (Fiscal Data)'=fed-treasury, 'FBI Wanted API'=fbi-wanted, 'Spaceflight News API (SNAPI)'=spaceflight-news, 'OpenFIGI (Bloomberg)'=openfigi. Not hallucinations."
+    },
+    {
+      "field": "priority / approval",
+      "result": "3 entries dropped from approval for domain fit or duplication: EconDB, Tradestie, REST Countries (see per-entry notes)."
+    },
+    {
+      "field": "excluded_risky",
+      "result": "Shodan removed from exclusions: free public API key with ordinary email signup, no KYC or credit card; abuse risk exists only for bulk multi-accounting, which this workflow does not perform. Keep rate-limit ToS awareness."
+    }
+  ],
+  "candidates": [
+    {
+      "name": "OpenSanctions",
+      "base_url": "https://www.opensanctions.org/docs/api",
+      "registry_match": true,
+      "registry_id": "opensanctions",
+      "validated": true,
+      "approved": true,
+      "final_priority": 1,
+      "note": "Exact registry match, auth=none/not_needed confirmed. Thematic overlap with live src_ofac_sdn but OpenSanctions is a global superset (PEPs, multi-jurisdiction sanctions); complementary, keep."
+    },
+    {
+      "name": "Fed Treasury (Fiscal Data)",
+      "base_url": "https://fiscaldata.treasury.gov/api-documentation",
+      "registry_match": true,
+      "registry_id": "fed-treasury",
+      "validated": true,
+      "approved": true,
+      "final_priority": 1,
+      "note": "Exact registry match, keyless confirmed. Distinct from ingested worldbank/owid (US Treasury-specific)."
+    },
+    {
+      "name": "Open-Meteo",
+      "base_url": "https://api.open-meteo.com/v1/",
+      "registry_match": true,
+      "registry_id": "openmeteo",
+      "validated": true,
+      "approved": true,
+      "final_priority": 1,
+      "note": "Exact registry match (curated entry), keyless confirmed. Complements live src_nws/src_noaa_spc (US alerts) with global forecast/history."
+    },
+    {
+      "name": "AviationWeather (NOAA AWC)",
+      "base_url": "https://www.aviationweather.gov/dataserver",
+      "registry_match": true,
+      "registry_id": "aviationweather",
+      "validated": true,
+      "approved": true,
+      "final_priority": 1,
+      "note": "Exact registry match, keyless confirmed. METAR/TAF feeds distinct from NWS alert ingestion."
+    },
+    {
+      "name": "FBI Wanted API",
+      "base_url": "https://www.fbi.gov/wanted/api",
+      "registry_match": true,
+      "registry_id": "fbi-wanted",
+      "validated": true,
+      "approved": true,
+      "final_priority": 1,
+      "note": "Exact registry match, keyless confirmed. On-domain OSINT/law-enforcement; no existing connector."
+    },
+    {
+      "name": "URLhaus (abuse.ch)",
+      "base_url": "https://urlhaus-api.abuse.ch",
+      "registry_match": true,
+      "registry_id": "urlhaus",
+      "validated": true,
+      "approved": true,
+      "final_priority": 1,
+      "note": "Exact registry match, keyless confirmed. Malicious-URL feed; distinct from live crtsh (certificate transparency) and scamsearch."
+    },
+    {
+      "name": "FRED (Federal Reserve Economic Data)",
+      "base_url": "https://fred.stlouisfed.org/docs/api/fred",
+      "registry_match": true,
+      "registry_id": "fred",
+      "validated": true,
+      "approved": true,
+      "final_priority": 1,
+      "note": "Exact registry match, auth=api_key confirmed; instant_key correct (free key after email signup, no CC). Premier US macro series."
+    },
+    {
+      "name": "UK Parliament API",
+      "base_url": "https://explore.data.parliament.uk",
+      "registry_match": true,
+      "registry_id": "data-parliament-uk",
+      "validated": true,
+      "approved": true,
+      "final_priority": 1,
+      "note": "Name variant, exact base_url match. Keyless confirmed. Jurisdiction-distinct from live src_legistar."
+    },
+    {
+      "name": "Chronicling America (Library of Congress)",
+      "base_url": "https://chroniclingamerica.loc.gov/about/api",
+      "registry_match": true,
+      "registry_id": "chronicling-america",
+      "validated": true,
+      "approved": true,
+      "final_priority": 1,
+      "note": "Exact registry match, keyless confirmed. Historical newspapers; distinct from live src_mediacloud (contemporary)."
+    },
+    {
+      "name": "Interpol Red Notices",
+      "base_url": "https://interpol.api.bund.dev",
+      "registry_match": true,
+      "registry_id": "interpol-red-notices",
+      "validated": true,
+      "approved": true,
+      "final_priority": 2,
+      "note": "Exact registry match, keyless confirmed. Caveat: bund.dev is an unofficial community wrapper of Interpol data, not an official Interpol API \u2014 monitor availability, preserve source attribution."
+    },
+    {
+      "name": "National Vulnerability Database (NIST NVD)",
+      "base_url": "https://nvd.nist.gov/vuln/Data-Feeds/JSON-feed-changelog",
+      "registry_match": true,
+      "registry_id": "national-vulnerability-database",
+      "validated": true,
+      "approved": true,
+      "final_priority": 2,
+      "note": "Exact registry match (fuzzy name search only), keyless confirmed. NVD 2.0 offers an optional API key for higher rate limits but keyless works."
+    },
+    {
+      "name": "Bargo Congress Trades",
+      "base_url": "https://www.bargo.ai/free-apis/congress",
+      "registry_match": true,
+      "registry_id": "bargo-congress-trades",
+      "validated": true,
+      "approved": true,
+      "final_priority": 2,
+      "note": "Exact registry match, keyless confirmed. STOCK Act trades: civic+finance fit, no existing connector."
+    },
+    {
+      "name": "Spaceflight News API (SNAPI)",
+      "base_url": "https://spaceflightnewsapi.net",
+      "registry_match": true,
+      "registry_id": "spaceflight-news",
+      "validated": true,
+      "approved": true,
+      "final_priority": 3,
+      "note": "Name variant, exact base_url match, keyless confirmed. Approved but demoted 2->3: niche vertical, low breadth for Newsk; still in-domain news."
+    },
+    {
+      "name": "EconDB",
+      "base_url": "https://www.econdb.com/api",
+      "registry_match": true,
+      "registry_id": "econdb",
+      "validated": true,
+      "approved": false,
+      "final_priority": null,
+      "note": "Registry match and keyless confirmed, but dropped: macro time-series duplicative of FRED in this list plus already-ingested src_worldbank and src_owid; adds little new coverage."
+    },
+    {
+      "name": "Kanari Wildfires",
+      "base_url": "https://kanari.io/",
+      "registry_match": true,
+      "registry_id": "kanari",
+      "validated": true,
+      "approved": true,
+      "final_priority": 2,
+      "note": "Exact registry match, keyless confirmed (purpose ingest:events:wildfire). Complements live src_gdacs with satellite thermal anomalies."
+    },
+    {
+      "name": "GridVigil",
+      "base_url": "https://gridvigil.com/",
+      "registry_match": true,
+      "registry_id": "gridvigil",
+      "validated": true,
+      "approved": true,
+      "final_priority": 2,
+      "note": "Exact registry match, keyless confirmed. Partial thematic overlap with live src_poweroutage_us but measures demand/generation, not outages; complementary."
+    },
+    {
+      "name": "UK Police Data API",
+      "base_url": "https://data.police.uk/docs",
+      "registry_match": true,
+      "registry_id": "uk-police",
+      "validated": true,
+      "approved": true,
+      "final_priority": 2,
+      "note": "Name variant, exact base_url match, keyless confirmed. On-domain civic/public safety; no existing connector."
+    },
+    {
+      "name": "PhishStats",
+      "base_url": "https://phishstats.info",
+      "registry_match": true,
+      "registry_id": "phishstats",
+      "validated": true,
+      "approved": true,
+      "final_priority": 3,
+      "note": "Exact registry match, keyless confirmed. Approved but demoted 2->3: overlaps URLhaus (both phishing/malware URL telemetry); URLhaus is the primary, PhishStats secondary."
+    },
+    {
+      "name": "UK Carbon Intensity (NESO)",
+      "base_url": "https://api.carbonintensity.org.uk/",
+      "registry_match": true,
+      "registry_id": "uk-carbon-intensity",
+      "validated": true,
+      "approved": true,
+      "final_priority": 3,
+      "note": "Exact registry match, keyless confirmed (purpose ingest:grid:carbon:GB). On-domain Ops/energy; no existing connector."
+    },
+    {
+      "name": "NASA POWER",
+      "base_url": "https://power.larc.nasa.gov/api/",
+      "registry_match": true,
+      "registry_id": "nasa-power",
+      "validated": true,
+      "approved": true,
+      "final_priority": 3,
+      "note": "Exact registry match, keyless confirmed. Climate/solar data; distinct from live src_nasa_snowmodel."
+    },
+    {
+      "name": "Tradestie",
+      "base_url": "https://tradestie.com",
+      "registry_match": true,
+      "registry_id": "tradestie",
+      "validated": true,
+      "approved": false,
+      "final_priority": null,
+      "note": "Registry match and keyless confirmed, but dropped: retail social-forum sentiment is off-core-domain, low signal, and depends on third-party social scraping with ToS exposure; duplicative of the finance desk's other feeds."
+    },
+    {
+      "name": "OpenFIGI (Bloomberg)",
+      "base_url": "https://www.openfigi.com/api",
+      "registry_match": true,
+      "registry_id": "openfigi",
+      "validated": true,
+      "approved": true,
+      "final_priority": 3,
+      "note": "Name variant, exact base_url match, auth=api_key confirmed; instant_key correct (free key, no CC). High-value entity mapping for finance desk."
+    },
+    {
+      "name": "Represent by Open North",
+      "base_url": "https://represent.opennorth.ca",
+      "registry_match": true,
+      "registry_id": "represent-by-open-north",
+      "validated": true,
+      "approved": true,
+      "final_priority": 3,
+      "note": "Exact registry match, keyless confirmed. Canadian civic directory; in-domain but geographically niche."
+    },
+    {
+      "name": "Postcodes.io",
+      "base_url": "https://postcodes.io",
+      "registry_match": true,
+      "registry_id": "postcodes-io",
+      "validated": true,
+      "approved": true,
+      "final_priority": 3,
+      "note": "Exact registry match, keyless confirmed. UK geo lookup; complements live src_gadm/src_arcgis."
+    },
+    {
+      "name": "REST Countries",
+      "base_url": "https://restcountries.com",
+      "registry_match": true,
+      "registry_id": "rest-countries",
+      "validated": true,
+      "approved": false,
+      "final_priority": null,
+      "note": "Registry match and keyless confirmed, but dropped: static country reference table with near-zero ongoing ingest value; geo/reference coverage already served by live src_gadm, src_wikidata, src_dbpedia."
+    }
+  ],
+  "final_approved_list": [
+    "OpenSanctions",
+    "Fed Treasury (Fiscal Data)",
+    "Open-Meteo",
+    "AviationWeather (NOAA AWC)",
+    "FBI Wanted API",
+    "URLhaus (abuse.ch)",
+    "FRED (Federal Reserve Economic Data)",
+    "UK Parliament API",
+    "Chronicling America (Library of Congress)",
+    "Interpol Red Notices",
+    "National Vulnerability Database (NIST NVD)",
+    "Bargo Congress Trades",
+    "Kanari Wildfires",
+    "GridVigil",
+    "UK Police Data API",
+    "NASA POWER",
+    "OpenFIGI (Bloomberg)",
+    "UK Carbon Intensity (NESO)",
+    "Postcodes.io",
+    "Represent by Open North",
+    "Spaceflight News API (SNAPI)",
+    "PhishStats"
+  ],
+  "excluded_risky": [
+    {
+      "name": "Plaid",
+      "registry_match": true,
+      "registry_id": "plaid",
+      "upheld": true,
+      "note": "Genuine: banking KYC and business underwriting; automated/synthetic accounts prohibited."
+    },
+    {
+      "name": "Stripe",
+      "registry_match": true,
+      "registry_id": "stripe",
+      "upheld": true,
+      "note": "Genuine: legal-entity and identity verification; automated provisioning triggers fraud bans."
+    },
+    {
+      "name": "Klarna",
+      "registry_match": true,
+      "registry_id": "klarna",
+      "upheld": true,
+      "note": "Genuine: merchant-only onboarding with commercial contract review."
+    },
+    {
+      "name": "Citi Developer Hub",
+      "registry_match": true,
+      "registry_id": "citi",
+      "upheld": true,
+      "note": "Genuine: enterprise banking partner evaluation; scripted registration forbidden."
+    },
+    {
+      "name": "Privacy.com",
+      "registry_match": true,
+      "registry_id": "privacy-com",
+      "upheld": true,
+      "note": "Genuine: SSN/identity KYC under federal AML rules."
+    },
+    {
+      "name": "FingerprintJS Pro",
+      "registry_match": true,
+      "registry_id": "fingerprintjs-pro",
+      "upheld": true,
+      "note": "Genuine: anti-fraud platform that actively detects disposable emails and scripted trials."
+    },
+    {
+      "name": "FraudLabs Pro",
+      "registry_match": true,
+      "registry_id": "fraudlabs-pro",
+      "upheld": true,
+      "note": "Genuine: fraud screening provider that validates registrant authenticity."
+    },
+    {
+      "name": "HackerOne",
+      "registry_match": true,
+      "registry_id": "hackerone",
+      "upheld": true,
+      "note": "Genuine: researcher platform with mandatory 2FA and identity screening; bulk signup banned."
+    },
+    {
+      "name": "Bugcrowd",
+      "registry_match": true,
+      "registry_id": "bugcrowd",
+      "upheld": true,
+      "note": "Genuine: researcher ToS require manual identity/tax verification."
+    },
+    {
+      "name": "Complete Criminal Checks",
+      "registry_match": true,
+      "registry_id": "complete-criminal-checks",
+      "upheld": true,
+      "note": "Genuine: FCRA-regulated; requires verified permissible purpose."
+    },
+    {
+      "name": "Webz.io News API",
+      "registry_match": true,
+      "registry_id": "webz-io-news-api",
+      "upheld": true,
+      "note": "Genuine: enterprise sales qualification; screens automated trial creation."
+    },
+    {
+      "name": "Associated Press",
+      "registry_match": true,
+      "registry_id": "associated-press",
+      "upheld": true,
+      "note": "Genuine: licensed-publisher syndicate terms prohibit automated credential provisioning."
+    },
+    {
+      "name": "Shodan",
+      "registry_match": true,
+      "registry_id": "shodan",
+      "upheld": false,
+      "note": "REMOVED from exclusions: free key via ordinary email signup, no KYC/CC; only bulk multi-accounting would violate ToS, which this workflow does not do. Single signup is acceptable with rate-limit awareness."
+    },
+    {
+      "name": "VirusTotal",
+      "registry_match": true,
+      "registry_id": "virustotal",
+      "upheld": true,
+      "note": "Genuine: Google ToS explicitly bans automated/bulk account creation and detects disposable emails; higher policy risk than Shodan."
+    },
+    {
+      "name": "Lob.com",
+      "registry_match": true,
+      "registry_id": "lob / lob-com",
+      "upheld": true,
+      "note": "Genuine: credit card pre-authorization and business verification required."
+    }
+  ],
+  "missed_high_value": [
+    {
+      "registry_id": "google-news-rss",
+      "name": "Google News RSS",
+      "base": "https://news.google.com/rss/",
+      "auth": "none",
+      "reason": "Keyless global news ingest (purpose ingest:news:rss) directly feeds Newsk; not yet ingested (no src_ entry in CONNECTOR_STATUS)."
+    },
+    {
+      "registry_id": "federal-register",
+      "name": "Federal Register",
+      "base": "https://www.federalregister.gov/reader-aids/developer-resources/rest-api",
+      "auth": "none",
+      "reason": "Keyless US rules/notices API; core government feed for Ops/Civic with no existing connector."
+    },
+    {
+      "registry_id": "usaspending-gov",
+      "name": "USAspending.gov",
+      "base": "https://api.usaspending.gov",
+      "auth": "none",
+      "reason": "Keyless federal spending data; finance/government fit, distinct from live src_sam_gov (opportunities) and src_datagov."
+    },
+    {
+      "registry_id": "sec-edgar-data",
+      "name": "SEC EDGAR Data",
+      "base": "https://www.sec.gov/search-filings/edgar-application-programming-interface",
+      "auth": "none",
+      "reason": "Keyless SEC filings feed; high-value finance desk source, no existing connector."
+    },
+    {
+      "registry_id": "census-gov",
+      "name": "Census.gov",
+      "base": "https://www.census.gov/data/developers/data-sets.html",
+      "auth": "none",
+      "reason": "Keyless US demographic/civic datasets; verify no overlap with live src_datagov before ingest."
+    }
+  ],
+  "notes": [
+    "No file other than this validation file was created or modified; the original candidates file is untouched.",
+    "All registry matches are exact base_url matches; five name variants are documented and are not hallucinations.",
+    "GDELT was not suggested: v2/connectors/gdelt.workflow.ts already exists (mid-flight).",
+    "Live-source duplication baseline from docs/CONNECTOR_STATUS.md src_* inventory: ofac_sdn, worldbank, owid, owid_datasets, nws, noaa_spc, gdacs, usgs, fema_openfema, poweroutage_us, opensky, arcgis, courtlistener, crtsh, wayback, gadm, unhcr, who, mediacloud, claimreview, fullfact, legistar, openflights, dbpedia, energydata_info, sam_gov, ghcn, aemo_outages, ckan, opendatasoft, wikidata, scamsearch, nasa_snowmodel, datagov.",
+    "No credentials, secrets, or signup actions were involved in this validation."
+  ]
+}

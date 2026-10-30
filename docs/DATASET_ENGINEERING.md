@@ -1,4 +1,5 @@
 ---
+publish: true
 title: Dataset engineering
 description: Standards for building large, source-grounded intelligence datasets.
 tags:
@@ -75,7 +76,6 @@ Before a source is adopted, verify two bounded successful runs, idempotent repla
 
 ## Related standards
 
-- [[DEVELOPMENT|Engineering standard]]
-- [[CONNECTOR_PLAN|Connector adoption gates]]
-- [[CONNECTOR_STATUS|Connector evidence ledger]]
-- [[REPO_INDEX|Infrastructure and resource evidence]]
+- [[DEVELOPER_STANDARDS|Developer standards]]
+- [[CODEBASE|Codebase map]]
+- See repository `docs/DEVELOPMENT.md` for detailed data and connector requirements.

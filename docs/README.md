@@ -21,3 +21,5 @@ npm run docs:build
 ```
 
 Start at [[index|Harvy Developer Documentation]], then see [[CODEBASE|Codebase map]], [[API_REFERENCE|API reference]], [[STATUS|Implementation status]], and [[DATASET_ENGINEERING|Dataset engineering]]. The build output is `dist/docs` and the published host is `https://docs.harvy.dev`.
+
+The public developer path starts with [Get started](GETTING_STARTED.md), [API examples](API_EXAMPLES.md), and [Developer standards](DEVELOPER_STANDARDS.md). Also see [Concepts](CONCEPTS.md), [Data model](DATA_MODEL.md), [Errors](ERRORS.md), [Limits](LIMITS.md), [Recipes](RECIPES.md), and the [Changelog](CHANGELOG.md).

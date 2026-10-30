@@ -10,6 +10,22 @@ configuration:
     - private
     - templates
     - .obsidian
+    # Public Pages output is a curated subset; canonical operational files stay in docs/.
+    - BASIN_PIPELINE_FIX.md
+    - BASIN_PROVISIONING.md
+    - BUILD_AGENT_PROMPT.md
+    - CONNECTOR-CANDIDATES.md
+    - CONNECTOR_PLAN.md
+    - CONNECTOR_STATUS.md
+    - DEPLOY_RUNBOOK.md
+    - DEVELOPMENT.md
+    - HOSTING.md
+    - IOS_APP_PLAN.md
+    - PLAN.md
+    - README.md
+    - REPO_INDEX.md
+    - SECURITY_VULNERABILITY_REPORTING.md
+    - UI_SPEC.md
   theme:
     fontOrigin: googleFonts
     cdnCaching: true
@@ -106,7 +122,7 @@ plugins:
   - source: "@quartz-community/remove-draft"
     enabled: true
   - source: "@quartz-community/explicit-publish"
-    enabled: false
+    enabled: true
   - source: "@quartz-community/alias-redirects"
     enabled: true
   - source: "@quartz-community/content-index"
