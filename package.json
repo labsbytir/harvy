@@ -8,14 +8,15 @@
     "build": "vite build --config v2/web/vite.config.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "node --experimental-strip-types --test v2/tests/*.test.mjs v2/auth/*.test.mjs",
-    "check:local": "npm run typecheck && npm run typecheck:api && npm run typecheck:auth && npm run typecheck:auth-client && npm test && npm run build",
+    "check:local": "npm run typecheck && npm run typecheck:api && npm run typecheck:auth && npm run typecheck:auth-client && npm run typecheck:email-inbox && npm test && npm run build",
     "typecheck:auth": "tsc -p v2/auth/tsconfig.json",
     "typecheck:auth-client": "tsc -p v2/auth/tsconfig.client.json",
     "test:auth-consent": "node --test v2/auth/privacy-consent.test.mjs",
     "build:auth-client": "vite build --config v2/auth/vite.config.mts",
     "typecheck:api": "tsc -p v2/api/tsconfig.json",
+    "typecheck:email-inbox": "tsc -p v2/email-inbox/tsconfig.json",
     "docs:install-plugins": "tsx quartz/plugins/loader/install-plugins.ts",
-    "docs:build": "npm run docs:install-plugins && node quartz/bootstrap-cli.mjs build --directory docs --output dist/docs",
+    "docs:build": "npm run docs:install-plugins && node quartz/bootstrap-cli.mjs build --directory docs --output dist/docs && node v2/scripts/docs_tombstones.mjs",
     "docs:dev": "npm run docs:build && node v2/scripts/serve_docs.mjs"
   },
   "dependencies": {

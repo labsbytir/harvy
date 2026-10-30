@@ -1,0 +1,16 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "harvy-email-inbox",
+  "main": "./worker.ts",
+  "compatibility_date": "2026-10-30",
+  "workers_dev": false,
+  "routes": [
+    { "pattern": "inbox.harvy.dev", "zone_name": "harvy.dev" }
+  ],
+  "services": [
+    { "binding": "AUTH", "service": "harvy-auth" }
+  ],
+  "r2_buckets": [
+    { "binding": "HARVY_INBOX", "bucket_name": "harvy-inbox" }
+  ]
+}
