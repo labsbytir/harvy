@@ -22,10 +22,13 @@ import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import { createBrief, createDashboard, createStory, getContext, getEvent, getStory, handoffEventToOps, handoffStory, HarvyApiError, listAdminAudit, listDashboards, listEvents, listProductEntitlements, listRuns, listSources, listStories, saveStory, startRun, updateEventState, updateProductEntitlement, updateSourceState, type AdminAuditEntry, type DashboardView, type EventActivity, type HarvyContext, type HarvyEvent, type HarvyRun, type ProductEntitlement, type Source, type Story, type WorkspaceSearchResult } from "./api";
 import GlobalSearch from "./GlobalSearch";
+import { appendUniqueEvents, EventRequestGuard } from "./event-scope";
 import { isSavedViewConfig } from "../../shared/dashboard-config";
 import type { HarvyProduct } from "./modes";
 const AnalysisDesk = lazy(() => import("./AnalysisDesk"));
 const OpsDesk = lazy(() => import("./OpsDesk"));
+const InvestigationsDesk = lazy(() => import("./InvestigationsDesk"));
+const RadarMap = lazy(() => import("./RadarMap"));
 
 interface AuthUser { id: string; name?: string; email?: string; activeOrganizationId?: string | null }
 interface AuthGlobals {
@@ -86,9 +89,11 @@ export default function Workspace() {
   const [context, setContext] = useState<HarvyContext | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
   const [product, setProduct] = useState<HarvyProduct>("Newsk");
-  const [surface, setSurface] = useState<"events" | "analysis" | "actions">("events");
+  const [surface, setSurface] = useState<"events" | "analysis" | "actions" | "investigations" | "map">("events");
   const [searchTargetDashboard, setSearchTargetDashboard] = useState<string | null>(null);
   const [searchTargetAction, setSearchTargetAction] = useState<string | null>(null);
+  const [searchTargetInvestigation, setSearchTargetInvestigation] = useState<string | null>(null);
+  const [searchTargetEntity, setSearchTargetEntity] = useState<string | null>(null);
   const [sources, setSources] = useState<Source[]>([]);
   const [events, setEvents] = useState<HarvyEvent[]>([]);
   const [selected, setSelected] = useState<(HarvyEvent & { evidence: Awaited<ReturnType<typeof getEvent>>["evidence"]; activity: EventActivity[] }) | null>(null);
@@ -108,6 +113,10 @@ export default function Workspace() {
   const [needsOrganization, setNeedsOrganization] = useState(false);
   const activeOrganizationRef = useRef<string | null>(null);
   const activePrincipalRef = useRef<string | null>(null);
+  const loadingMoreRef = useRef(false);
+  const eventGuardRef = useRef<EventRequestGuard | null>(null);
+  if (!eventGuardRef.current) eventGuardRef.current = new EventRequestGuard();
+  const eventGuard = eventGuardRef.current;
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -122,9 +131,12 @@ export default function Workspace() {
 
   const reload = useCallback(async () => {
     if (!user) return;
+    eventGuard.setScope([user.id, user.activeOrganizationId ?? "", product, searchTerm, from, to, sourceFilter, statusFilter].join("|")); // identity + filters form the scope; a new scope invalidates in-flight pagination
+    const token = eventGuard.begin(); // a newer reload discards this response
     setBusy(true);
     try {
       const ctx = await getContext();
+      if (!eventGuard.isCurrent(token)) return;
       setContext(ctx);
       if (!ctx.allowedProducts.length) {
         setSources([]); setStories([]); setRuns([]); setDashboards([]); setEvents([]);
@@ -138,6 +150,7 @@ export default function Workspace() {
       const [sourceResult, storyResult, runResult, dashboardResult] = await Promise.all([
         listSources(product), product === "Newsk" ? listStories() : Promise.resolve({ items: [] as Story[] }), listRuns(product), listDashboards(),
       ]);
+      if (!eventGuard.isCurrent(token)) return;
       setSources(sourceResult.items);
       setStories(storyResult.items);
       setRuns(runResult.items);
@@ -150,12 +163,14 @@ export default function Workspace() {
       if (sourceFilter) filters.set("source_id", sourceFilter);
       if (statusFilter !== "all") filters.set("status", statusFilter);
       const eventResult = await listEvents(filters);
+      if (!eventGuard.isCurrent(token)) return;
       setEvents(eventResult.items);
       setNextCursor(eventResult.next_cursor);
       setNotice("");
       setWorkspaceError("");
       setNeedsOrganization(false);
     } catch (error) {
+      if (!eventGuard.isCurrent(token)) return;
       const message = error instanceof Error ? error.message : "The workspace could not load.";
       if (error instanceof HarvyApiError && [401, 403].includes(error.status)) {
         setContext(null); setSources([]); setEvents([]); setSelected(null); setStories([]); setRuns([]); setDashboards([]); setStory(null); setBrief(null);
@@ -163,7 +178,7 @@ export default function Workspace() {
       setNotice(message);
       setWorkspaceError(message);
       setNeedsOrganization(error instanceof HarvyApiError && [401, 403].includes(error.status));
-    } finally { setBusy(false); }
+    } finally { if (eventGuard.isCurrent(token)) setBusy(false); }
   }, [user, product, searchTerm, from, to, sourceFilter, statusFilter]);
 
   useEffect(() => { if (user) void reload(); }, [user, reload]);
@@ -196,10 +211,11 @@ export default function Workspace() {
   }, [user, runs, product]);
   const onUser = useCallback((next: AuthUser | null) => {
     if (activePrincipalRef.current !== (next?.id || null) || activeOrganizationRef.current !== (next?.activeOrganizationId || null)) {
+      eventGuard.invalidate(); // an identity switch discards in-flight responses from the previous principal
       setContext(null); setWorkspaceError(""); setNeedsOrganization(false); setNotice("");
       setProduct("Newsk"); setAccountOpen(false); setQuery(""); setSearchTerm(""); setFrom(""); setTo(""); setSourceFilter(""); setStatusFilter("all");
       setSources([]); setEvents([]); setSelected(null); setStories([]); setRuns([]); setDashboards([]); setStory(null); setBrief(null); setProductEntitlements([]); setEntitlementError(""); setAdminAudit([]); setAuditError("");
-      setSearchTargetDashboard(null); setSearchTargetAction(null);
+      setSearchTargetDashboard(null); setSearchTargetAction(null); setSearchTargetInvestigation(null); setSearchTargetEntity(null);
     }
     activePrincipalRef.current = next?.id || null;
     activeOrganizationRef.current = next?.activeOrganizationId || null;
@@ -208,7 +224,9 @@ export default function Workspace() {
   useEffect(() => { if (context) { activeOrganizationRef.current = context.tenantId; activePrincipalRef.current = context.principalId; } }, [context?.tenantId, context?.principalId]);
 
   const loadMoreEvents = async () => {
-    if (!nextCursor) return;
+    if (!nextCursor || loadingMoreRef.current) return;
+    const token = eventGuard.begin();
+    loadingMoreRef.current = true;
     const filters = new URLSearchParams({ before: nextCursor });
     filters.set("product", product);
     if (searchTerm) filters.set("q", searchTerm);
@@ -218,9 +236,11 @@ export default function Workspace() {
     if (statusFilter !== "all") filters.set("status", statusFilter);
     try {
       const page = await listEvents(filters);
-      setEvents((current) => [...current, ...page.items]);
+      if (!eventGuard.isCurrent(token)) return; // filters changed mid-flight; discard the stale page
+      setEvents((current) => appendUniqueEvents(current, page.items));
       setNextCursor(page.next_cursor);
     } catch (error) { setNotice(error instanceof Error ? error.message : "More events could not load."); }
+    finally { loadingMoreRef.current = false; }
   };
 
   const openStory = async (id: string) => {
@@ -237,19 +257,33 @@ export default function Workspace() {
     setNotice("");
     if (result.type === "dashboard") {
       setSearchTargetAction(null);
+      setSearchTargetInvestigation(null);
+      setSearchTargetEntity(null);
       setSearchTargetDashboard(result.id);
       setSurface("analysis");
       return;
     }
     if (result.type === "action") {
       setSearchTargetDashboard(null);
+      setSearchTargetInvestigation(null);
+      setSearchTargetEntity(null);
       setSearchTargetAction(result.id);
       setProduct("Ops");
       setSurface("actions");
       return;
     }
+    if (result.type === "investigation" || result.type === "entity") {
+      setSearchTargetDashboard(null);
+      setSearchTargetAction(null);
+      setSearchTargetInvestigation(result.type === "investigation" ? result.id : null);
+      setSearchTargetEntity(result.type === "entity" ? result.id : null);
+      setSurface("investigations");
+      return;
+    }
     setSearchTargetDashboard(null);
     setSearchTargetAction(null);
+    setSearchTargetInvestigation(null);
+    setSearchTargetEntity(null);
     setSurface("events");
     if (result.type === "story") {
       await openStory(result.id);
@@ -269,11 +303,11 @@ export default function Workspace() {
     setBusy(true);
     try {
       await createDashboard({
-        title: product === "Tower" ? "Business watchlist" : "Newsroom event feed", product,
+        title: product === "Tower" ? "Business watchlist" : product === "Civic" ? "Civic watchlist" : "Newsroom event feed", product,
         config: { kind: "saved_view", hql_version: 1, filters: { query, source_id: sourceFilter, from, to, status: statusFilter } },
       });
       setDashboards((await listDashboards()).results);
-      setSuccessNotice(product === "Tower" ? "Saved this filter as a watchlist." : "Saved this newsroom view.");
+      setSuccessNotice(product === "Newsk" ? "Saved this newsroom view." : "Saved this filter as a watchlist.");
     } catch (error) { setNotice(error instanceof Error ? error.message : "View could not be saved."); }
     finally { setBusy(false); }
   };
@@ -428,6 +462,8 @@ export default function Workspace() {
         {context?.allowedProducts.includes(product) && <Stack direction="row" spacing={0.5} role="tablist" aria-label={`${product} workspace views`}>
           {product === "Ops" ? <Button role="tab" aria-selected={surface === "actions"} onClick={() => setSurface("actions")}>Actions</Button> : <Button role="tab" aria-selected={surface === "events"} onClick={() => setSurface("events")}>Events</Button>}
           {product === "Ops" && <Button role="tab" aria-selected={surface === "events"} onClick={() => setSurface("events")}>Signals</Button>}
+          {product !== "Ops" && <Button role="tab" aria-selected={surface === "investigations"} onClick={() => setSurface("investigations")}>Investigations</Button>}
+          {product !== "Ops" && <Button role="tab" aria-selected={surface === "map"} onClick={() => setSurface("map")}>Map</Button>}
           <Button role="tab" aria-selected={surface === "analysis"} onClick={() => setSurface("analysis")}>Analysis</Button>
         </Stack>}
         {user && <Button variant="text" onClick={() => setAccountOpen((open) => !open)} aria-expanded={accountOpen} aria-controls="account-panel">{user.name || user.email || "Account"}</Button>}
@@ -461,13 +497,23 @@ export default function Workspace() {
           <Stack direction="row" spacing={1}><Chip label={context.tenantName} variant="outlined" /><Chip label={context.role} variant="outlined" /><Chip label="Organization scoped" color="success" variant="outlined" /></Stack>
         </Stack>
         {notice && <Alert severity={noticeKind} onClose={() => setNotice("")} sx={{ mb: 2 }}>{notice}</Alert>}
-        {surface === "analysis" ? <Suspense fallback={<Stack alignItems="center" sx={{ py: 8 }}><CircularProgress aria-label="Loading analytics" /></Stack>}><AnalysisDesk key={`${context.principalId}:${context.tenantId}:${context.workspaceId}:${context.featureRevision}:${context.capabilities.join(",")}:${product}`} context={context} product={product} openDashboardId={searchTargetDashboard} /></Suspense> : surface === "actions" ? <Suspense fallback={<Stack alignItems="center" sx={{ py: 8 }}><CircularProgress aria-label="Loading Ops actions" /></Stack>}><OpsDesk key={`${context.principalId}:${context.tenantId}:${context.workspaceId}:${context.featureRevision}:${context.capabilities.join(",")}`} canEdit={context.capabilities.includes("ops.actions.edit")} focusActionId={searchTargetAction} /></Suspense> : <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "minmax(220px, 0.72fr) minmax(310px, 1.2fr) minmax(320px, 1.1fr)" }, gap: 2, alignItems: "start" }}>
+        {surface === "investigations" ? <Suspense fallback={<Stack alignItems="center" sx={{ py: 8 }}><CircularProgress aria-label="Loading investigations" /></Stack>}><InvestigationsDesk key={`${context.principalId}:${context.tenantId}:${context.workspaceId}:${context.featureRevision}:${context.capabilities.join(",")}:${product}`} product={product} canEdit={context.capabilities.includes("investigations.edit")} focusInvestigationId={searchTargetInvestigation} focusEntityId={searchTargetEntity} onShowWatchlists={() => setSurface("events")} /></Suspense> : surface === "analysis" ? <Suspense fallback={<Stack alignItems="center" sx={{ py: 8 }}><CircularProgress aria-label="Loading analytics" /></Stack>}><AnalysisDesk key={`${context.principalId}:${context.tenantId}:${context.workspaceId}:${context.featureRevision}:${context.capabilities.join(",")}:${product}`} context={context} product={product} openDashboardId={searchTargetDashboard} /></Suspense> : surface === "actions" ? <Suspense fallback={<Stack alignItems="center" sx={{ py: 8 }}><CircularProgress aria-label="Loading Ops actions" /></Stack>}><OpsDesk key={`${context.principalId}:${context.tenantId}:${context.workspaceId}:${context.featureRevision}:${context.capabilities.join(",")}`} canEdit={context.capabilities.includes("ops.actions.edit")} focusActionId={searchTargetAction} /></Suspense> : <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "minmax(220px, 0.72fr) minmax(310px, 1.2fr) minmax(320px, 1.1fr)" }, gap: 2, alignItems: "start" }}>
+          {surface === "map" ? <Card sx={{ gridColumn: { lg: "1 / 3" } }}><CardContent>
+            <Stack direction="row" justifyContent="flex-end" alignItems="center">
+              <Button size="small" onClick={() => void reload()} disabled={busy}>Refresh</Button>
+            </Stack>
+            <Box sx={{ mt: 1 }}>
+              <Suspense fallback={<Stack alignItems="center" sx={{ py: 8 }}><CircularProgress aria-label="Loading radar map" /></Stack>}>
+                <RadarMap product={product} events={events} hasMoreEvents={!!nextCursor} from={from} to={to} onSelectEvent={(event) => void selectEvent(event)} />
+              </Suspense>
+            </Box>
+          </CardContent></Card> : <>
           <Card><CardContent>
             <Stack direction="row" alignItems="center" justifyContent="space-between"><Typography variant="h6">Monitored sources</Typography><Button size="small" onClick={() => void reload()} disabled={busy}>Refresh</Button></Stack>
             {sources.length === 0 ? <Alert severity="info" sx={{ mt: 2 }}>No approved monitors are configured for this workspace.</Alert> : <Stack spacing={1} sx={{ mt: 2 }}>{sources.map((source) => <Box key={source.id} sx={{ display: "flex", gap: 1, alignItems: "center" }}><Button fullWidth disabled={!source.enabled} variant={sourceFilter === source.id ? "contained" : "outlined"} onClick={() => setSourceFilter(sourceFilter === source.id ? "" : source.id)} sx={{ justifyContent: "flex-start", textAlign: "left" }}><Box><Typography variant="body2" fontWeight={700}>{source.label}</Typography><Typography variant="caption">{source.publisher}</Typography></Box></Button><Chip size="small" label={source.enabled ? "Active" : "Paused"} color={source.enabled ? "success" : "default"} />{source.enabled && <Button size="small" onClick={() => void runSource(source.id)} disabled={busy || !context.capabilities.includes("runs.manage")} aria-label={`Run ${source.label}`}>Run</Button>}{context.capabilities.includes("monitors.manage") && <Button size="small" onClick={() => void setSourceEnabled(source)} disabled={busy} aria-label={`${source.enabled ? "Pause" : "Resume"} ${source.label}`}>{source.enabled ? "Pause" : "Resume"}</Button>}</Box>)}</Stack>}
             {context.capabilities.includes("monitors.manage") && <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>Pausing prevents new runs; already submitted jobs continue.</Typography>}
             {sourceFilter && <Button size="small" onClick={() => setSourceFilter("")} sx={{ mt: 1 }}>Clear source filter</Button>}
-            {(["Newsk", "Tower"].includes(product)) && context.capabilities.includes("dashboards.edit") && <Box sx={{ mt: 3 }}><Stack direction="row" justifyContent="space-between" alignItems="center"><Typography variant="subtitle2">{product === "Tower" ? "Business watchlists" : "Saved views"}</Typography><Button size="small" onClick={() => void saveCurrentView()} disabled={busy}>{product === "Tower" ? "Save watchlist" : "Save current"}</Button></Stack><Stack spacing={0.5} sx={{ mt: 1 }}>{dashboards.filter((view) => view.product === product && isFilterDashboard(view)).map((view) => <Button key={view.id} size="small" onClick={() => loadSavedView(view)} sx={{ justifyContent: "flex-start" }}>{view.title}</Button>)}</Stack></Box>}
+            {(["Newsk", "Tower", "Civic"].includes(product)) && context.capabilities.includes("dashboards.edit") && <Box sx={{ mt: 3 }}><Stack direction="row" justifyContent="space-between" alignItems="center"><Typography variant="subtitle2">{product === "Newsk" ? "Saved views" : product === "Tower" ? "Business watchlists" : "Civic watchlists"}</Typography><Button size="small" onClick={() => void saveCurrentView()} disabled={busy}>{product === "Newsk" ? "Save current" : "Save watchlist"}</Button></Stack><Stack spacing={0.5} sx={{ mt: 1 }}>{dashboards.filter((view) => view.product === product && isFilterDashboard(view)).map((view) => <Button key={view.id} size="small" onClick={() => loadSavedView(view)} sx={{ justifyContent: "flex-start" }}>{view.title}</Button>)}</Stack></Box>}
             {product === "Newsk" && !!stories.length && <Box sx={{ mt: 3 }}><Typography variant="subtitle2">Saved stories</Typography><Stack spacing={0.5} sx={{ mt: 1 }}>{stories.slice(0, 10).map((item) => <Button key={item.id} size="small" onClick={() => void openStory(item.id)} sx={{ justifyContent: "flex-start", textAlign: "left" }}>{item.title} · {item.status}</Button>)}</Stack></Box>}
             {!!runs.length && <Box sx={{ mt: 3 }}><Typography variant="subtitle2">Recent runs</Typography><Stack spacing={0.5} sx={{ mt: 1 }}>{runs.slice(0, 5).map((run) => <Box key={run.id} sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}><Typography variant="caption">{run.status}{run.error_code ? ` · ${run.error_code}` : ""} · {new Date(run.updated_at).toLocaleTimeString()}</Typography>{run.status === "queued" && run.error_code === "dispatch_unconfirmed" && context.capabilities.includes("runs.manage") && <Button size="small" disabled={busy || !run.idempotency_key} onClick={() => void runSource(run.source_id, run.idempotency_key)}>Retry same run</Button>}</Box>)}</Stack></Box>}
           </CardContent></Card>
@@ -480,9 +526,10 @@ export default function Workspace() {
                 <TextField size="small" type="datetime-local" label="To" InputLabelProps={{ shrink: true }} value={to} onChange={(e) => setTo(e.target.value)} />
               </Stack>
               <FormControl size="small"><InputLabel id="event-status-label">Status</InputLabel><Select labelId="event-status-label" label="Status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><MenuItem value="all">All events</MenuItem><MenuItem value="new">New</MenuItem><MenuItem value="reviewing">Reviewing</MenuItem><MenuItem value="saved">Saved</MenuItem><MenuItem value="closed">Closed</MenuItem></Select></FormControl>
+              {nextCursor && <Button size="small" variant="outlined" onClick={() => void loadMoreEvents()}>Load more</Button>}
             </Stack>
             {events.length === 0 ? <Alert severity="info" sx={{ mt: 2 }}>{sources.length ? "No events match these filters. Try another search or wait for a verified run." : "Events appear here after an approved source completes a run."}</Alert> : <Stack divider={<Divider flexItem />} sx={{ mt: 1 }}>{events.map((event) => <Button key={event.id} onClick={() => void selectEvent(event)} aria-current={selected?.id === event.id ? "true" : undefined} sx={{ display: "block", textAlign: "left", py: 1.5, px: 1, color: "text.primary" }}><Stack direction="row" justifyContent="space-between" alignItems="start" gap={1}><Typography fontWeight={700}>{event.title}</Typography><Chip size="small" label={event.status} /></Stack><Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{event.summary || "No summary provided."}</Typography><Typography variant="caption" color="text.secondary">{new Date(event.last_seen_at).toLocaleString()} · {event.evidence_count} sources</Typography></Button>)}</Stack>}
-          </CardContent></Card>
+          </CardContent></Card></>}
           <Stack spacing={2}>
             {!selected ? <Card><CardContent><Typography variant="h6">Evidence</Typography><Typography color="text.secondary" sx={{ mt: 1 }}>Select an event to review source links, capture times, and evidence.</Typography></CardContent></Card> : <Card><CardContent>
               <Chip label={selected.status} size="small" color={selected.status === "closed" ? "default" : "primary"} />

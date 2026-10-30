@@ -111,7 +111,8 @@ test("workspace search returns scoped events, evidence metadata, stories, and vi
   assert.deepEqual(eventQuery.params.slice(4, 6), [from, to]);
   assert.ok(evidenceQuery.sql.includes("e.tenant_id = ?") && evidenceQuery.sql.includes("e.workspace_id = ?"));
   assert.deepEqual(evidenceQuery.params.slice(0, 4), ["org-a", "org-a", "Newsk", "Newsk"]);
-  assert.deepEqual(evidenceQuery.params.slice(4, 10), ["needle", from, from, to, to, 4]);
+  assert.deepEqual(evidenceQuery.params.slice(4, 10), ["%needle%", from, from, to, to, 4]);
+  assert.equal(storyQuery.params[2], "%needle%");
   assert.deepEqual(storyQuery.params.slice(3, 7), [from, from, to, to]);
   assert.match(dashboardQuery.sql, /visibility = 'workspace' OR owner_principal_id = \?/);
   assert.deepEqual(dashboardQuery.params.slice(0, 4), ["org-a", "org-a", "Newsk", "user-1"]);
@@ -354,7 +355,7 @@ test("event list query is bound to the authenticated tenant and workspace", asyn
   assert.equal(response.status, 200);
   const query = db.calls.find(({ sql }) => sql.includes("FROM harvy_v2_events e"));
   assert.ok(query);
-  assert.deepEqual(query.params.slice(0, 5), ["org-a", "org-a", "Newsk", "budget", "source-x"]);
+  assert.deepEqual(query.params.slice(0, 5), ["org-a", "org-a", "Newsk", "%budget%", "source-x"]);
   assert.match(query.sql, /e\.tenant_id = \?/);
   assert.match(query.sql, /e\.workspace_id = \?/);
 });
@@ -635,7 +636,7 @@ test("signed Automation publication checks R2 manifests and writes only the run'
     artifacts,
     events: [{
       harvydex_id: "123e4567-e89b-42d3-a456-426614174001", title: "Verified event", summary: "A bounded event.",
-      first_seen_at: Date.now(), last_seen_at: Date.now(),
+      first_seen_at: Date.now(), last_seen_at: Date.now(), latitude: 40.7128, longitude: -74.006,
       evidence: [{ source_url: "https://example.org/story", publisher: "Example", headline: "Reported event", excerpt: "Source text", captured_at: Date.now(), artifact_id: "processed-artifact-1" }],
     }],
   });
@@ -655,4 +656,48 @@ test("signed Automation publication checks R2 manifests and writes only the run'
   assert.match((await response.json()).run_id, /123e4567/);
   assert.ok(db.calls.some((call) => call.sql.includes("INSERT INTO harvy_v2_events") && call.params.includes("org-a")));
   assert.ok(db.calls.some((call) => call.sql.includes("INSERT OR IGNORE INTO harvy_v2_evidence") && call.params.includes("org-a")));
+  const eventInsert = db.calls.find((call) => call.sql.includes("INSERT INTO harvy_v2_events"));
+  assert.ok(eventInsert && eventInsert.params.includes(40.7128) && eventInsert.params.includes(-74.006), "source-provided coordinates are persisted");
+
+  const badPayload = JSON.stringify({
+    run_id: "123e4567-e89b-42d3-a456-426614174000",
+    artifacts,
+    events: [{
+      harvydex_id: "123e4567-e89b-42d3-a456-426614174002", title: "Bad coordinates", summary: "Out of range.",
+      first_seen_at: Date.now(), last_seen_at: Date.now(), latitude: 91,
+      evidence: [{ source_url: "https://example.org/story", publisher: "Example", headline: "Reported event", excerpt: "Source text", captured_at: Date.now(), artifact_id: "processed-artifact-1" }],
+    }],
+  });
+  const badTimestamp = Date.now();
+  const badMac = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${badTimestamp}.${badPayload}`)));
+  const badSignature = [...badMac].map((v) => v.toString(16).padStart(2, "0")).join("");
+  const badResponse = await worker.fetch(new Request("https://harvy.test/internal/v1/automation-publications", {
+    method: "POST", headers: { "x-harvy-timestamp": String(badTimestamp), "x-harvy-signature": badSignature }, body: badPayload,
+  }), {
+    HARVY_D1: db, AUTH: auth(), AUTOMATION_CALLBACK_SECRET: secret,
+    HARVY_RAW: { async head() { return { size: 10, customMetadata: { sha256: "a".repeat(64) } }; } },
+    HARVY_ARTIFACTS: { async head() { return { size: 20, customMetadata: { sha256: "b".repeat(64) } }; } },
+  });
+  assert.equal(badResponse.status, 400, "out-of-range coordinates are rejected");
+
+  const pairPayload = JSON.stringify({
+    run_id: "123e4567-e89b-42d3-a456-426614174000",
+    artifacts,
+    events: [{
+      harvydex_id: "123e4567-e89b-42d3-a456-426614174003", title: "Lone latitude", summary: "Missing longitude.",
+      first_seen_at: Date.now(), last_seen_at: Date.now(), latitude: 40.7128,
+      evidence: [{ source_url: "https://example.org/story", publisher: "Example", headline: "Reported event", excerpt: "Source text", captured_at: Date.now(), artifact_id: "processed-artifact-1" }],
+    }],
+  });
+  const pairTimestamp = Date.now();
+  const pairMac = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${pairTimestamp}.${pairPayload}`)));
+  const pairSignature = [...pairMac].map((v) => v.toString(16).padStart(2, "0")).join("");
+  const pairResponse = await worker.fetch(new Request("https://harvy.test/internal/v1/automation-publications", {
+    method: "POST", headers: { "x-harvy-timestamp": String(pairTimestamp), "x-harvy-signature": pairSignature }, body: pairPayload,
+  }), {
+    HARVY_D1: db, AUTH: auth(), AUTOMATION_CALLBACK_SECRET: secret,
+    HARVY_RAW: { async head() { return { size: 10, customMetadata: { sha256: "a".repeat(64) } }; } },
+    HARVY_ARTIFACTS: { async head() { return { size: 20, customMetadata: { sha256: "b".repeat(64) } }; } },
+  });
+  assert.equal(pairResponse.status, 400, "a lone coordinate is rejected so a location is never mixed across publications");
 });

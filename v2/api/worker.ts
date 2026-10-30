@@ -1,5 +1,6 @@
 /** Harvy API: authenticated, tenant-scoped product operations and Automation dispatch. */
-import type { D1Database, Fetcher } from "@cloudflare/workers-types";
+import type { D1Database, Fetcher, Hyperdrive } from "@cloudflare/workers-types";
+import { PostgresDatabase, type SqlDatabase } from "../shared/sql-database.ts";
 import { canTransitionAutomationRun, isSafeSourceUrl, parseAutomationRunRequest } from "../shared/automation-run.ts";
 import { harvyErrorResponse } from "../shared/errors.ts";
 import { parseHqlQuery } from "../shared/hql.ts";
@@ -7,10 +8,12 @@ import { isHarvyDexId } from "../shared/harvydex.ts";
 import { parseArtifactManifest, type ArtifactManifest } from "../shared/artifacts.ts";
 import { isDashboardConfig, isPersistedDashboardConfig } from "../shared/dashboard-config.ts";
 import { createAnalyticsLayer, hqlToSemanticQuery, normalizeCubeQuery } from "./analytics.ts";
+import { handleInvestigations } from "./investigations.ts";
 
 interface Actor { id: string; tenantId: string; workspaceId: string; tenantName: string; role: string; harvyAdmin: boolean }
 interface Env {
-  HARVY_D1: D1Database;
+  HARVY_D1?: D1Database;
+  HYPERDRIVE_PRIVATE?: Hyperdrive;
   AUTH: Fetcher;
   AUTOMATION_URL?: string;
   AUTOMATION_DISPATCH_TOKEN?: string;
@@ -19,16 +22,25 @@ interface Env {
   HARVY_ARTIFACTS?: R2Bucket;
 }
 
+function databaseFor(env: Env): SqlDatabase | null {
+  if (env.HYPERDRIVE_PRIVATE?.connectionString) return new PostgresDatabase(env.HYPERDRIVE_PRIVATE.connectionString);
+  return env.HARVY_D1 ? env.HARVY_D1 as unknown as SqlDatabase : null;
+}
+
 const PRODUCTS = ["Newsk", "Tower", "Ops", "Civic"] as const;
 type Product = typeof PRODUCTS[number];
 type RunStatus = "queued" | "running" | "succeeded" | "partial" | "failed" | "cancelled";
 const now = () => Date.now();
+// Source-provided coordinates only; undefined/null allowed, numbers must be in range.
+const validCoord = (value: unknown, min: number, max: number) =>
+  value === undefined || value === null || (typeof value === "number" && Number.isFinite(value) && value >= min && value <= max);
 const DISPATCH_CLAIM_LEASE_MS = 30_000;
 const traceId = () => crypto.randomUUID();
 const json = (data: unknown, status = 200, headers: HeadersInit = {}) => Response.json(data, {
   status, headers: { "Cache-Control": "private, no-store", ...headers },
 });
 const fail = (code: string, message: string, status: number, trace: string) => harvyErrorResponse(code, message, status, trace);
+const likePattern = (value: string) => `%${value.replace(/[\\%_]/g, "\\$&")}%`;
 
 async function bodyJson(request: Request, maxBytes = 65_536): Promise<Record<string, unknown>> {
   const text = await readBoundedText(request, maxBytes);
@@ -73,16 +85,16 @@ async function actor(request: Request, env: Env): Promise<Actor | null> {
 }
 
 function capabilities(role: string, harvyAdmin = false): string[] {
-  const read = ["query.view", "events.view", "evidence.view", "stories.view", "dashboards.view", "monitors.view", "runs.view", "ops.actions.view"];
+  const read = ["query.view", "events.view", "evidence.view", "stories.view", "investigations.view", "dashboards.view", "monitors.view", "runs.view", "ops.actions.view"];
   const platform = harvyAdmin ? ["entitlements.manage"] : [];
   if (role === "platform_admin") return platform;
-  if (["owner", "admin"].includes(role)) return [...read, "events.edit", "stories.edit", "stories.handoff", "events.handoff", "ops.actions.edit", "monitors.manage", "runs.manage", "dashboards.edit", "members.manage", ...platform];
+  if (["owner", "admin"].includes(role)) return [...read, "events.edit", "stories.edit", "investigations.edit", "stories.handoff", "events.handoff", "ops.actions.edit", "monitors.manage", "runs.manage", "dashboards.edit", "members.manage", ...platform];
   if (role === "viewer") return [...read, ...platform];
-  if (["member", "editor", "analyst"].includes(role)) return [...read, "events.edit", "stories.edit", "stories.handoff", "events.handoff", "ops.actions.edit", "runs.manage", "dashboards.edit", ...platform];
+  if (["member", "editor", "analyst"].includes(role)) return [...read, "events.edit", "stories.edit", "investigations.edit", "stories.handoff", "events.handoff", "ops.actions.edit", "runs.manage", "dashboards.edit", ...platform];
   return platform;
 }
 
-async function allowedProducts(db: D1Database, tenantId: string): Promise<Product[]> {
+async function allowedProducts(db: SqlDatabase, tenantId: string): Promise<Product[]> {
   const result = await db.prepare(
     "SELECT product FROM harvy_v2_product_entitlements WHERE tenant_id = ? AND enabled = 1",
   ).bind(tenantId).all<{ product: string }>();
@@ -90,13 +102,13 @@ async function allowedProducts(db: D1Database, tenantId: string): Promise<Produc
   return products;
 }
 
-async function entitlementRevision(db: D1Database, tenantId: string): Promise<number> {
+async function entitlementRevision(db: SqlDatabase, tenantId: string): Promise<number> {
   const row = await db.prepare("SELECT SUM(revision) AS revision FROM harvy_v2_product_entitlements WHERE tenant_id = ?")
     .bind(tenantId).first<{ revision: number | null }>();
   return Math.max(1, row?.revision || 1);
 }
 
-async function entitledProduct(db: D1Database, tenantId: string, requested: string | null): Promise<Product | null> {
+async function entitledProduct(db: SqlDatabase, tenantId: string, requested: string | null): Promise<Product | null> {
   const products = await allowedProducts(db, tenantId);
   if (requested) return PRODUCTS.includes(requested as Product) && products.includes(requested as Product) ? requested as Product : null;
   return products.length === 1 ? products[0] : null;
@@ -120,9 +132,9 @@ function automationEndpoint(value: string | undefined): URL | null {
   } catch { return null; }
 }
 
-async function eventDetail(db: D1Database, a: Actor, id: string, product: Product) {
+async function eventDetail(db: SqlDatabase, a: Actor, id: string, product: Product) {
   const event = await db.prepare(
-    "SELECT id, product, title, summary, status, assigned_to, revision, first_seen_at, last_seen_at FROM harvy_v2_events WHERE id = ? AND tenant_id = ? AND workspace_id = ? AND product = ?",
+    "SELECT id, product, title, summary, status, assigned_to, revision, first_seen_at, last_seen_at, latitude, longitude FROM harvy_v2_events WHERE id = ? AND tenant_id = ? AND workspace_id = ? AND product = ?",
   ).bind(id, a.tenantId, a.workspaceId, product).first();
   if (!event) return null;
   const evidence = await db.prepare(
@@ -134,7 +146,7 @@ async function eventDetail(db: D1Database, a: Actor, id: string, product: Produc
   return { ...event, evidence: evidence.results, activity: activity.results };
 }
 
-async function listEvents(request: Request, db: D1Database, a: Actor, product: Product) {
+async function listEvents(request: Request, db: SqlDatabase, a: Actor, product: Product) {
   const q = new URL(request.url).searchParams;
   const search = q.get("q")?.trim() || "";
   if (search.length > 200) return { error: "invalid_search" as const };
@@ -151,7 +163,7 @@ async function listEvents(request: Request, db: D1Database, a: Actor, product: P
   if (cursor && (!Number.isSafeInteger(cursorTime) || cursorTime! < 0 || !/^[a-f0-9-]{36}$/i.test(cursorId || "") || extraCursorParts.length)) return { error: "invalid_cursor" as const };
   const where = ["e.tenant_id = ?", "e.workspace_id = ?", "e.product = ?"];
   const args: (string | number)[] = [a.tenantId, a.workspaceId, product];
-  if (search) { where.push("instr(lower(e.title || ' ' || e.summary), lower(?)) > 0"); args.push(search); }
+  if (search) { where.push("lower(e.title || ' ' || e.summary) LIKE lower(?) ESCAPE '\\'"); args.push(likePattern(search)); }
   if (from !== null) { where.push("e.last_seen_at >= ?"); args.push(from); }
   if (to !== null) { where.push("e.last_seen_at <= ?"); args.push(to); }
   if (status) { where.push("e.status = ?"); args.push(status); }
@@ -162,7 +174,7 @@ async function listEvents(request: Request, db: D1Database, a: Actor, product: P
   if (cursorTime !== null) { where.push("(e.last_seen_at < ? OR (e.last_seen_at = ? AND e.id < ?))"); args.push(cursorTime, cursorTime, cursorId); }
   args.push(limit + 1);
   const rows = await db.prepare(
-    `SELECT e.id, e.product, e.title, e.summary, e.status, e.assigned_to, e.revision, e.first_seen_at, e.last_seen_at,
+    `SELECT e.id, e.product, e.title, e.summary, e.status, e.assigned_to, e.revision, e.first_seen_at, e.last_seen_at, e.latitude, e.longitude,
       (SELECT COUNT(*) FROM harvy_v2_evidence ev WHERE ev.event_id = e.id AND ev.tenant_id = e.tenant_id AND ev.workspace_id = e.workspace_id) AS evidence_count
      FROM harvy_v2_events e WHERE ${where.join(" AND ")} ORDER BY e.last_seen_at DESC, e.id DESC LIMIT ?`,
   ).bind(...args).all<Record<string, unknown>>();
@@ -172,7 +184,7 @@ async function listEvents(request: Request, db: D1Database, a: Actor, product: P
   return { items, next_cursor: hasMore && last ? `${last.last_seen_at}:${last.id}` : null };
 }
 
-async function updateStory(db: D1Database, a: Actor, id: string, body: Record<string, unknown>) {
+async function updateStory(db: SqlDatabase, a: Actor, id: string, body: Record<string, unknown>) {
   if (!has(a, "stories.edit")) return { status: 403 as const, code: "forbidden" };
   const current = await db.prepare(
     "SELECT revision, status FROM harvy_v2_stories WHERE id = ? AND tenant_id = ? AND workspace_id = ?",
@@ -196,7 +208,7 @@ async function updateStory(db: D1Database, a: Actor, id: string, body: Record<st
   ).bind(id, a.tenantId, a.workspaceId).first() };
 }
 
-async function markDispatchFailure(db: D1Database, runId: string, tenantId: string, traceId: string, code: string, message: string) {
+async function markDispatchFailure(db: SqlDatabase, runId: string, tenantId: string, traceId: string, code: string, message: string) {
   const result = await db.prepare("UPDATE harvy_v2_runs SET status = 'failed', error_code = ?, updated_at = ? WHERE id = ? AND tenant_id = ? AND status = 'queued'")
     .bind(code, now(), runId, tenantId).run();
   if (result.meta.changes) return fail(code, message, 502, traceId);
@@ -205,7 +217,7 @@ async function markDispatchFailure(db: D1Database, runId: string, tenantId: stri
   return current ? json({ run_id: runId, status: current.status, trace_id: current.trace_id }, 202) : fail("run_not_found", "Run state was lost.", 500, traceId);
 }
 
-async function markDispatchUnconfirmed(db: D1Database, runId: string, tenantId: string, traceId: string, idempotencyKey: string) {
+async function markDispatchUnconfirmed(db: SqlDatabase, runId: string, tenantId: string, traceId: string, idempotencyKey: string) {
   const result = await db.prepare("UPDATE harvy_v2_runs SET error_code = 'dispatch_unconfirmed', updated_at = ? WHERE id = ? AND tenant_id = ? AND status = 'queued'")
     .bind(now(), runId, tenantId).run();
   if (result.meta.changes) return json({ run_id: runId, status: "queued", error_code: "dispatch_unconfirmed", idempotency_key: idempotencyKey, trace_id: traceId }, 202);
@@ -215,20 +227,36 @@ async function markDispatchUnconfirmed(db: D1Database, runId: string, tenantId: 
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
+    const db = databaseFor(env);
+    try { return await handleApiRequest(request, env, db); }
+    finally {
+      if (db instanceof PostgresDatabase) {
+        if (ctx) ctx.waitUntil(db.close());
+        else await db.close();
+      }
+    }
+  },
+};
+
+async function handleApiRequest(request: Request, env: Env, db: SqlDatabase | null): Promise<Response> {
     const url = new URL(request.url);
     const trace = traceId();
     const { pathname } = url;
 
     if (pathname === "/health" && request.method === "GET") return json({ status: "ok", time: new Date().toISOString() }, 200, { "Cache-Control": "no-store" });
-    if (pathname === "/internal/v1/automation-callback" && request.method === "POST") return automationCallback(request, env, trace);
-    if (pathname === "/internal/v1/automation-publications" && request.method === "POST") return automationPublication(request, env, trace);
+    if (pathname === "/internal/v1/automation-callback" && request.method === "POST") return automationCallback(request, env, trace, db);
+    if (pathname === "/internal/v1/automation-publications" && request.method === "POST") return automationPublication(request, env, trace, db);
 
     if (!pathname.startsWith("/api/v1/")) return fail("not_found", "Unknown route.", 404, trace);
-    if (!env.HARVY_D1) return fail("unavailable", "Harvy storage is not configured.", 503, trace);
+    if (!db) return fail("unavailable", "Harvy PostgreSQL storage is not configured.", 503, trace);
     const a = await actor(request, env);
     if (!a) return fail("unauthorized", "Sign in and select an organization.", 401, trace);
-    const db = env.HARVY_D1;
+
+    if (/^\/api\/v1\/(investigations|entities|relationships|graph)(?:\/|$)/.test(pathname)) {
+      const products = await allowedProducts(db, a.tenantId);
+      return (await handleInvestigations(request, db, a, products, has(a, "investigations.view"), has(a, "investigations.edit"), trace)) || fail("not_found", "Unknown investigation route.", 404, trace);
+    }
 
     const cubeRoute = pathname.match(/^\/api\/v1\/cube\/(meta|load)$/);
     if (cubeRoute && (request.method === "GET" || request.method === "POST")) {
@@ -379,20 +407,24 @@ export default {
       eventUrl.searchParams.set("limit", String(limit));
       if (url.searchParams.has("from")) eventUrl.searchParams.set("from", url.searchParams.get("from")!);
       if (url.searchParams.has("to")) eventUrl.searchParams.set("to", url.searchParams.get("to")!);
-      const [eventResult, evidence, stories, dashboards, actions] = await Promise.all([
+      const [eventResult, evidence, stories, dashboards, actions, investigations, entities] = await Promise.all([
         listEvents(new Request(eventUrl), db, a, product),
-        db.prepare("SELECT e.id, ev.id AS event_id, ev.product, e.headline AS title, e.publisher, ev.title AS event_title, e.captured_at AS updated_at FROM harvy_v2_evidence e JOIN harvy_v2_events ev ON ev.id = e.event_id AND ev.tenant_id = e.tenant_id AND ev.workspace_id = e.workspace_id AND ev.product = e.product WHERE e.tenant_id = ? AND e.workspace_id = ? AND e.product = ? AND ev.product = ? AND instr(lower(e.headline || ' ' || e.publisher || ' ' || e.excerpt), lower(?)) > 0 AND (? IS NULL OR e.captured_at >= ?) AND (? IS NULL OR e.captured_at <= ?) ORDER BY e.captured_at DESC LIMIT ?")
-          .bind(a.tenantId, a.workspaceId, product, product, term, from, from, to, to, limit).all<{ id: string; event_id: string; product: string; title: string; publisher: string; event_title: string; updated_at: number }>(),
+        db.prepare("SELECT e.id, ev.id AS event_id, ev.product, e.headline AS title, e.publisher, ev.title AS event_title, e.captured_at AS updated_at FROM harvy_v2_evidence e JOIN harvy_v2_events ev ON ev.id = e.event_id AND ev.tenant_id = e.tenant_id AND ev.workspace_id = e.workspace_id AND ev.product = e.product WHERE e.tenant_id = ? AND e.workspace_id = ? AND e.product = ? AND ev.product = ? AND lower(e.headline || ' ' || e.publisher || ' ' || e.excerpt) LIKE lower(?) ESCAPE '\\' AND (? IS NULL OR e.captured_at >= ?) AND (? IS NULL OR e.captured_at <= ?) ORDER BY e.captured_at DESC LIMIT ?")
+          .bind(a.tenantId, a.workspaceId, product, product, likePattern(term), from, from, to, to, limit).all<{ id: string; event_id: string; product: string; title: string; publisher: string; event_title: string; updated_at: number }>(),
         product === "Newsk"
-          ? db.prepare("SELECT id, product, event_id, title, notes AS description, updated_at FROM harvy_v2_stories WHERE tenant_id = ? AND workspace_id = ? AND instr(lower(title || ' ' || notes), lower(?)) > 0 AND (? IS NULL OR updated_at >= ?) AND (? IS NULL OR updated_at <= ?) ORDER BY updated_at DESC LIMIT ?")
-            .bind(a.tenantId, a.workspaceId, term, from, from, to, to, limit).all<{ id: string; product: string; event_id: string; title: string; description: string; updated_at: number }>()
+          ? db.prepare("SELECT id, product, event_id, title, notes AS description, updated_at FROM harvy_v2_stories WHERE tenant_id = ? AND workspace_id = ? AND lower(title || ' ' || notes) LIKE lower(?) ESCAPE '\\' AND (? IS NULL OR updated_at >= ?) AND (? IS NULL OR updated_at <= ?) ORDER BY updated_at DESC LIMIT ?")
+            .bind(a.tenantId, a.workspaceId, likePattern(term), from, from, to, to, limit).all<{ id: string; product: string; event_id: string; title: string; description: string; updated_at: number }>()
           : Promise.resolve({ results: [] as Array<{ id: string; product: string; event_id: string; title: string; description: string; updated_at: number }> }),
-        db.prepare("SELECT id, product, title, description, config_json, updated_at FROM harvy_v2_dashboards WHERE tenant_id = ? AND workspace_id = ? AND product = ? AND deleted_at IS NULL AND (visibility = 'workspace' OR owner_principal_id = ?) AND instr(lower(title || ' ' || description), lower(?)) > 0 AND (? IS NULL OR updated_at >= ?) AND (? IS NULL OR updated_at <= ?) ORDER BY updated_at DESC LIMIT ?")
-          .bind(a.tenantId, a.workspaceId, product, a.id, term, from, from, to, to, limit).all<{ id: string; product: string; title: string; description: string; config_json: string; updated_at: number }>(),
+        db.prepare("SELECT id, product, title, description, config_json, updated_at FROM harvy_v2_dashboards WHERE tenant_id = ? AND workspace_id = ? AND product = ? AND deleted_at IS NULL AND (visibility = 'workspace' OR owner_principal_id = ?) AND lower(title || ' ' || description) LIKE lower(?) ESCAPE '\\' AND (? IS NULL OR updated_at >= ?) AND (? IS NULL OR updated_at <= ?) ORDER BY updated_at DESC LIMIT ?")
+          .bind(a.tenantId, a.workspaceId, product, a.id, likePattern(term), from, from, to, to, limit).all<{ id: string; product: string; title: string; description: string; config_json: string; updated_at: number }>(),
         product === "Ops"
-          ? db.prepare("SELECT a.id, a.source_event_id AS event_id, a.source_product, COALESCE(s.title, e.title) AS title, e.summary AS description, a.updated_at FROM harvy_v2_ops_actions a JOIN harvy_v2_events e ON e.id = a.source_event_id AND e.tenant_id = a.tenant_id AND e.workspace_id = a.workspace_id AND e.product = a.source_product LEFT JOIN harvy_v2_stories s ON s.id = a.source_story_id AND s.tenant_id = a.tenant_id AND s.workspace_id = a.workspace_id AND s.product = a.source_product AND s.event_id = a.source_event_id WHERE a.tenant_id = ? AND a.workspace_id = ? AND instr(lower(COALESCE(s.title, '') || ' ' || e.title || ' ' || e.summary), lower(?)) > 0 AND (? IS NULL OR a.updated_at >= ?) AND (? IS NULL OR a.updated_at <= ?) ORDER BY a.updated_at DESC LIMIT ?")
-            .bind(a.tenantId, a.workspaceId, term, from, from, to, to, limit).all<{ id: string; event_id: string; source_product: Product; title: string; description: string; updated_at: number }>()
+          ? db.prepare("SELECT a.id, a.source_event_id AS event_id, a.source_product, COALESCE(s.title, e.title) AS title, e.summary AS description, a.updated_at FROM harvy_v2_ops_actions a JOIN harvy_v2_events e ON e.id = a.source_event_id AND e.tenant_id = a.tenant_id AND e.workspace_id = a.workspace_id AND e.product = a.source_product LEFT JOIN harvy_v2_stories s ON s.id = a.source_story_id AND s.tenant_id = a.tenant_id AND s.workspace_id = a.workspace_id AND s.product = a.source_product AND s.event_id = a.source_event_id WHERE a.tenant_id = ? AND a.workspace_id = ? AND lower(COALESCE(s.title, '') || ' ' || e.title || ' ' || e.summary) LIKE lower(?) ESCAPE '\\' AND (? IS NULL OR a.updated_at >= ?) AND (? IS NULL OR a.updated_at <= ?) ORDER BY a.updated_at DESC LIMIT ?")
+            .bind(a.tenantId, a.workspaceId, likePattern(term), from, from, to, to, limit).all<{ id: string; event_id: string; source_product: Product; title: string; description: string; updated_at: number }>()
           : Promise.resolve({ results: [] as Array<{ id: string; event_id: string; source_product: Product; title: string; description: string; updated_at: number }> }),
+        db.prepare("SELECT id, product, title, summary AS description, updated_at FROM harvy_v2_investigations WHERE tenant_id = ? AND workspace_id = ? AND product = ? AND lower(title || ' ' || summary) LIKE lower(?) ESCAPE '\\' AND (? IS NULL OR updated_at >= ?) AND (? IS NULL OR updated_at <= ?) ORDER BY updated_at DESC LIMIT ?")
+          .bind(a.tenantId, a.workspaceId, product, likePattern(term), from, from, to, to, limit).all<{ id: string; product: Product; title: string; description: string; updated_at: number }>(),
+        db.prepare("SELECT id, product, display_name AS title, description, updated_at FROM harvy_v2_entities WHERE tenant_id = ? AND workspace_id = ? AND product = ? AND lower(display_name || ' ' || description) LIKE lower(?) ESCAPE '\\' AND (? IS NULL OR updated_at >= ?) AND (? IS NULL OR updated_at <= ?) ORDER BY updated_at DESC LIMIT ?")
+          .bind(a.tenantId, a.workspaceId, product, likePattern(term), from, from, to, to, limit).all<{ id: string; product: Product; title: string; description: string; updated_at: number }>(),
       ]);
       if ("error" in eventResult) return fail("invalid_search", "Search filters are invalid.", 400, trace);
       const eventItems = eventResult.items as Array<{ id: string; product: string; title: string; summary: string; last_seen_at: number }>;
@@ -406,6 +438,8 @@ export default {
         ...stories.results.map((item) => ({ type: "story", ...item })),
         ...dashboardItems,
         ...actions.results.map((item) => ({ type: "action", id: item.id, product: "Ops", event_id: item.event_id, source_product: item.source_product, title: item.title, description: item.description, updated_at: item.updated_at })),
+        ...investigations.results.map((item) => ({ type: "investigation", ...item })),
+        ...entities.results.map((item) => ({ type: "entity", ...item })),
       ].sort((left, right) => right.updated_at - left.updated_at || left.title.localeCompare(right.title)).slice(0, limit);
       return json({ items });
     }
@@ -766,10 +800,9 @@ export default {
     }
 
     return fail("not_found", "Unknown route.", 404, trace);
-  },
-};
+}
 
-async function automationCallback(request: Request, env: Env, trace: string): Promise<Response> {
+async function automationCallback(request: Request, env: Env, trace: string, db: SqlDatabase | null): Promise<Response> {
   const raw = await verifiedAutomationBody(request, env, trace);
   if (raw instanceof Response) return raw;
   let value: unknown;
@@ -780,8 +813,7 @@ async function automationCallback(request: Request, env: Env, trace: string): Pr
   if (Object.keys(b).some((key) => !callbackFields.has(key)) || typeof b.run_id !== "string" || !isHarvyDexId(b.run_id) ||
       !["running", "succeeded", "partial", "failed", "cancelled"].includes(String(b.status)) ||
       (b.error_code !== undefined && (typeof b.error_code !== "string" || b.error_code.length > 64))) return fail("invalid_callback", "Callback state is invalid.", 400, trace);
-  if (!env.HARVY_D1) return fail("unavailable", "Harvy storage is not configured.", 503, trace);
-  const db = env.HARVY_D1;
+  if (!db) return fail("unavailable", "Harvy PostgreSQL storage is not configured.", 503, trace);
   const current = await db.prepare("SELECT status FROM harvy_v2_runs WHERE id = ?").bind(b.run_id).first<{ status: RunStatus }>();
   if (!current) return fail("not_found", "Run not found.", 404, trace);
   const next = b.status as RunStatus;
@@ -806,10 +838,10 @@ async function verifiedAutomationBody(request: Request, env: Env, trace: string)
   return constantTimeEqual(signature.toLowerCase(), expected) ? raw : fail("unauthorized", "Invalid callback authentication.", 401, trace);
 }
 
-async function automationPublication(request: Request, env: Env, trace: string): Promise<Response> {
+async function automationPublication(request: Request, env: Env, trace: string, db: SqlDatabase | null): Promise<Response> {
   const raw = await verifiedAutomationBody(request, env, trace);
   if (raw instanceof Response) return raw;
-  if (!env.HARVY_D1 || !env.HARVY_RAW || !env.HARVY_ARTIFACTS) return fail("unavailable", "Run storage and both artifact stores must be configured.", 503, trace);
+  if (!db || !env.HARVY_RAW || !env.HARVY_ARTIFACTS) return fail("unavailable", "PostgreSQL and both artifact stores must be configured.", 503, trace);
   let value: unknown;
   try { value = JSON.parse(raw); } catch { return fail("invalid_request", "Publication body must be JSON.", 400, trace); }
   if (typeof value !== "object" || value === null || Array.isArray(value)) return fail("invalid_publication", "Publication body is invalid.", 400, trace);
@@ -819,7 +851,6 @@ async function automationPublication(request: Request, env: Env, trace: string):
       body.artifacts.length < 2 || body.artifacts.length > 100 || !Array.isArray(body.events) || body.events.length > 50) {
     return fail("invalid_publication", "Publication envelope is outside the contract bounds.", 400, trace);
   }
-  const db = env.HARVY_D1;
   const run = await db.prepare("SELECT id, tenant_id, workspace_id, source_id, source_scope_id, status, product FROM harvy_v2_runs WHERE id = ?")
     .bind(body.run_id).first<{ id: string; tenant_id: string; workspace_id: string; source_id: string; status: RunStatus; product: Product; source_scope_id: string }>();
   if (!run) return fail("not_found", "Run not found.", 404, trace);
@@ -838,17 +869,19 @@ async function automationPublication(request: Request, env: Env, trace: string):
   if (!manifests.some((manifest) => manifest.stage === "raw") || !manifests.some((manifest) => manifest.stage === "processed")) return fail("invalid_manifest", "A publication requires raw and processed artifacts.", 400, trace);
 
   const processedIds = new Set(manifests.filter((manifest) => manifest.stage === "processed").map((manifest) => manifest.artifact_id));
-  const acceptedEvents: Array<{ id: string; title: string; summary: string; first: number; last: number; evidence: Array<{ url: string; publisher: string; headline: string; excerpt: string; captured: number; artifactId: string }> }> = [];
+  const acceptedEvents: Array<{ id: string; title: string; summary: string; first: number; last: number; lat: number | null; lng: number | null; evidence: Array<{ url: string; publisher: string; headline: string; excerpt: string; captured: number; artifactId: string }> }> = [];
   const seenEvents = new Set<string>();
   const maxTime = Date.now() + 24 * 60 * 60 * 1000;
   for (const item of body.events) {
     if (typeof item !== "object" || item === null || Array.isArray(item)) return fail("invalid_event", "Event record is invalid.", 400, trace);
     const event = item as Record<string, unknown>;
-    if (Object.keys(event).some((key) => !["harvydex_id", "title", "summary", "first_seen_at", "last_seen_at", "evidence"].includes(key)) ||
+    if (Object.keys(event).some((key) => !["harvydex_id", "title", "summary", "first_seen_at", "last_seen_at", "latitude", "longitude", "evidence"].includes(key)) ||
         !isHarvyDexId(event.harvydex_id) || seenEvents.has(event.harvydex_id) || typeof event.title !== "string" || !event.title.trim() || event.title.length > 500 ||
         typeof event.summary !== "string" || event.summary.length > 4000 || !Number.isSafeInteger(event.first_seen_at) ||
         !Number.isSafeInteger(event.last_seen_at) || (event.first_seen_at as number) < 0 || (event.first_seen_at as number) > (event.last_seen_at as number) ||
-        (event.last_seen_at as number) > maxTime || !Array.isArray(event.evidence) || event.evidence.length < 1 || event.evidence.length > 20) return fail("invalid_event", "Event record is outside the contract bounds.", 400, trace);
+        (event.last_seen_at as number) > maxTime || !Array.isArray(event.evidence) || event.evidence.length < 1 || event.evidence.length > 20 ||
+        !validCoord(event.latitude, -90, 90) || !validCoord(event.longitude, -180, 180) ||
+        (event.latitude == null) !== (event.longitude == null)) return fail("invalid_event", "Event record is outside the contract bounds.", 400, trace); // coordinates must arrive as a complete pair
     const evidenceItems: Array<{ url: string; publisher: string; headline: string; excerpt: string; captured: number; artifactId: string }> = [];
     for (const itemEvidence of event.evidence) {
       if (typeof itemEvidence !== "object" || itemEvidence === null || Array.isArray(itemEvidence)) return fail("invalid_evidence", "Evidence record is invalid.", 400, trace);
@@ -861,7 +894,7 @@ async function automationPublication(request: Request, env: Env, trace: string):
       evidenceItems.push({ url: ev.source_url, publisher: ev.publisher.trim(), headline: ev.headline.trim(), excerpt: ev.excerpt, captured: ev.captured_at as number, artifactId: ev.artifact_id as string });
     }
     seenEvents.add(event.harvydex_id);
-    acceptedEvents.push({ id: event.harvydex_id, title: event.title.trim(), summary: event.summary, first: event.first_seen_at as number, last: event.last_seen_at as number, evidence: evidenceItems });
+    acceptedEvents.push({ id: event.harvydex_id, title: event.title.trim(), summary: event.summary, first: event.first_seen_at as number, last: event.last_seen_at as number, lat: typeof event.latitude === "number" ? event.latitude : null, lng: typeof event.longitude === "number" ? event.longitude : null, evidence: evidenceItems });
   }
 
   for (const manifest of manifests) {
@@ -878,8 +911,8 @@ async function automationPublication(request: Request, env: Env, trace: string):
     .bind(manifest.artifact_id, run.tenant_id, run.workspace_id, run.id, manifest.source_scope_id, manifest.stage, manifest.storage_uri, manifest.sha256, manifest.byte_count, manifest.capture_time, now())));
 
   for (const event of acceptedEvents) {
-    const statements = [db.prepare("INSERT INTO harvy_v2_events (id, tenant_id, workspace_id, product, title, summary, status, first_seen_at, last_seen_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'new', ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET title = excluded.title, summary = excluded.summary, first_seen_at = MIN(harvy_v2_events.first_seen_at, excluded.first_seen_at), last_seen_at = MAX(harvy_v2_events.last_seen_at, excluded.last_seen_at), updated_at = excluded.updated_at WHERE harvy_v2_events.tenant_id = excluded.tenant_id AND harvy_v2_events.workspace_id = excluded.workspace_id AND harvy_v2_events.product = excluded.product")
-      .bind(event.id, run.tenant_id, run.workspace_id, run.product, event.title, event.summary, event.first, event.last, now(), now()),
+    const statements = [db.prepare("INSERT INTO harvy_v2_events (id, tenant_id, workspace_id, product, title, summary, status, first_seen_at, last_seen_at, latitude, longitude, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'new', ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET title = excluded.title, summary = excluded.summary, first_seen_at = CASE WHEN harvy_v2_events.first_seen_at < excluded.first_seen_at THEN harvy_v2_events.first_seen_at ELSE excluded.first_seen_at END, last_seen_at = CASE WHEN harvy_v2_events.last_seen_at > excluded.last_seen_at THEN harvy_v2_events.last_seen_at ELSE excluded.last_seen_at END, latitude = CASE WHEN excluded.latitude IS NOT NULL AND excluded.longitude IS NOT NULL THEN excluded.latitude ELSE harvy_v2_events.latitude END, longitude = CASE WHEN excluded.latitude IS NOT NULL AND excluded.longitude IS NOT NULL THEN excluded.longitude ELSE harvy_v2_events.longitude END, updated_at = excluded.updated_at WHERE harvy_v2_events.tenant_id = excluded.tenant_id AND harvy_v2_events.workspace_id = excluded.workspace_id AND harvy_v2_events.product = excluded.product")
+      .bind(event.id, run.tenant_id, run.workspace_id, run.product, event.title, event.summary, event.first, event.last, event.lat, event.lng, now(), now()),
       ...event.evidence.map((ev) => db.prepare("INSERT OR IGNORE INTO harvy_v2_evidence (id, tenant_id, workspace_id, product, event_id, source_id, source_url, publisher, headline, excerpt, captured_at, artifact_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
         .bind(crypto.randomUUID(), run.tenant_id, run.workspace_id, run.product, event.id, run.source_id, ev.url, ev.publisher, ev.headline, ev.excerpt, ev.captured, ev.artifactId, now())),
     ];

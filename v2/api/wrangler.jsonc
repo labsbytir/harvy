@@ -17,12 +17,10 @@
     { "binding": "HARVY_RAW", "bucket_name": "harvy-raw" },
     { "binding": "HARVY_ARTIFACTS", "bucket_name": "harvy-artifacts" }
   ],
-  "d1_databases": [
+  "hyperdrive": [
     {
-      "binding": "HARVY_D1",
-      "database_name": "harvy-platform-v2",
-      "database_id": "2fb9f8e4-ca31-4cd0-95b4-b084429816f2",
-      "migrations_dir": "../migrations"
+      "binding": "HYPERDRIVE_PRIVATE",
+      "id": "hyperdrive-postgres-harvy"
     }
   ]
 }

@@ -35,6 +35,8 @@ export interface HarvyEvent {
   revision: number;
   first_seen_at: number;
   last_seen_at: number;
+  latitude?: number | null;
+  longitude?: number | null;
   evidence_count: number;
 }
 
@@ -93,8 +95,32 @@ export interface Story {
   updated_at: number;
 }
 
+export interface Investigation {
+  id: string; product: string; title: string; summary: string; status: "active" | "archived"; revision: number;
+  created_by: string; created_at: number; updated_at: number; item_count?: number;
+}
+
+export interface InvestigationItem {
+  id: string; item_kind: "note" | "event" | "evidence" | "entity" | "relationship"; title: string; note: string;
+  target_event_id: string | null; target_evidence_id: string | null; target_entity_id: string | null; target_relationship_id: string | null;
+  event_title?: string | null; evidence_headline?: string | null; publisher?: string | null; source_url?: string | null;
+  captured_at?: number | null; entity_name?: string | null; relationship_type?: string | null; created_by: string; created_at: number;
+}
+
+export interface OsintEntity {
+  id: string; product: string; entity_type: "person" | "organization" | "place" | "asset" | "public_body" | "other";
+  display_name: string; description: string; revision: number; created_by: string; created_at: number; updated_at: number;
+}
+
+export interface OsintRelationship {
+  id: string; from_entity_id: string; to_entity_id: string; relationship_type: string; interpretation: "observed" | "inferred" | "disputed";
+  evidence_id: string; notes: string; headline: string; publisher: string; source_url: string; captured_at: number; created_by: string; created_at: number;
+}
+
+export interface InvestigationGraph { nodes: Pick<OsintEntity, "id" | "entity_type" | "display_name" | "description" | "revision">[]; edges: OsintRelationship[]; capped: boolean }
+
 export interface WorkspaceSearchResult {
-  type: "event" | "evidence" | "story" | "dashboard" | "action";
+  type: "event" | "evidence" | "story" | "dashboard" | "action" | "investigation" | "entity";
   id: string;
   product: string;
   title: string;
@@ -176,3 +202,20 @@ export const createStory = (value: { event_id: string; title: string; notes: str
 export const saveStory = (story: Story) => request<Story>(`/api/v1/stories/${encodeURIComponent(story.id)}`, { method: "PATCH", body: JSON.stringify(story) });
 export const handoffStory = (id: string) => request<{ action_id: string; story_id: string; status: "open" }>(`/api/v1/stories/${encodeURIComponent(id)}/handoff`, { method: "POST" });
 export const createBrief = (story_id: string) => request<{ id: string; title: string; body: string; citations: Evidence[]; generated_by: string }>("/api/v1/briefs", { method: "POST", body: JSON.stringify({ story_id }) });
+
+const scoped = (path: string, product: string) => `${path}${path.includes("?") ? "&" : "?"}product=${encodeURIComponent(product)}`;
+export const listInvestigations = (product: string) => request<{ items: Investigation[] }>(scoped("/api/v1/investigations", product));
+export const getInvestigation = (id: string, product: string) => request<Investigation & { items: InvestigationItem[] }>(scoped(`/api/v1/investigations/${encodeURIComponent(id)}`, product));
+export const createInvestigation = (product: string, value: { title: string; summary: string }) => request<Investigation>("/api/v1/investigations", { method: "POST", body: JSON.stringify({ ...value, product }) });
+export const updateInvestigation = (item: Investigation, update: Partial<Pick<Investigation, "title" | "summary" | "status">>) => request<Investigation>(scoped(`/api/v1/investigations/${encodeURIComponent(item.id)}`, item.product), { method: "PATCH", body: JSON.stringify({ ...update, expected_revision: item.revision }) });
+export const addInvestigationItem = (id: string, product: string, value: { kind: InvestigationItem["item_kind"]; target_id?: string; title: string; note?: string; expected_revision: number }) => request<{ id: string; revision?: number; unchanged?: boolean }>(scoped(`/api/v1/investigations/${encodeURIComponent(id)}/items`, product), { method: "POST", body: JSON.stringify(value) });
+export const deleteInvestigationItem = (id: string, itemId: string, product: string, expected_revision: number) => request<{ deleted: boolean; revision: number }>(scoped(`/api/v1/investigations/${encodeURIComponent(id)}/items/${encodeURIComponent(itemId)}`, product), { method: "DELETE", body: JSON.stringify({ expected_revision }) });
+export const listEntities = (product: string, query = "") => request<{ items: OsintEntity[] }>(scoped(`/api/v1/entities${query ? `?q=${encodeURIComponent(query)}` : ""}`, product));
+export const getEntity = (id: string, product: string) => request<OsintEntity & { relationships: OsintRelationship[] }>(scoped(`/api/v1/entities/${encodeURIComponent(id)}`, product));
+export const createEntity = (product: string, value: Pick<OsintEntity, "entity_type" | "display_name" | "description">) => request<OsintEntity>("/api/v1/entities", { method: "POST", body: JSON.stringify({ ...value, product }) });
+export const createRelationship = (product: string, value: { from_entity_id: string; to_entity_id: string; relationship_type: string; interpretation: OsintRelationship["interpretation"]; evidence_id: string; notes: string }) => request<{ id: string }>("/api/v1/relationships", { method: "POST", body: JSON.stringify({ ...value, product }) });
+export const loadInvestigationGraph = (product: string, investigationId?: string) => {
+  const params = new URLSearchParams({ product });
+  if (investigationId) params.set("investigation_id", investigationId);
+  return request<InvestigationGraph>(`/api/v1/graph?${params}`);
+};

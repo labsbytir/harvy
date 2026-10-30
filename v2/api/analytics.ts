@@ -1,15 +1,25 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
+import { drizzle as drizzleD1 } from "drizzle-orm/d1";
+import { drizzle as drizzlePostgres } from "drizzle-orm/node-postgres";
 import { createDrizzleSemanticLayer, type Cube, type DrizzleDatabase, type SecurityContext, type SemanticQuery } from "drizzle-cube/server";
 import type { D1Database } from "@cloudflare/workers-types";
 import type { HqlQuery } from "../shared/hql.ts";
 import { events, evidence, apiSchema } from "./schema.ts";
+import { pgEvents, pgEvidence, pgApiSchema } from "./pg-schema.ts";
+import { PostgresDatabase, type SqlDatabase } from "../shared/sql-database.ts";
 
 export interface QueryScope { tenantId: string; workspaceId: string; products: string[] }
 
-export function createAnalyticsLayer(database: D1Database) {
-  const db = drizzle(database, { schema: apiSchema });
-  const layer = createDrizzleSemanticLayer({ drizzle: db as unknown as DrizzleDatabase, schema: apiSchema });
+export function createAnalyticsLayer(database: SqlDatabase) {
+  const isPostgres = database instanceof PostgresDatabase;
+  const db = isPostgres
+    ? drizzlePostgres(database.nativeClient, { schema: pgApiSchema })
+    : drizzleD1(database as unknown as D1Database, { schema: apiSchema });
+  const eventTable = (isPostgres ? pgEvents : events) as typeof events;
+  const evidenceTable = (isPostgres ? pgEvidence : evidence) as typeof evidence;
+  const layer = createDrizzleSemanticLayer({ drizzle: db as unknown as DrizzleDatabase, schema: (isPostgres ? pgApiSchema : apiSchema) as typeof apiSchema });
+  const eventTime = (column: typeof events.firstSeenAt | typeof events.lastSeenAt) => isPostgres ? sql`to_timestamp(${column} / 1000.0)` : sql`datetime(${column} / 1000, 'unixepoch')`;
+  const evidenceTime = (column: typeof evidence.capturedAt) => isPostgres ? sql`to_timestamp(${column} / 1000.0)` : sql`datetime(${column} / 1000, 'unixepoch')`;
   const scopeFrom = (context: SecurityContext): QueryScope => {
     if (typeof context.tenantId !== "string" || typeof context.workspaceId !== "string" ||
         !Array.isArray(context.products) || context.products.length === 0 || context.products.some((product) => typeof product !== "string")) throw new Error("Missing trusted query scope");
@@ -20,29 +30,29 @@ export function createAnalyticsLayer(database: D1Database) {
     title: "Events",
     description: "Organization-scoped observed events.",
     sql: ({ securityContext }) => ({
-      from: events,
-      where: (() => { const scope = scopeFrom(securityContext); return and(eq(events.tenantId, scope.tenantId), eq(events.workspaceId, scope.workspaceId), inArray(events.product, scope.products)); })(),
+      from: eventTable,
+      where: (() => { const scope = scopeFrom(securityContext); return and(eq(eventTable.tenantId, scope.tenantId), eq(eventTable.workspaceId, scope.workspaceId), inArray(eventTable.product, scope.products)); })(),
     }),
     dimensions: {
-      id: { name: "id", title: "Event ID", type: "string", sql: events.id, primaryKey: true, shown: false },
-      title: { name: "title", title: "Title", type: "string", sql: events.title },
-      summary: { name: "summary", title: "Summary", type: "string", sql: events.summary },
-      status: { name: "status", title: "Status", type: "string", sql: events.status },
-      product: { name: "product", title: "Mode", type: "string", sql: events.product },
-      firstSeenAt: { name: "firstSeenAt", title: "First seen", type: "time", sql: sql`datetime(${events.firstSeenAt} / 1000, 'unixepoch')` },
-      lastSeenAt: { name: "lastSeenAt", title: "Last seen", type: "time", sql: sql`datetime(${events.lastSeenAt} / 1000, 'unixepoch')` },
+      id: { name: "id", title: "Event ID", type: "string", sql: eventTable.id, primaryKey: true, shown: false },
+      title: { name: "title", title: "Title", type: "string", sql: eventTable.title },
+      summary: { name: "summary", title: "Summary", type: "string", sql: eventTable.summary },
+      status: { name: "status", title: "Status", type: "string", sql: eventTable.status },
+      product: { name: "product", title: "Mode", type: "string", sql: eventTable.product },
+      firstSeenAt: { name: "firstSeenAt", title: "First seen", type: "time", sql: eventTime(eventTable.firstSeenAt) },
+      lastSeenAt: { name: "lastSeenAt", title: "Last seen", type: "time", sql: eventTime(eventTable.lastSeenAt) },
     },
     measures: {
-      count: { name: "count", title: "Events", type: "count", sql: events.id },
+      count: { name: "count", title: "Events", type: "count", sql: eventTable.id },
     },
     joins: {
       Evidence: {
         targetCube: "Evidence",
         relationship: "hasMany",
         on: [
-          { source: events.id, target: evidence.eventId },
-          { source: events.tenantId, target: evidence.tenantId },
-          { source: events.workspaceId, target: evidence.workspaceId },
+          { source: eventTable.id, target: evidenceTable.eventId },
+          { source: eventTable.tenantId, target: evidenceTable.tenantId },
+          { source: eventTable.workspaceId, target: evidenceTable.workspaceId },
         ],
       },
     },
@@ -52,20 +62,20 @@ export function createAnalyticsLayer(database: D1Database) {
     title: "Evidence",
     description: "Source-attributed observations attached to events.",
     sql: ({ securityContext }) => ({
-      from: evidence,
-      where: (() => { const scope = scopeFrom(securityContext); return and(eq(evidence.tenantId, scope.tenantId), eq(evidence.workspaceId, scope.workspaceId), inArray(evidence.product, scope.products)); })(),
+      from: evidenceTable,
+      where: (() => { const scope = scopeFrom(securityContext); return and(eq(evidenceTable.tenantId, scope.tenantId), eq(evidenceTable.workspaceId, scope.workspaceId), inArray(evidenceTable.product, scope.products)); })(),
     }),
     dimensions: {
-      id: { name: "id", title: "Evidence ID", type: "string", sql: evidence.id, primaryKey: true, shown: false },
-      eventId: { name: "eventId", title: "Event ID", type: "string", sql: evidence.eventId },
-      sourceId: { name: "sourceId", title: "Source ID", type: "string", sql: evidence.sourceId },
-      publisher: { name: "publisher", title: "Publisher", type: "string", sql: evidence.publisher },
-      headline: { name: "headline", title: "Headline", type: "string", sql: evidence.headline },
-      product: { name: "product", title: "Mode", type: "string", sql: evidence.product },
-      capturedAt: { name: "capturedAt", title: "Captured", type: "time", sql: sql`datetime(${evidence.capturedAt} / 1000, 'unixepoch')` },
+      id: { name: "id", title: "Evidence ID", type: "string", sql: evidenceTable.id, primaryKey: true, shown: false },
+      eventId: { name: "eventId", title: "Event ID", type: "string", sql: evidenceTable.eventId },
+      sourceId: { name: "sourceId", title: "Source ID", type: "string", sql: evidenceTable.sourceId },
+      publisher: { name: "publisher", title: "Publisher", type: "string", sql: evidenceTable.publisher },
+      headline: { name: "headline", title: "Headline", type: "string", sql: evidenceTable.headline },
+      product: { name: "product", title: "Mode", type: "string", sql: evidenceTable.product },
+      capturedAt: { name: "capturedAt", title: "Captured", type: "time", sql: evidenceTime(evidenceTable.capturedAt) },
     },
     measures: {
-      count: { name: "count", title: "Evidence items", type: "count", sql: evidence.id },
+      count: { name: "count", title: "Evidence items", type: "count", sql: evidenceTable.id },
     },
   } satisfies Cube);
   layer.validateCubeReferences();

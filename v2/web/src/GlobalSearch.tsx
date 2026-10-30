@@ -12,6 +12,8 @@ const kindLabel: Record<WorkspaceSearchResult["type"], string> = {
   story: "Story",
   dashboard: "Saved view",
   action: "Ops action",
+  investigation: "Investigation",
+  entity: "Entity record",
 };
 
 export default function GlobalSearch({ product, from, to, onSelect }: {
@@ -71,6 +73,6 @@ export default function GlobalSearch({ product, from, to, onSelect }: {
         <Typography variant="caption" color="text.secondary" noWrap>{kindLabel[item.type]} · {item.description || item.product}</Typography>
       </Stack>
     </li>}
-     renderInput={(params) => <TextField {...params} size="small" label="Search workspace" placeholder="Events, evidence, stories, saved views" helperText={from || to ? "Using the current date range" : undefined} InputProps={{ ...params.InputProps, endAdornment: <>{loading ? <CircularProgress size={16} color="inherit" /> : null}{params.InputProps.endAdornment}</> }} />}
+     renderInput={(params) => <TextField {...params} size="small" label="Search workspace" placeholder="Events, evidence, investigations, entities" helperText={from || to ? "Using the current date range" : undefined} InputProps={{ ...params.InputProps, endAdornment: <>{loading ? <CircularProgress size={16} color="inherit" /> : null}{params.InputProps.endAdornment}</> }} />}
   />;
 }

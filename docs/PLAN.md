@@ -64,7 +64,7 @@ Plan against 120 developer-hours and 40 Ops-hours. Allocate approximately 20 dev
 - Production topology is Cloudflare for the web/auth/API Workers and R2, PostgreSQL on the user's database server through Hyperdrive, and the separate VPS n8n system for connector execution. The current V2 code and configs still use D1 and no production PostgreSQL/Hyperdrive connection exists; port auth/API and migrations before deploying those Workers. The user-facing domain is `harvy.dev`. Verify tenant/workspace isolation before external invitations.
 - Better Auth is ported locally and resolves verified organization membership; basic role capabilities, explicit product entitlements, Harvy-admin-only grant management, and grant audit records are implemented locally. Live grant provisioning, revocation tests, and production auth routing remain pending.
 - The bounded HQL subset maps registered event/evidence fields and product scope to the installed Drizzle Cube 0.12.2 semantic layer. Search/time/source/status filters, stable event pagination, bounded dashboard/saved-view validation, and audited private/workspace dashboard CRUD are implemented; OpenAPI generation and broader query grammar remain pending. Customer data export is prohibited, not a deferred feature.
-- Raw/processed manifests are validated and scoped in the local API path, which checks R2 object size before publication. The two R2 bindings are not configured here; Basin/Parquet, streaming customer uploads, video, maps/graph, forecasting, and bulk archives remain pending.
+- Raw/processed manifests are validated and scoped in the local API path, which checks R2 object size before publication. The two R2 bindings are not configured here; Basin/Parquet, streaming customer uploads, video, relation graphs, forecasting, and bulk archives remain pending. The workspace event radar (Map surface on non-Ops products, OpenFreeMap light/dark basemap, heatmap density over source-provided coordinates only) is implemented locally with migration 0009 geometry columns; actual browser tile verification is pending because local sign-in and the deployed harvy-api are not yet available.
 - Use the user's VPS-hosted n8n as the Automation execution runtime, following the n8n standard in DEVELOPMENT.md. One schedule owner per monitor. Fixed n8n workflows receive Harvy's validated bounded run envelope, execute Spider/Webshare or registered API requests, normalize results, and store artifacts; they do not create unregistered targets or bypass Harvy authorization. Do not introduce a competing scheduler for the same job.
 - One AI provider/model route and one optional source-grounded briefing action are enough. Apply budgets, schema validation, tool restrictions, and citations. If AI blocks completion, ship an extractive source-linked brief and label it accurately. Full multi-provider routing, autonomous agents, broad MCP/CLI rollout, and optimizer installation experiments wait until after the core works.
 
@@ -174,6 +174,21 @@ At the end of Day 1, report three separate statuses: (1) the customer workflow's
 - The reference checkout's `0006_ontology_and_dashboards.sql` is a migration candidate, not a schema in this clean repository or a remotely applied migration.
 - The target R2 layout has three buckets: `harvy-raw` for source captures, `harvy-artifacts` for validated/normalized records, and a separate Basin catalog bucket for catalog-managed analytical tables. The account has `harvy-raw`; `harvy-artifacts` is missing and the Basin bucket name/bindings require confirmation. The configured `harvy-platform-v2` D1 database is missing remotely and is not the production database target.
 - The 75% cache-hit target applies only to eligible public responses and has not been measured on a representative workload.
+
+## Consolidated sprint track (2026-10-30)
+
+Integrator track for the main checkout (replaces two plan sessions that hit a usage limit). Local gates pass: `typecheck`, `typecheck:api`, `npm test` 67/67, `build`, `git diff --check`.
+
+Commit gates landed in the single gated local commit:
+
+- `v2/web/src/Workspace.tsx`: the event scope key now includes user id and active organization, and `onUser` invalidates `eventGuard` on identity switch, so in-flight responses from a previous principal cannot land (filter races were already token-covered).
+- `v2/tests/migrations.test.mjs`: real SQLite (`node:sqlite`) round-trip for the pair-safe coordinate upsert in `v2/api/worker.ts` — a null coordinate pair never erases a stored pair and a complete new pair replaces it atomically; also covers the migration 0009 `latitude`/`longitude` columns.
+- `v2/web/src/InvestigationsDesk.tsx`: `reload` now uses the same `EventRequestGuard` stale-guard pattern as the workspace event feed.
+- `v2/web/src/RadarMap.tsx`: empty-map copy no longer claims the event data contract lacks locations (migration 0009 added optional geometry).
+
+Release blockers — documented as unverified, NOT blocking the local commit, never claimed done: P0 `v2/auth/worker.ts:28-149` reads `env.HARVY_D1` while `v2/auth/wrangler.jsonc:18-23` declares only `HYPERDRIVE_PRIVATE`; P1 `v2/shared/sql-database.ts:136-187` shared PgClient `batch` BEGIN/COMMIT interleave risk with no concurrency test. Also pending: Hyperdrive live connection, R2 bindings, hosted routes, `harvy-api` deploy, live n8n, two-tenant isolation, browser tile evidence, cache-rate measurement.
+
+Dependency order: (a) commit gates above; (b) honest PG/auth migration status (this section plus the Work sequence item 8); (c) ONE gated local commit with gates green, `.cortexkit/` left untracked, no push/deploy — a commit gate is not a release gate; (d) production readiness after the commit; (e) then ONE bounded existing-n8n source run before any connector breadth. The auth/PG port is not sequenced behind map polish.
 
 ## Work sequence
 

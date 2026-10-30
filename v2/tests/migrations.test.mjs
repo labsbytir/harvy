@@ -221,3 +221,88 @@ test("event assignment and status updates are scope-bound, revision-checked, and
   assert.equal(db.prepare("SELECT status, assigned_to, revision FROM harvy_v2_events WHERE id = ?").get(eventId).status, "reviewing");
   db.close();
 });
+
+test("pair-safe event coordinate upsert round-trips through real SQLite migrations", async () => {
+  const db = new DatabaseSync(":memory:");
+  db.exec("PRAGMA foreign_keys=ON");
+  for (const file of readdirSync(migrations).filter((name) => name.endsWith(".sql")).sort()) {
+    db.exec(readFileSync(join(migrations, file), "utf8"));
+  }
+  const columns = db.prepare("PRAGMA table_info(harvy_v2_events)").all().map((column) => column.name);
+  assert.ok(columns.includes("latitude") && columns.includes("longitude"), "migration 0009 adds the geometry columns");
+
+  db.prepare("INSERT INTO harvy_v2_workspaces (id, tenant_id, name, created_at) VALUES ('org-a', 'org-a', 'A', 1)").run();
+  db.prepare("INSERT INTO harvy_v2_sources (id, tenant_id, workspace_id, connector_id, product, publisher, label, target_url, source_scope_id, mode, max_pages, config_revision, approval_status, approved_by, approved_at, enabled, created_at, updated_at) VALUES ('source-a', 'org-a', 'org-a', 'news_feed', 'Newsk', 'Publisher', 'Feed', 'https://example.org', 'scope.news', 'api', 1, '1', 'approved', 'platform-admin', 1, 1, 1, 1)").run();
+  const runId = "123e4567-e89b-42d3-a456-426614174000";
+  db.prepare("INSERT INTO harvy_v2_runs (id, tenant_id, workspace_id, product, source_id, source_scope_id, config_revision, source_snapshot_json, requested_by, idempotency_key, status, quota_units, trace_id, created_at, updated_at) VALUES (?, 'org-a', 'org-a', 'Newsk', 'source-a', 'scope.news', '1', '{}', 'user-1', 'key-1', 'running', 1, 'trace', 1, 1)").run(runId);
+
+  const HARVY_D1 = {
+    prepare(sql) {
+      const statement = db.prepare(sql);
+      let params = [];
+      return {
+        bind(...values) { params = values; return this; },
+        async first() { return statement.get(...params) ?? null; },
+        async all() { return { results: statement.all(...params) }; },
+        async run() { return { meta: { changes: Number(statement.run(...params).changes) } }; },
+      };
+    },
+    async batch(statements) {
+      db.exec("BEGIN");
+      try {
+        const results = [];
+        for (const statement of statements) results.push(await statement.run());
+        db.exec("COMMIT");
+        return results;
+      } catch (error) {
+        db.exec("ROLLBACK");
+        throw error;
+      }
+    },
+  };
+  const secret = "test-callback-secret";
+  const artifacts = [
+    { artifact_id: "raw-artifact-1", stage: "raw", source_scope_id: "scope.news", access_scope_id: "tenant-org-a", run_id: runId, storage_uri: "r2://harvy-raw/tenant/raw.json", sha256: "a".repeat(64), byte_count: 10, capture_time: new Date().toISOString() },
+    { artifact_id: "processed-artifact-1", stage: "processed", source_scope_id: "scope.news", access_scope_id: "tenant-org-a", run_id: runId, storage_uri: "r2://harvy-artifacts/tenant/processed.json", sha256: "b".repeat(64), byte_count: 20, capture_time: new Date().toISOString() },
+  ];
+  const env = {
+    HARVY_D1,
+    AUTOMATION_CALLBACK_SECRET: secret,
+    HARVY_RAW: { async head() { return { size: 10, customMetadata: { sha256: "a".repeat(64) } }; } },
+    HARVY_ARTIFACTS: { async head() { return { size: 20, customMetadata: { sha256: "b".repeat(64) } }; } },
+  };
+  const publish = async (eventId, latitude, longitude) => {
+    const payload = JSON.stringify({
+      run_id: runId,
+      artifacts,
+      events: [{
+        harvydex_id: eventId, title: "Verified event", summary: "Bounded.",
+        first_seen_at: 1, last_seen_at: 2, latitude, longitude,
+        evidence: [{ source_url: "https://example.org/story", publisher: "Example", headline: "Reported event", excerpt: "Source text", captured_at: 1, artifact_id: "processed-artifact-1" }],
+      }],
+    });
+    const timestamp = Date.now();
+    const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    const mac = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${timestamp}.${payload}`)));
+    const signature = [...mac].map((value) => value.toString(16).padStart(2, "0")).join("");
+    return worker.fetch(new Request("https://harvy.test/internal/v1/automation-publications", {
+      method: "POST", headers: { "x-harvy-timestamp": String(timestamp), "x-harvy-signature": signature }, body: payload,
+    }), env);
+  };
+  const eventId = "123e4567-e89b-42d3-a456-426614174001";
+  const readCoords = () => {
+    const row = db.prepare("SELECT latitude, longitude FROM harvy_v2_events WHERE id = ?").get(eventId);
+    return row ? { latitude: row.latitude, longitude: row.longitude } : null;
+  };
+
+  assert.equal((await publish(eventId, 40.7128, -74.006)).status, 202);
+  assert.deepEqual(readCoords(), { latitude: 40.7128, longitude: -74.006 });
+
+  assert.equal((await publish(eventId, null, null)).status, 202);
+  assert.deepEqual(readCoords(), { latitude: 40.7128, longitude: -74.006 }, "a null pair never erases stored coordinates");
+
+  assert.equal((await publish(eventId, 34.0522, -118.2437)).status, 202);
+  assert.deepEqual(readCoords(), { latitude: 34.0522, longitude: -118.2437 }, "a complete new pair replaces the old pair atomically");
+
+  db.close();
+});

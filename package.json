@@ -16,35 +16,39 @@
     "typecheck:api": "tsc -p v2/api/tsconfig.json"
   },
   "dependencies": {
+    "@better-auth/api-key": "^1.7.13",
+    "@better-auth/infra": "^0.4.22",
+    "@better-auth/passkey": "^1.7.13",
+    "@better-auth/stripe": "^1.7.13",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
+    "@marinedotsh/better-auth-referral": "^0.3.0",
     "@mui/material": "^6.5.0",
+    "@nivo/core": "^0.99.0",
+    "@nivo/heatmap": "^0.99.0",
+    "@tanstack/react-query": "^5.105.0",
+    "better-auth": "^1.7.13",
+    "better-auth-cloudflare": "^0.4.1",
     "drizzle-cube": "0.12.2",
+    "drizzle-orm": "^0.45.4",
+    "maplibre-gl": "6.16.0",
+    "pg": "8.23.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-grid-layout": "^2.3.0",
     "react-is": "^19.3.1",
     "recharts": "^3.10.1",
-    "better-auth": "^1.7.13",
-    "better-auth-cloudflare": "^0.4.1",
-    "@better-auth/api-key": "^1.7.13",
-    "@better-auth/passkey": "^1.7.13",
-    "@better-auth/stripe": "^1.7.13",
-    "@better-auth/infra": "^0.4.22",
-    "@marinedotsh/better-auth-referral": "^0.3.0",
-    "drizzle-orm": "^0.45.4",
-    "stripe": "^23.0.0",
-    "@nivo/core": "^0.99.0",
-    "@nivo/heatmap": "^0.99.0",
-    "@tanstack/react-query": "^5.105.0"
+    "stripe": "^23.0.0"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261025.1",
+    "@types/pg": "8.23.1",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^6.1.2",
+    "drizzle-kit": "^0.31.11",
     "typescript": "^5.8.3",
     "vite": "^8.3.5",
-    "@cloudflare/workers-types": "^5.20261025.1",
-    "drizzle-kit": "^0.31.11"
+    "wrangler": "4.152.0"
   }
 }
