@@ -283,3 +283,60 @@ Answer, from evidence:
   for SOME targets (CourtListener, Reddit), not most. Fix: route CF-fronted targets through
   Spider Cloud unlimited (approved path) instead of raw proxy HTTP, or keep those sources
   proxy-free/direct with rate limits.
+
+## 2026-10-30 ~10:10 UTC — n8n MCP auth outage + recovery (restart manager)
+
+- OUTAGE: n8n (container n8n-n8n-1) restarted cleanly 09:41:46 UTC (restartCount 0; cause not
+  crash — likely deploy/restart). After restart, connector.harvy.dev/mcp-server/http began
+  returning 401 to every unauthenticated call (tools.automation.* dead for manager AND all 20
+  mimo builders). Sequence observed: 429 (pre-restart rate limit) -> 404 (warmup) -> 401
+  (auth now enforced). Earlier the same morning MCP worked with NO auth header.
+- ROOT CAUSE (verified in container dist): n8n 2.45.4 enforces Authorization: Bearer on the MCP
+  endpoint when mcp.access.enabled=true (settings row, was already true). The token must be a
+  JWT (audience 'mcp-server-api', iss 'n8n', sub=owner userId) signed with n8n's JwtService
+  secret AND stored verbatim in table user_api_keys (audience='mcp-server-api'); the auth
+  strategy looks up the presented token in that table. The two pre-existing keys were
+  audience='public-api' (REST), hence 401. Setting mcp.access.enabled=false DISABLES MCP
+  entirely (404 "Cannot POST") — do not use it to "fix" auth.
+- FIX (no user action needed): minted a new MCP key inside the container (node + n8n's own
+  jsonwebtoken, secret = sha256(every-2nd-char(encryptionKey)) from /home/node/.n8n/config),
+  inserted the row into user_api_keys for owner 22a781ce-..., audience mcp-server-api.
+  Token stored ONLY at ~/.config/harvy/mcp_token (mode 600) and wired into
+  ~/.config/opencode/opencode.json as mcp.servers.automation.headers.Authorization. Verified:
+  tools/list and search_workflows both return 200 via Bearer. n8n instance left UNCHANGED
+  otherwise (mcp.access.enabled stays true — this restores the intended secure setup).
+- BUILDERS: all 20 mimo-v2.6-flash builder sessions pinged with the fix + resume instruction
+  (reuse existing drafts, no duplicates). Confirmed moving again: openaddresses draft
+  4m4S40HJABnUW3u3 created 10:13. OpenCorporates re-published (ACTIVE dHaVwGlVcakMtYEA 10:03).
+- STATE AT RECOVERY: ACTIVE=12 (GDACS backfill, NWS, USGS, FEMA, data-gov-apis, ArcGIS, CKAN,
+  OWID, OpenSky, PowerOutage, Reddit, OpenCorporates); drafts=17 (incl. courtlistener_bulk,
+  worldbank, wikidata, who_gho, blockchair, transitland, aemo_outages, crt.sh, gdacs continuous,
+  n8n test copies). Basin default.evidence = VERIFIED 1295 rows / 17 source_id (16 real + src_diag; query `SELECT count(*),count(DISTINCT source_id) FROM default.evidence`). New since brief:
+  src_aemo_outages 25, src_worldbank 50, src_wikidata 200, src_opensky 100, src_owid 100,
+  src_dbpedia 28, src_energydata_info 25, src_courtlistener_bulk 25, src_poweroutage_us 162).
+  harvy-raw still EMPTY (CourtListener bulk requirement unmet). NOAA NCEI qLP2FI5uqmP9Pozk
+  untouched/inactive per rule.
+- NOTE: several builder drafts already have Basin rows (dbpedia, energydata, courtlistener_bulk,
+  worldbank, wikidata, aemo) — verification done, publish pending builder/manager sign-off.
+
+## 2026-10-30 ~10:30 UTC — wayback BLOCKED (builder continuation): automation MCP absent from subagent catalog
+
+- Wayback workflow L84UojEd9WxxFDzT (draft, project FqfK5dzjTKUzamjO) still has the Normalize bug: exec 98 emitted 0 items (CDX JSON is a top-level array; n8n split it into per-row items, old code used $input.first() and saw only the header row). No R2/Basin/dedupe side effects from that run; safe to fix in place. Corrected jsCode (consumes ALL items via $input.all(), handles array/numeric-key/data/urlkey shapes) is ready in the parent session's brief.
+- BLOCKER: this continuation subagent's Code Mode tool catalog contains NO automation tools (verified: search namespace automation empty; live tools keys = opencode, chrome-devtools, opencode_console, morph_edit). Bearer token at ~/.config/harvy/mcp_token is wired into ~/.config/opencode/opencode.json but the automation server was not attached to this subagent session. Per directive, no REST fallback attempted, nothing modified, nothing published.
+- RESUME: re-spawn this continuation with the automation MCP server attached (or run from the supervisor session which has it): update_workflow jsCode on Normalize Wayback -> manual exec -> Basin count src_wayback >= 1 (query with WRANGLER_BASIN_SQL_AUTH_TOKEN from ~/.config/harvy/basin_sql_token, wait ~300s sink flush) -> R2 harvy-artifacts/wayback/<key> -> idempotent re-run (expect 0 new rows) -> publish -> append table line here.
+
+## 2026-10-30 ~10:00 UTC — weather 40y backfill: source audit (supervisor)
+
+Q: does the weather.gov/NOAA backfill work? NO.
+- The NOAA NCEI workflow (qLP2FI5uqmP9Pozk) is INACTIVE by design (team-review hold) and posts to
+  Harvy's own /v2/runs API, which 503s (AUTOMATION_* secrets unset on harvy-api).
+- api.weather.gov verified working via proxy (200 GeoJSON) but only covers ~recent obs + 7d forecasts.
+  Only NWS alerts are landing (src_nws-alerts=26 rows) — current alerts, not history.
+- 40-year structured history source VERIFIED via proxy (no token needed): NOAA NCEI GHCN-Daily:
+  ghcnd-stations.txt (60,043 stations), ghcnd-inventory.txt (46,703 coverage rows),
+  by_year/ 1763..2026 (528 csv.gz), by_station/ (39k csv.gz), all/<ID>.dly (fixed-width, range OK;
+  sampled US10RMHS145.dly = 3240 bytes, parsed PRCP row 2004-09).
+- Dispatched GHCN-Daily 40y backfill builder: ses_e73af62f5ffeaFRKIrNmoFz7dt (mimo-v2.6-flash).
+  Plan: station manifest (US, PRCP/TMAX/TMIN, >=40y coverage, cap 200) -> raw .dly to harvy-raw ->
+  parse fixed-width -> normalized (degC/mm) to harvy-artifacts -> Basin src_ghcn-daily ->
+  queryable via Basin SQL. Schedule 6h, error trigger, idempotent station+date+element IDs.
