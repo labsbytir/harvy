@@ -121,6 +121,15 @@ Workflow `8q9kYIHCQqoB7xMk` "GDACS Continuous Ingestion" (inactive; last run exe
 - docs/CONNECTOR_STATUS.md committed + pushed to main (8668174) — user authorized docs pushes.
 - MCP 429s increasing as builder count grows (35 chats); manager now backs off 60-120s and retries once per policy.
 
+## 2026-10-30 ~09:50 UTC — MiMo-V2.6-Flash restart wave (20 fresh builders) + verify/publish pings
+
+- 18 wave-3 gemini-3.8-flash builders FAILED with no workflows (socrata, openflights, opendatasoft, energydata_info, dbpedia x2, openaddresses, fivethirtyeight, gdelt, owid_datasets, wayback, crtsh, imf, ofac_sdn, unhcr, owid grapher, gadm). Restarted ALL on opencodex/mimo/mimo-v2.6-flash (20 sessions, incl. 4 new manifest picks: mobility-database, legistar, gtfs-de, noaa-spc-tornadoes):
+  ses_e73e0ef21ffeltRJVc1PssCyNX socrata, ses_e73e0eecbffee8JQPIeMiPIsjX openflights, ses_e73e0ef22ffem6cfXI0oydpe82 opendatasoft, ses_e73e0eed6ffeu7WEiBVBY7bTkP energydata_info, ses_e73e0eed6ffckChNBKY9QnOl7k dbpedia, ses_e73e0eecaffbJwdZP78C9n4uD2 openaddresses, ses_e73e0eecaffd1TxiYr9VZj8R42 fivethirtyeight, ses_e73e0eecaffegaDxvdyydYlob9 gdelt, ses_e73e0eecaffcexIkZO66GBJcq6 owid_datasets, ses_e73e0eed6ffdT4xEN103GGvhxI wayback, ses_e73e0074bffenx8Vh2PvxC3lB6 crtsh, ses_e73e00765ffeSpREzBfRj9f7C7 imf, ses_e73e00749ffew05BJawhkBRa9j ofac_sdn, ses_e73e0074affdawivmM0dMaeRQ7 unhcr, ses_e73e00766ffei5FD76lT9Kz2Np ourworldindata, ses_e73e0074affeS8iY5MdxzkNQD3 gadm, ses_e73e0074effeeWZvyIV2dGnGOT mobilitydb, ses_e73e0074cffe1juDc6wZZnTrh8 legistar, ses_e73e00728ffeHEOnFOIqbiJh79 gtfs_de, ses_e73e0074dffe0IFqmnMGSlLMID noaa_spc. Fallback if mimo 429s: opencode/mimo-v2.6-flash-free, then mistral-large-4.
+- VERIFY+PUBLISH pings sent to 12 idle-but-succeeded gemini builders: aemo ses_e73f5fbdeffeKuP1aXJ7ZjtGfX, wikidata ses_e73f2b32dffetELDhodRLZJgUO, crtsh ses_e73f2b32bffejdIBzLnwzdL9aY, courtlistener ses_e73f2b336ffdiSFqpnzq7Z710k (incl. harvy-raw requirement), owid ses_e73f2b32bffcb20Pj8WqFS0H9a, worldbank ses_e73f2b336ffesxXcCMuW8erR2i, who_gho ses_e73f2b338ffe17EpnoX2cIHNxj, poweroutage ses_e73f5fbdfffeNiHqRY5nLN2U8Y, opensky ses_e73f2b32effeMOKOjy36VS6Sz5, transitland ses_e73f2b32cffd4CqUIe1Hb4fjAI, blockchair ses_e73f2b32cffeTKOXY1XzrSeM1Z, overpass ses_e73f2b32dffdiG6vtJ7ndrGD2j.
+- Reddit 6NrHM5uC0ePlOhP3: Validate Config proxy regex relaxed via direct Postgres patch (allows user:pass@host:port; WEBSHARE_PROXY_URL var confirmed set, len 46); re-ran as exec 94. Publish after clean success.
+- Basin ~09:45: 8+ sources incl. src_aemo_outages 25 (new), gdacs ~296, nws 26, fema/arcgis/usgs 25 each, ckan/datagov 20 each, diag 3.
+- docs pushed to main (8668174, 4e7c450).
+
 ## Open gaps
 
 - AUTOMATION_URL / AUTOMATION_DISPATCH_TOKEN / AUTOMATION_CALLBACK_SECRET unset on harvy-api Worker -> /api/v1/runs 503. n8n runs standalone for now.
