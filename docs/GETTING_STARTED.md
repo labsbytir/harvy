@@ -20,7 +20,7 @@ npm run check:local
 npm run docs:build
 ```
 
-`check:local` runs four typechecks, tests and the web build. `docs:build` renders the canonical `docs/` Markdown into `dist/docs`. Neither command proves a deployed API, production database, live connector, or two-tenant isolation. For a local web preview use `npm run dev`; for the documentation preview use `npm run docs:dev`. The web preview can show fixture states when services are unavailable.
+`check:local` runs five typechecks (root, API, auth, auth-client, email-inbox), tests and the web build. `docs:build` renders the canonical `docs/` Markdown into `dist/docs`. Neither command proves a deployed API, production database, live connector, or two-tenant isolation. For a local web preview use `npm run dev`; for the documentation preview use `npm run docs:dev`. The web preview can show fixture states when services are unavailable.
 
 ## Trace a request through the code
 

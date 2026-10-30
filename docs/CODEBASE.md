@@ -18,10 +18,10 @@ This map describes the clean V2 repository. Paths are authoritative; diagrams an
 | Web | `v2/web/` | React product shell, public preview, worker routing, UI data access | `docs/UI_SPEC.md`, web callers, `v2/web/wrangler.jsonc` |
 | API | `v2/api/` | authenticated HTTP routes, actor scope, analytics, investigations, callbacks | `v2/api/worker.ts`, route tests, shared contracts |
 | Auth | `v2/auth/` | Better Auth server/client integration and organization membership | auth worker, auth schema, auth tests, bindings |
-| Email inbox | `v2/email-inbox/` | receive-only inbound MIME storage (R2) with an authenticated read-only read API | `v2/email-inbox/worker.ts` + worker tests (`v2/tests/email-inbox-worker.test.mjs`); local implementation, deployment/route unverified; scoping fix in progress (unverified) |
+| Email inbox | `v2/email-inbox/` | receive-only inbound MIME storage (R2) with an authenticated read-only read API | `v2/email-inbox/worker.ts` + worker tests (`v2/tests/email-inbox-worker.test.mjs`); committed implementation with tenant-scoped reads (org prefix on R2 keys) and plus-inbox-address attribution; typecheck:email-inbox runs in `check:local`; deployment/route unverified |
 | Shared | `v2/shared/` | HarvyDex, HQL, automation, artifacts, errors, cache policy, cubes | all callers and contract tests |
 | Migrations | `v2/migrations/` | database schema source | migration order, adapter, isolation tests |
-| Catalog | `v2/catalog/` | source and API registry/reference ledgers | connector policy, source permissions, provenance rules |
+| Catalog | `v2/catalog/` | source and API registry/reference ledgers | connector policy, source permissions, provenance rules; connector adapter implementations live in `v2/catalog/connectors/` (batch-1: Open JSON API adapter family — bounded GET/POST to normalized events with provenance, ≤10 records, fetch performed by Automation; unverified) |
 | Workflows | `v2/workflows/` | inactive local Automation starters and examples | `docs/DEVELOPMENT.md`, workflow README |
 | Docs | `docs/` | canonical engineering and operations documentation | `docs/PLAN.md`, `docs/DEVELOPMENT.md` |
 | Tests | `v2/tests/`, `v2/auth/*.test.mjs` | local contract, API, auth, and UI utility checks | the implementation under test |

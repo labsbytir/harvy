@@ -11,6 +11,10 @@ Documentation changes, newest first. Entries are added by the docs-sync loop (ev
 
 ## 2026-10-30
 
+- **Docs-sync pass:** codebase map records the batch-1 connector adapter landing — `v2/catalog/connectors/openapi.ts` (Open JSON API adapter family: bounded GET/POST to normalized events with provenance, ≤10 records, fetch performed by Automation). **Unverified** — no run or adoption claimed.
+
+- **Docs-sync pass:** the email-inbox scoping fix **landed (committed)** — tenant-scoped reads (org prefix on R2 keys), plus-inbox-address attribution, bounded tests, and `typecheck:email-inbox` wired into `check:local`. Codebase map updated; get-started now says five typechecks. Repository tree is clean (work committed); deployment/route of the inbox Worker remains unverified.
+
 - **Docs-sync pass:** codebase map's email-inbox row gains the landed worker tests (`v2/tests/email-inbox-worker.test.mjs`) and notes a scoping fix **in progress (unverified)**. No behavior change is claimed.
 
 - **Docs-sync pass:** status ledger records the automation execution host as **down** — `connector.harvy.dev` unreachable (HTTP 522, verified by request), builder fleet stopped; connector adoption cannot advance until it is restored. Local n8n fallback is proposed in chat only, not activated.
