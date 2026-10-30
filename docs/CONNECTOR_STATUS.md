@@ -21,8 +21,63 @@ Workflow `8q9kYIHCQqoB7xMk` "GDACS Continuous Ingestion" (inactive; last run exe
 - Trigger method: n8n Public API keys all 401; `docker exec n8n execute` fails while main instance runs (task broker port 5679 conflict). Workaround: `docker compose stop n8n` then `docker compose run --rm --entrypoint n8n n8n execute --id=8q9kYIHCQqoB7xMk`. Execution 41 (mode cli) started 08:14:18. Main container restart pending after run.
 - R2 check: `harvy-artifacts/gdacs/events/EQ/2026-10/EQ-1574161-1743038.json` -> "key does not exist" (wrangler). The 35 rows marked ingested on Oct 27 did NOT produce R2 objects at those keys (S3 upload may have failed silently or written elsewhere). Verify after the new run.
 
+## 2026-10-30 — GDACS Backfill (2fUjRZpYizNc2evD) payload/auth fix, exec 47
+
+- Root cause of exec 43/44 failures at Ingest Basin: exec 43 hit the dead old stream endpoint ("Stream does not exist"); exec 44 hit the new endpoint but "You must provide authorization to use this Pipeline" — the node was missing `specifyHeaders: "keypair"`, so the custom Authorization header was never sent.
+- FIXED (update_workflow, 2 ops, no warnings): "Compile Event" now also emits `basin_event` in the 9-column evidence schema (id/event_id=gdacs_<type>_<eventid>_<episodeid>, source_id=src_gdacs, publisher=GDACS, headline=name, product=ops, tenant_id=shared, workspace_id=shared, captured_at=datemodified). "Ingest Basin" posts `=[basin_event]` (was `[{value: event}]`, wrong shape for the typed stream) with `Authorization: Bearer $vars.BASIN_SEND_TOKEN` (hardcoded token removed from workflow JSON) and `specifyHeaders: "keypair"` added.
+- Verified from shell: POST of the 9-column row shape to e05a3ed...ingest.cloudflare.com with the wrangler token returns `{"success":true,"result":{"committed":1}}`.
+- Proof $vars.BASIN_SEND_TOKEN works + shape lands: GDACS Continuous (8q9kYIHCQqoB7xMk) exec 45 ingested 17 gdacs_* rows into default.evidence between 08:41-08:42 UTC (count 20 incl. 2 diag + 1 shape-test rows). Query: `SELECT id, publisher, headline FROM default.evidence ORDER BY __ingest_ts DESC`.
+- Exec 47 (manual, Start Backfill, started 08:40:38) running at last check; execs 45/46/47 run concurrently and serialize on Spider's 1 req/s account limit, so runs take minutes, not seconds.
+- Exec 46 (started 08:25, pre-fix) still shows "running"; expected to fail at Ingest Basin or finish with old payload. No stop-execution tool in MCP; left to time out.
+- R2 content-type patched by supervisor: Upload Event to R2 now sends application/json pretty-printed (was text/html). Verify on next landed object.
+
+## 2026-10-30 — Proxy wired + builder wave 1 spawned (08:55 UTC)
+
+- Webshare proxy preflight PASSED from this machine: egress IP 9.249.21.58 via ipv4.webshare.io. n8n global variable `WEBSHARE_PROXY_URL` is now SET (value lives only in the n8n variables table).
+- Re-pointed to `={{ $vars.WEBSHARE_PROXY_URL }}`: GDACS backfill "Fetch GDACS Events" and "Scrape Report" (verified in workflow JSON 08:56), Reddit 6NrHM5uC0ePlOhP3 "Run Config" proxy_url. No proxy URL is hardcoded in workflow JSON anymore. Rule for all workflows: external-source HTTP nodes use options.proxy = $vars.WEBSHARE_PROXY_URL; Cloudflare-internal endpoints (Basin ingest, K2, R2/S3 credential) stay direct.
+- Builder wave 1 spawned (8 sessions, model opencodex/google-antigravity/gemini-3.8-flash, results delivered to supervisor):
+  - ses_e73fa906effeW2aSnJv4coc5pp -> gdacs (finish/prove 2fUjRZpYizNc2evD)
+  - ses_e73fa9083ffelfxxOoBJKoikgE -> fema_openfema
+  - ses_e73fa906effdygDbgU9fnG33l4 -> data-gov-apis
+  - ses_e73fa905affeIUI5Aa2UU7x66c -> usgs-earthquakes
+  - ses_e73fa905dffebVIeUMATxooxEt -> ckan-generic
+  - ses_e73fa905dffdWJUgp4ift1hbuA -> arcgis-hub
+  - ses_e73fa905dffcIN1TKnQeCNa2Dk -> opencorporates
+  - ses_e73fa906effcl86JywnqeH4hle -> nws-alerts (substitute for bea; BEA API requires a registered UserID key we do not have)
+- Basin evidence at 08:54: src_gdacs=59 rows (WF=53, TC=2, EQ=0 yet), src_diag=3. Exec 46 (backfill, pre-payload-fix) finished SUCCESS 08:53 — all 20 nodes incl. Ingest Basin; R2 object gdacs/events/WF/1033093-12/46.json verified present (content-type text/html — written before the contentType patch). Exec 47 (post-fix, started 08:40:38) still running at 08:55; exec 45 (continuous) still running. No stop-execution tool in MCP.
+
+## 2026-10-30 ~09:00 UTC — manager loop turn 1 (wave 2 spawned)
+
+- Builder sessions: all 8 wave-1 sessions alive (busy): gdacs ses_e73fa906effeW2aSnJv4coc5pp, fema_openfema ses_e73fa9083ffelfxxOoBJKoikgE, data-gov-apis ses_e73fa906effdygDbgU9fnG33l4, usgs-earthquakes ses_e73fa905affeIUI5Aa2UU7x66c, ckan-generic ses_e73fa905dffebVIeUMATxooxEt, arcgis-hub ses_e73fa905dffdWJUgp4ift1hbuA, opencorporates ses_e73fa905dffcIN1TKnQeCNa2Dk, nws-alerts ses_e73fa906effcl86JywnqeH4hle. No connector workflows created by them yet (still 6 workflows total).
+- Wave 2 spawned (target 10 builders): poweroutage_us ses_e73f5fbdfffeNiHqRY5nLN2U8Y (feed: ORNL ODIN odin-real-time-outages-county OData, public no-auth; poweroutage.us itself has no no-auth API), aemo_outages ses_e73f5fbdeffeKuP1aXJ7ZjtGfX (feed: data.wa.aemo.com.au/datafiles/realtime-outages/realtime-outages.csv, public no-auth). entso_e_outages skipped this wave (ENTSO-E requires a security token, not no-auth); eumetsat likewise auth-gated.
+- Workflows: 6 total. GDACS Backfill 2fUjRZpYizNc2evD active:true (schedule every 90 min). Exec 46 success (08:55), exec 47 now error (supervisor force-marked 08:58:02 after stuck >30 min). No "running" executions older than 30 min remain. NOAA NCEI qLP2FI5uqmP9Pozk untouched, inactive.
+- Basin 09:00 UTC: default.evidence = 62 rows (src_gdacs 59, src_diag 3). Token sourced from ~/.config/harvy/basin_sql_token (not in shell env).
+- R2 harvy-artifacts: 20 objects under gdacs/; newest (gdacs/events/DR/1015915-5/46.json) still content-type text/html — expected: exec 46 ran pre-patch; the contentType=application/json patch lands on the next scheduled run of 2fUjRZpYizNc2evD. harvy-raw and harvy-production still empty.
+- Next: collect builder final reports, verify Basin+R2 per connector, publish proven ones, add error handling, log.
+
+## 2026-10-30 ~09:05 UTC — scale-up to 20 builders + QA loop + VPS check
+
+- Basin proof: src_gdacs now 122 rows (last ingest 08:59:30) — the published "Every 90 Minutes" schedule on 2fUjRZpYizNc2evD is landing rows without manual runs. src_diag 3. Total 125.
+- VPS resource check (root@85.9.194.73): load average 0.25/0.25/0.23 on 32 cores; docker stats: n8n-n8n-1 13.3% CPU 650MiB, n8n-runners-1 10.6% 261MiB, postgres 108MiB — ~2.3GiB/62GiB total. Runner logs show only benign localStorage warnings + idle timeouts; n8n logs only OTel diagnostics noise. NOT saturated (threshold ~16) -> NO UpCloud/K8s provisioning.
+- MCP note: one search_workflow_executions call returned HTTP 429; policy now: on 429 wait 60s, retry once, never hammer.
+- Wave 2 spawned (10 new builder sessions, gemini-3.8-flash) -> 20 builders total:
+  - CourtListener bulk (priority #1, new source): ses_e73f2b336ffdiSFqpnzq7Z710k — bulk-data index -> smallest dataset (courts) -> sha256 + manifest to harvy-raw, normalized to harvy-artifacts, Basin src_courtlistener_bulk, Range-resume design noted, spider-concurrency<=8 in notes.
+  - who-gho ses_e73f2b338ffe17EpnoX2cIHNxj; worldbank-open ses_e73f2b336ffesxXcCMuW8erR2i; blockchair ses_e73f2b32cffeTKOXY1XzrSeM1Z; overpass-api ses_e73f2b32dffdiG6vtJ7ndrGD2j; transitland ses_e73f2b32cffd4CqUIe1Hb4fjAI; opensky ses_e73f2b32effeMOKOjy36VS6Sz5; crt_sh ses_e73f2b32bffejdIBzLnwzdL9aY; wikidata_power_plants ses_e73f2b32dffetELDhodRLZJgUO; owid-data-api ses_e73f2b32bffcb20Pj8WqFS0H9a.
+- All new briefs include: options.proxy = $vars.WEBSHARE_PROXY_URL on every external HTTP node (Cloudflare-internal direct), 9-column basin_event schema, deterministic event_id, dedupe data table, in-workflow Error Trigger -> <source>_errors table, workflow notes "spider-concurrency<=8" (Spider fan-out capped at 8 concurrent calls).
+- Codestral QA loop spawned: ses_e73f2b32bffd4EaUJItHn86Ks3 (mistral/codestral-2508) — reviews every workflow via MCP for the 6 defect classes (hardcoded secrets, missing proxy, non-idempotent ids, missing error trigger, Spider >8, wrong Basin payload), writes append-only passes to docs/CONNECTOR_QA.md, re-reviews on "REVIEW".
+- NOAA NCEI qLP2FI5uqmP9Pozk still inactive. No secrets logged.
+
+## 2026-10-30 ~09:10 UTC — spider cap 25, CKAN proven+published, contentType audit
+
+- Spider concurrency cap RAISED to 25 (was 8). Update sent to all 20 builder sessions + Codestral QA (ses_e73f2b32bffd4EaUJItHn86Ks3) to check against 25 and notes "spider-concurrency<=25". Added QA defect class: S3 upload node must set additionalFields.contentType="application/json".
+- CKAN Generic Ingestion msNQRk0FLpHzfhMq PROVEN + PUBLISHED (active:true): exec 49 success 09:03 (9 nodes, 235 Boston CKAN packages fetched, R2 artifacts, Basin via $vars.BASIN_SEND_TOKEN). Basin after 300s flush: src_ckan-generic = 20 rows. Reference pattern for all builders.
+- R2 contentType audit (harvy-artifacts): gdacs/ 20 objects ALL text/html (all from pre-patch execs 46/47 — patch is in the active version since 08:55:55, next scheduled run will verify); ckan-generic/ 20 objects: 18 text/html + 2 application/json (post-patch uploads working). harvy-raw: 0 objects — CourtListener builder reminded that raw bulk file + sha256 manifest MUST go to harvy-raw/courtlistener/... (brief + reminder sent to ses_e73f2b336ffdiSFqpnzq7Z710k).
+- Basin now: src_gdacs 122, src_ckan-generic 20, src_diag 3 = 145 rows.
+- VPS unchanged: load 0.25, no provisioning.
+
 ## Open gaps
 
 - AUTOMATION_URL / AUTOMATION_DISPATCH_TOKEN / AUTOMATION_CALLBACK_SECRET unset on harvy-api Worker -> /api/v1/runs 503. n8n runs standalone for now.
-- Webshare proxy URL not available in env (only WEBSHARE_API_KEY; api.webshare.io unreachable from here, code 000). GDACS API + Spider calls currently go direct from the VPS. Blocked: need the approved proxy URL to wire `$vars.WEBSHARE_PROXY_URL` into HTTP nodes.
+- VPS SSH unreachable from this host (209.151.154.226 times out; 209.151.151.172 refuses all keys) — cannot inspect n8n runner docker logs or restart runners from here; stuck executions can only be re-run, not killed, via MCP.
 - default.analyze legacy table kept; no consumer.
+- Basin sink flush is 300s/100MB: committed POSTs become queryable only after the batch window. Check counts after a flush, not immediately.
