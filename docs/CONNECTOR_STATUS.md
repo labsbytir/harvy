@@ -381,3 +381,26 @@ error trigger, publish-on-proof.
    WEBSHARE_PROXY_URL_RESIDENTIAL, route CF-fronted targets (courtlistener, reddit, fullfact
    JS, google ESF) through it; keep datacenter var for tolerant targets. p.webshare.io DNS
    unresolved from this Mac (expected — needs the backbone creds); test from the VPS.
+
+## 2026-10-30 ~10:35 UTC — dbpedia: proven + idempotent; publish pending (MCP rate limit)
+
+Workflow a7K31FCjWdsT5pSY "Harvy — dbpedia Ingestion" (source_id src_dbpedia, n8n personal project, data tables dbpedia_ingested Eet1Gla9ICcL4rRn). Exec 96 = first full success (15s: SPARQL fetch via Webshare proxy, normalize/dedupe, S3 upload to harvy-artifacts/dbpedia/<event_id>.json contentType application/json, Basin ingest committed>=1, verify passed). Exec 104 = idempotent re-run success (2.5s, "Filter Already Ingested" output 0 items — downstream S3/Basin/Record nodes never ran). Basin SQL count WHERE source_id='src_dbpedia' = 28, unchanged after re-run (no duplicates). R2 object verified: dbpedia/src_dbpedia_Independent_State_of_Raqqa.json (correct JSON). NOT PUBLISHED — publish_workflow blocked by MCP endpoint 429 rate limit (attempts at 0s/+60s/+180s all 429; server-wide under parallel builder load). Re-run publish_workflow a7K31FCjWdsT5pSY when load drops; no re-execution needed. Root cause found+fixed meanwhile: automation MCP entry was mis-nested under mcp.servers.automation in ~/.config/opencode/opencode.json (Bearer-token update landed in wrong shape, so no session could load tools.automation.*); promoted to mcp.automation (backup opencode.json.before-automation-fix).
+
+## 2026-10-30 ~10:20 UTC — proxy IP forensics + "is OUR cloudflare blocking the server?" NO (supervisor)
+
+Q2 answered live FROM the VPS: connector.harvy.dev/healthz direct -> 200 (Caddy);
+through the webshare proxy -> 200 with cf-ray (Cloudflare served it fine); harvy.dev -> 200 cf-ray.
+=> Our zone does NOT block the server or the proxy. No WAF/IP-access rules exist on harvy.dev.
+Blocks happen only on THIRD-PARTY CF-fronted sites (courtlistener.com via proxy = 403 Request blocked).
+
+Q1 proxy forensics on 9.249.21.58: in 9.249.16.0/21 announced by AS5650 FRONTIER-FRTR (Verizon
+Business) BUT transferred 2026-04 from IBM to "Aviation RE LLC" (mnt-us-aviation-1) — a repurposed
+hosting block. IP Judge lists IPs in this range as datacenter/PROXY IPs; asn.dev drop-lists AS5650
+space. So the dashboard label "residential" refers to the plan; THIS exit IP is reputation-flagged,
+and Cloudflare's Bot Fight Mode blocks on exactly those lists. => The residential pool that actually
+works against CF is the rotating backbone p.webshare.io:80 (Endpoint Generator creds, per-request
+home-device IPs), NOT this fixed IP:port.
+
+Fix paths: (a) generate rotating-residential backbone creds (p.webshare.io:80) and set n8n var
+WEBSHARE_PROXY_URL_RESIDENTIAL for CF-fronted targets; (b) route CF-fronted targets via Spider Cloud
+(approved path, already wired); (c) datacenter var stays for tolerant targets (ncei 206 OK).
