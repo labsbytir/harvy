@@ -81,3 +81,15 @@ Workflow `8q9kYIHCQqoB7xMk` "GDACS Continuous Ingestion" (inactive; last run exe
 - VPS SSH unreachable from this host (209.151.154.226 times out; 209.151.151.172 refuses all keys) — cannot inspect n8n runner docker logs or restart runners from here; stuck executions can only be re-run, not killed, via MCP.
 - default.analyze legacy table kept; no consumer.
 - Basin sink flush is 300s/100MB: committed POSTs become queryable only after the batch window. Check counts after a flush, not immediately.
+
+## 2026-10-30 ~09:10 UTC — OpenObserve tracing wired (supervisor)
+
+- Automation VPS otel-collector now has a dedicated `filelog/n8n` receiver tailing
+  /var/lib/docker/containers/n8n-n8n-1/*-json.log (json_parser, attribute service=n8n),
+  added to the logs pipeline; validated and restarted, service active.
+  n8n application logs (every execution + node error) ship to OpenObserve under service="n8n",
+  alongside journald, docker container logs, and hostmetrics.
+- Correlation key: n8n execution id <-> Basin source_id. Every connector workflow must carry
+  its slug in the description (setWorkflowMetadata) and use src_<slug> as source_id.
+- OpenObserve query per connector: service="n8n" AND body contains "<workflowId>" (or source_id).
+- CKAN workflow msNQRk0FLpHzfhMq already has the description pattern applied.
