@@ -1,0 +1,9 @@
+{
+  "id": "src_owid_datasets_co2_AFG_1949",
+  "entity": "Afghanistan",
+  "code": "AFG",
+  "year": "1949",
+  "value": "14656",
+  "source_url": "https://ourworldindata.org/grapher/annual-co2-emissions.csv?csvType=full",
+  "captured_at": "1949-01-01T00:00:00Z"
+}

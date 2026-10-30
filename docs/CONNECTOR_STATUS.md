@@ -499,3 +499,25 @@ Catalog: v2/catalog/reference/courtlistener-bulk.json. Builder dispatched:
 ses_e7390db69ffekwFlOtc9JinXmv (mimo-flash) — proof: latest month of courts/dockets/citation-map;
 expansion: all families all months, weekly schedule, dedupe sha1(key), raw bz2 -> harvy-raw,
 parsed -> harvy-artifacts -> Basin src_courtlistener_bulk (product civic). PACER stays replaced by this.
+
+- opendatasoft Ingestion `GiwBA9WSrMHvR0A8` PROVEN, NOT published: exec 101 success 10:16 UTC (25 catalog datasets via Webshare proxy, normalize to `src_opendatasoft_<dataset_id>` deterministic ids, dedupe `opendatasoft_ingested` A03pyUF7JvHopqQr (25 rows), S3 `additionalFields.contentType: "application/json"`, Basin direct via `$vars.BASIN_SEND_TOKEN` committed>=1, errors -> `opendatasoft_errors` Ums63BpRugiCa0w7, groups+OpenObserve description applied). Basin SQL `SELECT count(*) FROM default.evidence WHERE source_id='src_opendatasoft'` = 25 (after ~5min flush). R2 verified: `harvy-artifacts/opendatasoft/osm-australia-food-service.json`. BLOCKED at idempotent re-run + publish: Webshare proxy 407 auth failure began ~10:42 UTC — local `~/.config/harvy/webshare_proxy_url` and n8n `$vars.WEBSHARE_PROXY_URL` both return `CONNECT tunnel failed, response 407` (direct fetch still 200); exec 120 failed at fetch with the same proxy-auth error, so the re-run could not reach the dedupe filter. Refresh the Webshare credential, then: manual re-run (expect 0 items past Filter Already Ingested), publish_workflow, and this line becomes PUBLISHED.
+
+| source | workflow | exec | Basin SQL | R2 key | idempotent | published | blockers |
+|---|---|---|---|---|---|---|---|
+| ofac_sdn | mnGXZAUqQDgKXPEF "OFAC SDN Ingestion (ofac_sdn)" (12 nodes, 2 groups; reuses tables ofac_sdn_ingested bQ7xDMBOUxKFOH8i / ofac_sdn_errors KLqsX2vbMQFhOXuW) | 113 manual success (100 items, 2m41s, 10:32-10:34 UTC); 119+123+129 error (HTTP 407 at Fetch OFAC SDN CSV, <60ms — same Webshare proxy outage that blocked unhcr/owid_datasets from ~10:39 UTC; exec 113 predates it) | count=100 (`SELECT count(*) FROM default.evidence WHERE source_id='src_ofac_sdn'`) | ofac_sdn/36.json verified via wrangler r2 object get --remote (ent_num 36 AEROCARIBBEAN AIRLINES, 12-field row, valid JSON) | not proven (3 re-run attempts exhausted at fetch on proxy 407; dedupe never reached) | no (gated on idempotency per publish-only-if-proven) | Webshare $vars.WEBSHARE_PROXY_URL returns 407 "Not authenticated" since ~10:39 UTC (local curl also unreachable); refresh proxy creds, re-run manual once (expect Skip Already Ingested emits 0, count stays 100), then publish_workflow mnGXZAUqQDgKXPEF — no workflow changes needed |
+
+## 2026-10-30 ~10:55 UTC — SAM.gov keyless search + MediaCloud answer (supervisor)
+
+SAM.gov: site is istio-envoy (NOT CF), direct from VPS 200. Demo searches DONE keyless via
+GET https://sam.gov/api/prod/sgs/v1/search/?index=opp&q=<term>&size=25&page=N&sort=-modifiedDate
+(q=water -> live solicitations; q=cybersecurity -> 9,736 hits / 1,948 pages). Rendered UI at
+sam.gov/search/?index=opp is a SPA (main.*.js) — Spider fallback if API rate-limits.
+Builders: SAM.gov search connector ses_e738f352dffeT9jo0Px6K04MGU (src_sam_gov_search, term fan-out
+from v2/catalog/reference/sam-search-terms.json); keyed API connector ses_e73919eaaffenQC4yscPYYjZXw
+(src_sam_gov, blocked on SAM_GOV_API_KEY); search-terms generator dispatched (90 days of news).
+
+MediaCloud "why no backfill": NO public S3 bucket exists (mediacloud-files/database-* all
+NoSuchBucket/AccessDenied — verified); API-only with token + tight quotas (v4 ~4000 req/wk,
+2 req/min; v2 1000 calls/7d). So backfill was impossible without MEDIACLOUD_API_TOKEN.
+Ledger n=56 added; builder ses_e738f352dffdhgR6xjmk9PZ8MM (src_mediacloud, newsk) — builds inactive
+until token supplied; GDELT covers news attention meanwhile.
