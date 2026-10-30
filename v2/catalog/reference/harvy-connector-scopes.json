@@ -1391,10 +1391,11 @@
       "label": "SAM.gov Contract Opportunities API v2",
       "source_catalog_url": "https://github.com/pennytir/obsidian-civontology/blob/main/Ingestion/Stream%20Catalog/Scrapers/SAM_GOV.md",
       "api_documentation_url": "https://open.gsa.gov/api/get-opportunities-public-api/",
-      "implementation_status": "implemented; disabled pending SAM_GOV_API_KEY and operator verification",
-      "enabled": false,
-      "excluded": true,
-      "exclusion_reason": "User-excluded legacy source; never enable."
+      "implementation_status": "implemented; enabled 2026-10-30 by direct user directive (supersedes prior exclusion); pending SAM_GOV_API_KEY and bounded verification before publish",
+      "enabled": true,
+      "excluded": false,
+      "exclusion_reason": null,
+      "directive_change": "2026-10-30: user lifted the SAM.gov exclusion; Telegram/JudyRecords/Truth Social remain excluded"
     },
     {
       "id": "civic-scraper-reference",

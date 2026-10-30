@@ -18,7 +18,7 @@ Read docs/DEVELOPMENT.md before changing code and docs/PLAN.md for the single de
 - Harvy is web SaaS. Ontoly is the foundation; Tower, Ops, Civic, and Newsk share HarvyDex, HQL, auth, permissions, UI components, and feature semantics. Tower includes a business intelligence desk; Ops owns operational action.
 - Automation owns all external source processing. Crawling must pass Spider Unlimited and Webshare preflight, including target egress verification. Use /unlimited/scrape, /unlimited/crawl, and /unlimited/links; no silent direct or metered fallback. Every connector requires an approved Webshare path.
 - Resolve Spider, Webshare, and other secrets from scoped injection. Never print their values. Enforce source permissions and provider limits; preserve provenance, URLs, timestamps, and coverage gaps.
-- Telegram, JudyRecords, Truth Social, and SAM.gov are excluded. Do not reintroduce their legacy connectors.
+- Telegram, JudyRecords, and Truth Social are excluded. Do not reintroduce their legacy connectors. SAM.gov exclusion was lifted by direct user directive on 2026-10-30; onboard via the Get Opportunities Public API with SAM_GOV_API_KEY and bounded verification (see v2/catalog/reference/official-sources-ledger.json).
 - PostgreSQL through Hyperdrive is the target transactional store. The prior checkout used D1; this new repository has no deployed database yet. R2 is for raw/processed artifacts and Basin for analytical tables. Private data has explicit tenant/workspace scope.
 - Cache only scope-safe data. Report cache goals only when measured on representative eligible traffic.
 - Inventory and selectively port prior workflows. Keep bounded verification separate from full ingest.

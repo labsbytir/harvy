@@ -40,7 +40,7 @@ The runtime path is: approved scope → Harvy `/api/v1/` or internal n8n trigger
 | F | Public-page crawl | Approved source pages through Spider Unlimited | Allowed targets, page caps, Webshare egress proof, extraction completeness. |
 | G | Gated/social | Scoped Facebook, X, Reddit and other approved sources | Platform access/terms and scope, credential ownership, retention, quota. |
 
-These are adapter families, not claims that every example is ready. Use the source-by-source inventory to build configurations, and record blocked access explicitly. Do not reintroduce Telegram, JudyRecords, Truth Social, SAM.gov, RSS/RSSHub, or Cloudflare Search into the active plan. Do not count reference-only rows as connectors.
+These are adapter families, not claims that every example is ready. Use the source-by-source inventory to build configurations, and record blocked access explicitly. Do not reintroduce Telegram, JudyRecords, Truth Social, RSS/RSSHub, or Cloudflare Search into the active plan. SAM.gov was un-excluded by direct user directive on 2026-10-30 (AGENTS.md updated); onboard via the Get Opportunities Public API with SAM_GOV_API_KEY and bounded verification. Do not count reference-only rows as connectors.
 
 ## Immediate repo work
 

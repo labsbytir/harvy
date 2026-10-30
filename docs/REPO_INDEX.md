@@ -43,7 +43,7 @@ Git root: this repository (`labsbytir/harvy`, `main` at `92aecaa` when inspected
 2. News through Media Cloud (#26), SocketNews (#27), and approved Spider Cloud coverage (#8), surfaced in Newsk mode (#20). No RSS dependency.
 3. Weather ingestion/context (#29).
 
-The target uses all approved platform services as one Harvy system. Deployment can proceed in dependency order, but absence of a resource is tracked as a gap rather than a claim that it is unnecessary. Do not create one stack per mode or port excluded Telegram, JudyRecords, Truth Social, or SAM.gov connectors.
+The target uses all approved platform services as one Harvy system. Deployment can proceed in dependency order, but absence of a resource is tracked as a gap rather than a claim that it is unnecessary. Do not create one stack per mode or port excluded Telegram, JudyRecords, or Truth Social connectors. SAM.gov was un-excluded by direct user directive on 2026-10-30.
 
 ## Documentation drift to resolve
 

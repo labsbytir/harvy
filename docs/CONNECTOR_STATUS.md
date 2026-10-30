@@ -458,3 +458,25 @@ they are the highest-trust structured sources. Classification per source:
 - geo_bounded (Overpass / per-state extracts only): TIGER/Line, OpenStreetMap.
 - EXCLUDED by repo rule: SAM.gov (#15) — do not reintroduce. PACER (#27) -> CourtListener instead.
 Batch 1 builder dispatched: ses_e7393b408ffeHE5nPtZrBdLd3s (mimo-flash) for the ~11 no-key APIs.
+
+## 2026-10-30 ~10:45 UTC — unhcr BUILT, BLOCKED on Webshare proxy (407)
+
+| source | workflow | exec | Basin SQL | R2 key | idempotent | published | blockers |
+|---|---|---|---|---|---|---|---|
+| unhcr | qIhzJsVY8KB9Zzwy "UNHCR Population Displacement Connector" (18 nodes, 4 groups, valid) | 125+128 error (HTTP 407 at Fetch Years, <60ms) | count=0 (src_unhcr) — never reached ingest | none | not testable | no (not proven) | Webshare proxy $vars.WEBSHARE_PROXY_URL (…@9.249.21.58:6392) returns 407 "Not authenticated"; same proxy published noaa_spc 38 rows at 10:27, so creds rotated/expired after that. Direct UNHCR=200 but brief forbids bypassing Webshare for public web sources. Fix proxy creds or authorize DIRECT. |
+
+Design: GET /years/ -> probe last 5y -> newest with data (2025) -> /countries/?limit=500 (232) -> per-country /population/?year&coo -> normalize 9-col basin_event -> dedupe unhcr_ingested (76lH5eodx5BNtv7Y) -> S3 harvy-artifacts -> Basin ingest (DIRECT) -> verify committed>=1 -> mark ingested; error->unhcr_errors (yfnZVqPGuIKMw1nH).
+
+| source | workflow | exec | Basin SQL | R2 key | idempotent | published | blockers |
+|---|---|---|---|---|---|---|---|
+| owid_datasets | lJKHQLDM1Rqs7WyA "OWID Datasets Ingestion (owid_datasets)" (14 nodes, validated) | 114 success (100 rows); 122+133 error (HTTP 407 at CSV fetch, same Webshare 407 that blocked unhcr) | count=100 (src_owid_datasets, unchanged after failed re-runs) | owid_datasets/src_owid_datasets_co2_AFG_1949.json verified via wrangler r2 object get --remote | not proven (both re-runs died at fetch on proxy 407) | no (gated on idempotency) | Webshare proxy $vars.WEBSHARE_PROXY_URL returned 407 "Not authenticated" from ~10:39 UTC (local curl check also 407); 3 execute attempts exhausted; description/OpenObserve metadata set, notes field has no update op (best-effort skipped) |
+
+## 2026-10-30 ~10:40 UTC — SAM.gov exclusion LIFTED by direct user directive (supervisor)
+
+User instruction overrides prior repo rule. Updated: AGENTS.md (directive line), docs/BUILD_AGENT_PROMPT.md,
+docs/CONNECTOR_PLAN.md, docs/CONNECTOR-CANDIDATES.md (3 sam_* candidates now rollout candidates),
+docs/REPO_INDEX.md, docs/PLAN.md (annotated), v2/catalog/reference/official-sources-ledger.json
+(n=15 -> key_required, base api.sam.gov/prod/opps/v2/opportunities),
+v2/catalog/reference/harvy-connector-scopes.json (sam-gov: enabled=true, excluded=false,
+directive_change recorded). Telegram/JudyRecords/Truth Social remain excluded.
+Onboarding gate: SAM_GOV_API_KEY (api.data.gov) into secrets, then bounded verification before publish.

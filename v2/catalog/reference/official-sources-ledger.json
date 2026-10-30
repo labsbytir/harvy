@@ -27,7 +27,7 @@
     { "n": 12, "name": "Open States", "access": "scrape", "base": "https://openstates.org/" },
     { "n": 13, "name": "GovInfo API", "access": "key_required", "base": "https://api.govinfo.gov/" },
     { "n": 14, "name": "Regulations.gov API", "access": "key_required", "base": "https://api.regulations.gov/v4/" },
-    { "n": 15, "name": "SAM.gov", "access": "excluded", "note": "AGENTS.md: SAM.gov excluded — do NOT reintroduce legacy connectors" },
+    { "n": 15, "name": "SAM.gov Get Opportunities Public API v2", "access": "key_required", "base": "https://api.sam.gov/prod/opps/v2/opportunities", "note": "Exclusion lifted by direct user directive 2026-10-30 (AGENTS.md updated). Needs SAM_GOV_API_KEY (api.data.gov); onboard after key + bounded verification. Scopes entry sam-gov re-enabled." },
     { "n": 16, "name": "GAO", "access": "scrape", "base": "https://www.gao.gov/" },
     { "n": 17, "name": "OpenSecrets", "access": "scrape", "base": "https://www.opensecrets.org/" },
     { "n": 18, "name": "Senate Lobbying Disclosures", "access": "scrape", "base": "https://lda.senate.gov/" },
@@ -69,5 +69,5 @@
     { "n": 54, "name": "Census TIGER/Line", "access": "geo_bounded", "base": "https://www2.census.gov/geo/tiger/", "note": "per-state/per-layer extracts only" },
     { "n": 55, "name": "OpenStreetMap", "access": "geo_bounded", "base": "https://overpass-api.de/api/interpreter", "note": "bounded Overpass queries only; respect usage policy" }
   ],
-  "batch_plan": "batch1 = verified no-key JSON APIs (Federal Register, SEC EDGAR, CDC PLACES, openFDA, api.weather.gov, USAspending POST, USGS, OpenFEMA, CMS, NHTSA, CFPB). Then key_required after user supplies keys. Then scrape family via Spider. SAM.gov stays excluded. PACER via CourtListener."
+  "batch_plan": "batch1 = verified no-key JSON APIs (Federal Register, SEC EDGAR, CDC PLACES, openFDA, api.weather.gov, USAspending POST, USGS, OpenFEMA, CMS, NHTSA, CFPB). Then key_required after user supplies keys. Then scrape family via Spider. SAM.gov un-excluded 2026-10-30 (user directive) — key_required batch. PACER via CourtListener."
 }
