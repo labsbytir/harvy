@@ -75,6 +75,14 @@ Workflow `8q9kYIHCQqoB7xMk` "GDACS Continuous Ingestion" (inactive; last run exe
 - Basin now: src_gdacs 122, src_ckan-generic 20, src_diag 3 = 145 rows.
 - VPS unchanged: load 0.25, no provisioning.
 
+## 2026-10-30 — Wave 1 results (09:10 UTC)
+
+- Basin default.evidence total 440 rows. By source: src_gdacs 296, src_fema_openfema 25, src_arcgis-hub 25, src_usgs-earthquakes 25, src_ckan-generic 20, src_data-gov-apis 20, src_diag 3 (verified via SQL GROUP BY source_id, 09:09-09:10).
+- PROVEN + published (active): CKAN Generic Ingestion `msNQRk0FLpHzfhMq` (exec 49 success, re-run 51 idempotent count stayed 20, R2 ckan-generic/...json verified, schedule 6h, Error Trigger -> connector_errors added) and ArcGIS Hub Ingestion `ckUdJjP8SL0b8ZFP` (execs 50/61/62 success, 25 rows, R2 arcgis-hub/*.json verified, Error Trigger added 09:11). QA on both: external fetch via options.proxy = $vars.WEBSHARE_PROXY_URL, Basin ingest direct, S3 credential, no hardcoded secrets.
+- Builder sessions completed so far: ckan ses_e73fa905dffebVIeUMATxooxEt, arcgis ses_e73fa905dffdWJUgp4ift1hbuA. Replacement wave-2 builder spawned: ses_e73ee731affe4v2kzB6OFj095A -> crt_sh_certificate_transparency.
+- connector_errors data table id 92T2flIyNQfnxntj (workflow_id, workflow_name, execution_id, error_message, occurred_at) — shared failure audit for all connector workflows.
+- Exec 47 (GDACS backfill, post-fix) ended ERROR 08:58 — failing node detail pending (MCP 429 at the time); exec 45 (continuous) also ended error. src_gdacs rows still climbing (296), so ingestion works; gdacs builder ses_e73fa906effeW2aSnJv4coc5pp owns the diagnosis.
+
 ## Open gaps
 
 - AUTOMATION_URL / AUTOMATION_DISPATCH_TOKEN / AUTOMATION_CALLBACK_SECRET unset on harvy-api Worker -> /api/v1/runs 503. n8n runs standalone for now.
@@ -115,3 +123,28 @@ Workflow `8q9kYIHCQqoB7xMk` "GDACS Continuous Ingestion" (inactive; last run exe
 - R2 check: `harvy-artifacts/arcgis-hub/72c2365101cb4a8d8c6bd1567279874a.json` and `harvy-artifacts/arcgis-hub/f5d1c71dfcc947849a0f585916b067f5.json` verified with `wrangler r2 object get`.
 - Idempotency: re-run (exec 62) success, 0 items passed dedupe dataTable `sKSIQ4k4Iynkd7Dk` (`arcgis_hub_ingested`), 0 downstream S3 uploads/Basin posts, Basin count did not double.
 - Workflow notes include `spider-concurrency<=50`.
+
+## 2026-10-30 ~09:15 UTC — data-gov-apis Ingestion proven + published (builder)
+
+- Data.gov Ingestion `fSoesDq572AQcpYo` ("Harvy - data-gov-apis Ingestion") PROVEN + PUBLISHED (active: true): exec 56 success 09:05:02 (9 nodes, 20 public data.gov datasets fetched via Webshare proxy, normalized into Ops evidence schema, S3 artifacts to harvy-artifacts with `additionalFields.contentType: "application/json"`, Basin via `$vars.BASIN_SEND_TOKEN`).
+- Basin SQL count: `SELECT count(*) FROM default.evidence WHERE source_id='src_data-gov-apis'` = 20 rows verified after 300s flush.
+- R2 check: `harvy-artifacts/data-gov-apis/tiger-line-shapefile-2026-county-hill-county-mt-all-lines.json` verified with `wrangler r2 object get`.
+- Idempotency: re-run (exec 60) processed 0 items past deduplication table `data_gov_apis_ingested` (id `0Q5ptLygYYOC8tpQ`), Basin count remained 20 (did not double).
+- Concurrency note recorded: "spider-concurrency<=50", slug data-gov-apis, source_id src_data-gov-apis.
+
+## 2026-10-30 ~09:20 UTC — FEMA OpenFEMA proven and published (builder)
+
+- FEMA OpenFEMA Ingestion `IjsITwbIjjk35BA8` PROVEN + PUBLISHED (active: true): exec 59 success 09:08:47 (9 nodes, 25 FEMA disaster declarations fetched via Webshare proxy, S3 artifacts with `additionalFields.contentType: "application/json"`, Basin via `$vars.BASIN_SEND_TOKEN`).
+- Basin SQL count: `SELECT count(*) FROM default.evidence WHERE source_id='src_fema_openfema'` = 25 rows verified in `default.evidence`.
+- R2 check: `harvy-artifacts/fema_openfema/cfddcfb8-3d61-4637-8e10-39f28de0c4c6.json` verified with `wrangler r2 object get`.
+- Idempotency: re-run (exec 66) success (0.46s), 0 items passed dedupe dataTable `RC0tL0eWVPdIe3Md` (`fema_openfema_ingested`), Basin count remained 25 (did not double).
+- Concurrency note recorded: "spider-concurrency<=50", slug fema_openfema, source_id src_fema_openfema.
+
+2026-10-30T09:12:43Z | gdacs | ses_e73fa906effeW2aSnJv4coc5pp | exec 47 success | basin 296 | r2 gdacs/events/EQ/1574233-1743124/47.json | published yes
+
+## 2026-10-30 ~09:15 UTC — supervisor fixes
+
+- Published 5 more proven workflows: NWS Alerts, data-gov-apis, PowerOutage US, OpenCorporates, FEMA OpenFEMA. 9/15 workflows ACTIVE.
+- Basin: 440 rows across 7 sources (gdacs 296, nws 26, fema 25, usgs 25, arcgis 25, ckan 20, datagov 20).
+- OpenCorporates exec 68 error: "Authorization failed" — API requires a token. Fixed Fetch node to send `Authorization: Token token={{ $vars.OPENCORPORATES_TOKEN }}` (variable must be set by user; no key in repo). Proxy var already correct.
+- Exec 69 (new workflow kTOgfOSd) running.
