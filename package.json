@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --config v2/web/vite.config.ts",
     "build": "vite build --config v2/web/vite.config.ts",
+    "build:docs": "python3 v2/scripts/build_docs_site.py",
     "typecheck": "tsc -p tsconfig.json",
     "test": "node --experimental-strip-types --test v2/tests/*.test.mjs v2/auth/*.test.mjs",
     "check:local": "npm run typecheck && npm run typecheck:api && npm run typecheck:auth && npm run typecheck:auth-client && npm test && npm run build",

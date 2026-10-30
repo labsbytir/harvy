@@ -1,3 +1,5 @@
+[![Harvy banner](v2/web/docs-site/assets/harvy-github-banner.png)](https://docs.harvy.dev)
+
 # Harvy
 
 Harvy is a new web SaaS for source-grounded intelligence and operations. Ontoly is the shared ontology. Tower, Ops, Civic, and Newsk are product contexts; Tower includes a business intelligence desk. HarvyDex provides stable UUIDs, HQL is the shared query contract, and the user's VPS-hosted n8n workflows are Harvy's Automation system for approved external source access.
@@ -11,6 +13,7 @@ This is the clean V2 repository. It contains Better Auth integration, a tenant-s
 - [UI and Drizzle Cube specification](docs/UI_SPEC.md)
 - [Build-agent handoff prompt](docs/BUILD_AGENT_PROMPT.md)
 - [n8n control templates and Automation boundary](v2/workflows/README.md)
+- [Documentation site hosting](docs/HOSTING.md) · [Published site](https://docs.harvy.dev)
 
 ## Local development
 
