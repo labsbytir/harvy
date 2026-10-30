@@ -549,3 +549,19 @@ All: signup_email=trytir@agentmail.to, free_tier_only, profile Harvy Proctor/per
 Keyless (~40%) marked not_needed; apiKey/OAuth entries pending signup with derived key_var names.
 AgentMail poller on VPS maps incoming key emails -> n8n variables (extend service_map as new
 providers confirm). No keys in repo/chat.
+
+## 2026-10-30 ~11:30 UTC — API Ninjas added to registry (supervisor)
+
+api-ninjas.com: ONE free key unlocks ~150 endpoints. Added 63 high-value endpoints to
+api-registry.json (total 1,009 APIs), all key_var=API_NINJAS_API_KEY, signup_email
+trytir@agentmail.to, free tier (register at api-ninjas.com/register).
+Highlights: validation/enrichment batch (validateemail, validatephone, phonelookup,
+disposableemailchecker, mx/dns/whois/domain/ip/url lookups, webscraper, vatvalidation, iban, bin,
+routingnumber, sortcode, swiftcode, naicscode) — one key replaces many separate validators;
+new data (sanctionsscreening [OFAC-style], SEC filings search, insider trading, 13F holdings,
+exec comp, stock news, WARN layoff notices, FX/inflation/rates/treasury, oil/metals/gold, sales &
+property tax, airquality, weather, geocoding, US ZIP, 100+ country postal, city/country/population/GDP,
+timezone, 85k airports, USDOT motor-carrier safety, VIN, universities, holidays, historical events);
+text/AI enrichment (sentiment, textsimilarity for near-dup dedupe, embeddings for semantic search
+over Basin, textlanguage, spellcheck, profanityfilter, dictionary).
+Poller service_map on VPS extended: api-ninjas -> API_NINJAS_API_KEY (syntax verified).
