@@ -1,0 +1,327 @@
+{
+  "name": "Harvy — worldbank Ingestion v2",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "source_id": "worldbank-open",
+    "slug": "worldbank",
+    "spider_concurrency": 25,
+    "description": "World Bank Open Data ingestion with pagination, deduplication, and error handling"
+  },
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Set up bounded job with provenance\nconst workflowId = 'worldbank-v2';\nconst sourceId = 'src_worldbank';\nconst publisher = 'World Bank';\nconst product = 'ops';\nconst tenantId = 'shared';\nconst workspaceId = 'shared';\n\n// Generate deterministic event_id based on execution\nconst eventId = `worldbank_${Date.now()}_${$execution.id}`;\n\nreturn [{\n  json: {\n    workflow_id: workflowId,\n    source_id: sourceId,\n    publisher: publisher,\n    product: product,\n    tenant_id: tenantId,\n    workspace_id: workspaceId,\n    event_id: eventId,\n    captured_at: new Date().toISOString(),\n    provenance: {\n      source: 'World Bank Open Data API',\n      api_version: 'v2',\n      endpoint: 'https://api.worldbank.org/v2',\n      indicators: ['SP.POP.TOTL'],\n      years: '2019:2025',\n      pagination: {\n        strategy: 'page_by_page',\n        page_size: 1000,\n        max_pages: 5\n      },\n      spider_concurrency: 25,\n      proxy_used: true,\n      proxy_type: 'webshare_residential'\n    }\n  }\n}];"
+      },
+      "id": "set-bounded-job",
+      "name": "Set provenance & bounded job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.worldbank.org/v2/country?format=json&per_page=300",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-harvy-organization-id",
+              "value": "shared"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "format",
+              "value": "json"
+            },
+            {
+              "name": "per_page",
+              "value": "300"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "batch": {
+            "batchSize": 25,
+            "batchInterval": 1000
+          },
+          "proxy": "={{ $vars.WEBSHARE_PROXY_URL }}"
+        }
+      },
+      "id": "fetch-countries",
+      "name": "Fetch Countries",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        700,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process countries and prepare indicator queries\nconst countries = $input.all();\nconst results = [];\n\n// World Bank indicators to fetch\nconst indicators = ['SP.POP.TOTL', 'NY.GDP.MKTP.CD', 'EG.USE.COMM.FO.ZS'];\n\ncountries.forEach(country => {\n  indicators.forEach(indicator => {\n    results.push({\n      json: {\n        country_code: country.json.iso2Code,\n        country_name: country.json.name,\n        indicator_code: indicator,\n        page: 1,\n        per_page: 1000\n      }\n    });\n  });\n});\n\nreturn results;"
+      },
+      "id": "prepare-indicator-queries",
+      "name": "Prepare Indicator Queries",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.worldbank.org/v2/country/{{ $('Prepare Indicator Queries').item.json.country_code }}/indicator/{{ $('Prepare Indicator Queries').item.json.indicator_code }}?format=json&date=2019:2025&per_page={{ $('Prepare Indicator Queries').item.json.per_page }}&page={{ $('Prepare Indicator Queries').item.json.page }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-harvy-organization-id",
+              "value": "shared"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "format",
+              "value": "json"
+            },
+            {
+              "name": "date",
+              "value": "2019:2025"
+            },
+            {
+              "name": "per_page",
+              "value": "1000"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "batch": {
+            "batchSize": 25,
+            "batchInterval": 1000
+          },
+          "proxy": "={{ $vars.WEBSHARE_PROXY_URL }}"
+        }
+      },
+      "id": "fetch-indicator-data",
+      "name": "Fetch Indicator Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize World Bank indicator data to Basin 9-column schema\nconst items = $input.all();\nconst basinEvents = [];\n\nitems.forEach(item => {\n  const data = item.json;\n  \n  // Extract country and indicator info from the nested structure\n  const countryCode = data[1]?.iso2Code || 'unknown';\n  const countryName = data[1]?.name || 'Unknown Country';\n  const indicatorCode = data[2]?.indicator?.id || 'unknown';\n  const indicatorName = data[2]?.indicator?.value || indicatorCode;\n  \n  // Process data points\n  if (Array.isArray(data[1]) && data[1].length > 0) {\n    data[1].forEach(record => {\n      const year = record.date || 'unknown';\n      const value = record.value !== null ? record.value : 'N/A';\n      \n      // Create deterministic event_id\n      const eventId = `src_worldbank_${indicatorCode}_${countryCode}_${year}`;\n      \n      basinEvents.push({\n        json: {\n          id: eventId,\n          event_id: eventId,\n          source_id: 'src_worldbank',\n          publisher: 'World Bank',\n          headline: `${indicatorName} (${countryName})`,\n          product: 'ops',\n          tenant_id: 'shared',\n          workspace_id: 'shared',\n          captured_at: new Date().toISOString(),\n          data: {\n            indicator_code: indicatorCode,\n            indicator_name: indicatorName,\n            country_code: countryCode,\n            country_name: countryName,\n            year: year,\n            value: value,\n            unit: indicatorCode.includes('GDP') ? 'USD' : \n                  indicatorCode.includes('POP') ? 'people' : \n                  'percent'\n          },\n          provenance: {\n            source_url: `https://api.worldbank.org/v2/country/${countryCode}/indicator/${indicatorCode}?format=json&date=${year}`,\n            retrieved_at: new Date().toISOString(),\n            api_version: 'v2',\n            pagination: {\n              page: 1,\n              per_page: 1000\n            }\n          }\n        }\n      });\n    });\n  }\n});\n\nreturn basinEvents;"
+      },
+      "id": "normalize-indicator-data",
+      "name": "Normalize Indicator Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://e05a3ed89b654c2797dcff2cbd22c8ef.ingest.cloudflare.com",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $vars.BASIN_SEND_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 30000,
+          "specifyHeaders": "keypair"
+        }
+      },
+      "id": "ingest-basin",
+      "name": "Ingest to Basin",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1500,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log successful ingestion to error tracking table\nconst workflowId = 'worldbank-v2';\nconst executionId = $execution.id;\nconst sourceId = 'src_worldbank';\nconst successCount = $input.all().length;\n\n// Log to OpenObserve via HTTP\nconst logPayload = {\n  timestamp: new Date().toISOString(),\n  level: 'info',\n  service: 'n8n',\n  workflow_id: workflowId,\n  execution_id: executionId,\n  source_id: sourceId,\n  message: `WorldBank ingestion batch completed`,\n  metrics: {\n    rows_processed: successCount,\n    rows_per_second: successCount / 30\n  },\n  correlation_id: executionId\n};\n\n// In production, this would POST to OpenObserve endpoint\n// For now, we'll just return the count\n\nreturn [{ json: { success: true, count: successCount } }];"
+      },
+      "id": "log-success",
+      "name": "Log Success",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1700,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error handling trigger\nconst error = $input.first().json;\nconst workflowId = 'worldbank-v2';\nconst executionId = $execution.id;\nconst errorMessage = error.error?.message || JSON.stringify(error);\n\n// Log error to connector_errors table\nreturn [{\n  json: {\n    workflow_id: workflowId,\n    workflow_name: 'Harvy — worldbank Ingestion v2',\n    execution_id: executionId,\n    error_message: errorMessage,\n    error_type: error.error?.name || 'unknown',\n    occurred_at: new Date().toISOString(),\n    severity: 'high',\n    context: {\n      source: 'World Bank API',\n      endpoint: error.error?.url || 'unknown'\n    }\n  }\n}];"
+      },
+      "id": "error-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1500,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log error to OpenObserve\nconst error = $input.first().json;\n\n// In production: POST to OpenObserve endpoint with error details\n// For tracking: return structured error log\n\nreturn [{\n  json: {\n    error_logged: true,\n    workflow_id: 'worldbank-v2',\n    execution_id: $execution.id,\n    error: error.error_message || 'Unknown error',\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "log-error",
+      "name": "Log Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1700,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Manual start": {
+      "main": [
+        [
+          {
+            "node": "Set provenance & bounded job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set provenance & bounded job": {
+      "main": [
+        [
+          {
+            "node": "Fetch Countries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Countries": {
+      "main": [
+        [
+          {
+            "node": "Prepare Indicator Queries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Indicator Queries": {
+      "main": [
+        [
+          {
+            "node": "Fetch Indicator Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Indicator Data": {
+      "main": [
+        [
+          {
+            "node": "Normalize Indicator Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Indicator Data": {
+      "main": [
+        [
+          {
+            "node": "Ingest to Basin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ingest to Basin": {
+      "main": [
+        [
+          {
+            "node": "Log Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

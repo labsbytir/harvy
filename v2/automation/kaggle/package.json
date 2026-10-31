@@ -1,0 +1,33 @@
+{
+  "name": "harvy-kaggle-pipeline",
+  "version": "1.0.0",
+  "description": "Kaggle dataset ingestion pipeline for Harvy",
+  "main": "pipeline.mjs",
+  "type": "module",
+  "scripts": {
+    "search": "node pipeline.mjs search",
+    "import": "node pipeline.mjs import",
+    "list": "node pipeline.mjs list",
+    "stats": "node pipeline.mjs stats",
+    "us-datasets": "node pipeline.mjs us-datasets",
+    "test": "node --test pipeline.mjs"
+  },
+  "keywords": [
+    "kaggle",
+    "data",
+    "ingestion",
+    "pipeline",
+    "harvy"
+  ],
+  "author": "Harvy Automation",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.500.0"
+  },
+  "devDependencies": {
+    "dotenv": "^16.3.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "name": "Harvy — gdacs Ingestion",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "value": "0 */2 * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Cron Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://www.gdacs.org/api/v2/alerts",
+        "method": "GET",
+        "authentication": "none",
+        "headers": {
+          "User-Agent": "Harvy-GDACS-Connector/1.0",
+          "Accept": "application/json"
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "fetch-alerts",
+      "name": "Fetch GDACS Alerts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [460, 300]
+    }
+  ],
+  "connections": {
+    "Cron Trigger": {
+      "main": [[{"node": "Fetch GDACS Alerts", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "saveManualExecutions": true,
+    "executionTimeout": 3600
+  },
+  "versionId": "1.0.0"
+}

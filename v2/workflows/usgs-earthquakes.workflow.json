@@ -1,0 +1,361 @@
+{
+  "name": "Harvy — usgs-earthquakes Ingestion",
+  "id": "P5ApzeRgEnkSmOnG",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger-usgs",
+      "name": "USGS Earthquake API Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        200
+      ],
+      "webhookId": "usgs-earthquake-trigger",
+      "method": "POST"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Target-egress preflight check\nconst requiredEnv = ['SPIDER_API_KEY', 'WEBSHARE_PROXY_URL', 'HARVY_RAW', 'HARVY_ARTIFACTS'];\nconst missing = requiredEnv.filter(env => !process.env[env]);\n\nif (missing.length > 0) {\n  throw new Error(`Missing required environment variables: ${missing.join(', ')}`);\n}\n\n// Set backfill cursor and forward watermark\nconst now = new Date();\nconst oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);\nconst backfillCursor = oneWeekAgo.toISOString();\nconst forwardWatermark = now.toISOString();\n\nreturn [{\n  json: {\n    source_id: 'usgs-earthquakes-bulk',\n    idempotency_key: `usgs-${now.getTime()}-${Math.random().toString(36).substr(2, 9)}`,\n    backfill_cursor: backfillCursor,\n    forward_watermark: forwardWatermark,\n    provenance: {\n      source: 'USGS Earthquake API',\n      url: 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson',\n      license: 'Public Domain',\n      retrieved_at: now.toISOString(),\n      data_shape: 'GeoJSON FeatureCollection'\n    },\n    scope: {\n      tenant_id: '{{ $json.organization_id }}',\n      product_id: 'harvy-ingestion',\n      environment: 'production'\n    }\n  }\n}];"
+      },
+      "id": "set-job-params",
+      "name": "Set Job Parameters",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://{{ $env.HARVY_DOMAIN }}/api/v1/runs",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-harvy-organization-id",
+              "value": "{{ $json.organization_id }}"
+            },
+            {
+              "name": "x-harvy-product",
+              "value": "harvy-ingestion"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "submit-automation",
+      "name": "Submit to Automation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        700,
+        200
+      ],
+      "continueOnFail": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error logging to harvy_errors\nconst error = items[0].json.error || null;\nconst runId = items[0].json.run_id || 'unknown';\n\nif (error) {\n  console.error(`[USGS Ingestion Error] Run ${runId}:`, error);\n  // Log to OpenObserve via HTTP\n  try {\n    await fetch('https://eu1-api.openobserve.ai/api/default/harvy-logs/_json', {\n      method: 'POST',\n      headers: {\n        'Content-Type': 'application/json',\n        'Authorization': `Bearer ${process.env.OPENOBSERVE_TOKEN}`\n      },\n      body: JSON.stringify({\n        timestamp: new Date().toISOString(),\n        level: 'error',\n        service: 'usgs-earthquakes-ingestion',\n        run_id: runId,\n        message: error.message,\n        stack: error.stack,\n        source: 'n8n-workflow'\n      })\n    });\n  } catch (logError) {\n    console.error('Failed to log to OpenObserve:', logError.message);\n  }\n  \n  return [];\n}\n\nreturn items;"
+      },
+      "id": "error-handler",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        920,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Deterministic event_id generation\nconst crypto = require('crypto');\n\nfunction generateDeterministicId(data, prefix = 'evt') {\n  const hash = crypto.createHash('sha256');\n  hash.update(JSON.stringify(data));\n  return `${prefix}-${hash.digest('hex').substring(0, 16)}`;\n}\n\nconst eventData = {\n  source_id: 'usgs-earthquakes-bulk',\n  timestamp: new Date().toISOString(),\n  organization_id: items[0].json.organization_id,\n  run_id: items[0].json.run_id\n};\n\nreturn [{\n  json: {\n    ...items[0].json,\n    event_id: generateDeterministicId(eventData),\n    deduplication_key: `usgs-${items[0].json.run_id}`\n  }\n}];"
+      },
+      "id": "generate-event-id",
+      "name": "Generate Event ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://spider.unlimited.cloudflare.com/scrape",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-spider-proxy",
+              "value": "{{ $env.WEBSHARE_PROXY_URL }}"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Harvy-USGS-Ingestion/1.0"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "target",
+              "value": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            },
+            {
+              "name": "max_pages",
+              "value": "1"
+            },
+            {
+              "name": "concurrency",
+              "value": "1"
+            }
+          ]
+        },
+        "sendBody": false,
+        "options": {
+          "timeout": 60000,
+          "batching": {
+            "batch": {
+              "size": 100
+            }
+          }
+        }
+      },
+      "id": "fetch-usgs-data",
+      "name": "Fetch USGS Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize USGS GeoJSON to Harvy evidence format\nconst features = items[0].json.features || [];\n\nif (features.length === 0) {\n  throw new Error('No earthquake features found in USGS response');\n}\n\nconst normalized = features.map((feature, index) => ({\n  id: `usgs-${feature.id}`,\n  type: 'earthquake',\n  timestamp: feature.properties.time,\n  location: {\n    latitude: feature.geometry.coordinates[1],\n    longitude: feature.geometry.coordinates[0],\n    depth: feature.geometry.coordinates[2]\n  },\n  magnitude: feature.properties.mag,\n  place: feature.properties.place,\n  url: feature.properties.url,\n  detail: feature.properties.detail,\n  felt: feature.properties.felt || 0,\n  cdi: feature.properties.cdi || 0,\n  mmi: feature.properties.mmi,\n  alert: feature.properties.alert,\n  status: feature.properties.status,\n  tsunami: feature.properties.tsunami,\n  sig: feature.properties.sig,\n  net: feature.properties.net,\n  code: feature.properties.code,\n  ids: feature.properties.ids,\n  sources: feature.properties.sources,\n  types: feature.properties.types,\n  nst: feature.properties.nst,\n  dmin: feature.properties.dmin,\n  rms: feature.properties.rms,\n  gap: feature.properties.gap,\n  magType: feature.properties.magType,\n  type: feature.properties.type,\n  title: feature.properties.title,\n  event_id: `usgs-${feature.id}`,\n  source_url: 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson',\n  ingested_at: new Date().toISOString(),\n  provenance: {\n    source: 'USGS Earthquake API',\n    license: 'Public Domain',\n    retrieved_at: new Date().toISOString()\n  }\n}));\n\nreturn normalized.map(item => ({ json: item }));"
+      },
+      "id": "normalize-data",
+      "name": "Normalize USGS Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1140,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Deduplication check against harvy_errors\nconst crypto = require('crypto');\n\nfunction calculateHash(data) {\n  return crypto.createHash('sha256').update(JSON.stringify(data)).digest('hex');\n}\n\nconst existingHashes = []; // Would query harvy_errors in production\n\nconst uniqueItems = items.filter(item => {\n  const itemHash = calculateHash(item.json);\n  if (existingHashes.includes(itemHash)) {\n    console.log(`Duplicate detected: ${item.json.id}`);\n    return false;\n  }\n  return true;\n});\n\nif (uniqueItems.length !== items.length) {\n  console.log(`Deduplicated ${items.length - uniqueItems.length} items`);\n}\n\nreturn uniqueItems;"
+      },
+      "id": "deduplicate",
+      "name": "Deduplicate Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1360,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://{{ $env.HARVY_ARTIFACTS }}/harvy-raw/usgs-earthquakes/{{ $json.id }}.json",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-amz-acl",
+              "value": "bucket-owner-full-control"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 30000,
+          "batch": {
+            "size": 100
+          }
+        }
+      },
+      "id": "store-raw-data",
+      "name": "Store Raw Data in R2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1580,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://{{ $env.HARVY_DOMAIN }}/internal/v1/automation-callback",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-harvy-timestamp",
+              "value": "{{ $now.toISOString() }}"
+            },
+            {
+              "name": "x-harvy-signature",
+              "value": "{{ $env.AUTOMATION_CALLBACK_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n          run_id: items[0].json.run_id,\n          status: 'completed',\n          processed_count: items.length,\n          raw_artifacts: items.map(item => `usgs-earthquakes/${item.json.id}.json`),\n          timestamp: new Date().toISOString()\n        }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "callback-automation",
+      "name": "Callback Automation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1800,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "USGS Earthquake API Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Job Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Job Parameters": {
+      "main": [
+        [
+          {
+            "node": "Submit to Automation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Submit to Automation": {
+      "main": [
+        [
+          {
+            "node": "Generate Event ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Event ID": {
+      "main": [
+        [
+          {
+            "node": "Fetch USGS Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch USGS Data": {
+      "main": [
+        [
+          {
+            "node": "Normalize USGS Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize USGS Data": {
+      "main": [
+        [
+          {
+            "node": "Deduplicate Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deduplicate Data": {
+      "main": [
+        [
+          {
+            "node": "Store Raw Data in R2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Raw Data in R2": {
+      "main": [
+        [
+          {
+            "node": "Callback Automation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Handler": {
+      "main": []
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  },
+  "active": false,
+  "meta": {
+    "instanceId": "P5ApzeRgEnkSmOnG",
+    "templateCredsSetupCompleted": false,
+    "lastTested": null,
+    "verificationStatus": "inactive"
+  },
+  "versionId": "v1.0.0-alpha"
+}

@@ -28,3 +28,5 @@ Verify both `https://docs.harvy.dev` and the Pages deployment URL after deployme
 ## Publishing rule
 
 Do not publish a marketing landing page in place of the developer docs. Documentation must describe the codebase, API endpoints, standards, contracts, infrastructure, and evidence-backed implementation status. Distinguish implemented, partial, planned, blocked, and unverified work.
+
+Deploys to `docs.harvy.dev` are manual (`npx wrangler pages deploy dist/docs --project-name harvy-docs`) by the docs-sync loop; a GitHub Actions workflow (`.github/workflows/deploy-docs.yml`, added 2026-10-30) can also deploy on push to `main` when the `CLOUDFLARE_API_TOKEN` repository secret is set.

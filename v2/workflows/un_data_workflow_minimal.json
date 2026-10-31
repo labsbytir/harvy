@@ -1,0 +1,80 @@
+{
+  "name": "Harvy — un_data Ingestion",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://data.un.org/Rest/GetData/Population/indicator*country*year",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "headers": {
+          "User-Agent": "Harvy-Data-Ingestor/1.0",
+          "Accept": "application/json"
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "un-data-api",
+      "name": "UN Data API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.error }}",
+              "operation": "notExists"
+            }
+          ]
+        }
+      },
+      "id": "error-check",
+      "name": "Error Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const provenance = {\n  source: 'UN Data API',\n  sourceUrl: 'https://data.un.org/',\n  retrievalDate: new Date().toISOString(),\n  workflowId: $workflow.id,\n  workflowName: $workflow.name,\n  eventId: 'un_data_' + $execution.id + '_' + Date.now(),\n  dataSource: 'public-api',\n  proxyUsed: 'webshare'\n};\nfor (const item of items) {\n  item.json._provenance = provenance;\n}\nreturn items;"
+      },
+      "id": "add-provenance",
+      "name": "Add Provenance",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const seen = new Set();\nconst deduped = [];\nfor (const item of items) {\n  const key = item.json.Country + '|' + item.json.Year + '|' + item.json.Value;\n  if (!seen.has(key)) {\n    seen.add(key);\n    deduped.push(item);\n  } else {\n    item.json._duplicate = true;\n  }\n}\nreturn deduped;"
+      },
+      "id": "dedupe",
+      "name": "Deduplicate",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [850, 300]
+    }
+  ],
+  "connections": {
+    "UN Data API": {
+      "main": [[{"node": "Error Check", "type": "main", "index": 0}]]
+    },
+    "Error Check": {
+      "main": [
+        [{"node": "Add Provenance", "type": "main", "index": 0}],
+        []
+      ]
+    },
+    "Add Provenance": {
+      "main": [[{"node": "Deduplicate", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1.0.0"
+}

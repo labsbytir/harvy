@@ -1,0 +1,11 @@
+{
+  "mcp": {
+    "servers": {
+      "n8n": {
+        "type": "remote",
+        "url": "https://n8n.harvy.dev/mcp-server/http",
+        "disabled": false
+      }
+    }
+  }
+}

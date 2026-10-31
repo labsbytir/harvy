@@ -1,0 +1,269 @@
+{
+  "name": "Harvy — nws-alerts Ingestion",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "hour": 0,
+              "minute": 0
+            },
+            {
+              "hour": 6,
+              "minute": 0
+            },
+            {
+              "hour": 12,
+              "minute": 0
+            },
+            {
+              "hour": 18,
+              "minute": 0
+            }
+          ]
+        }
+      },
+      "id": "nws-alerts-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Build the job envelope for NWS alerts ingestion\n// Source ID for National Weather Service alerts\nconst source_id = 'src_weather-gov-alerts';\n\n// Deterministic idempotency key using execution ID and timestamp\nconst idempotency_key = `n8n-${$execution.id}-${Date.now()}`;\n\n// Return the job envelope\nreturn [{ \n  json: { \n    source_id: source_id, \n    idempotency_key: idempotency_key,\n    product: 'ops',\n    tenant_id: 'shared',\n    workspace_id: 'shared',\n    captured_at: new Date().toISOString(),\n    source_url: 'https://api.weather.gov/alerts/active',\n    source_type: 'weather_gov_alerts',\n    provenance: {\n      source: 'U.S. National Weather Service',\n      method: 'api',\n      license: 'public_domain',\n      retrieved_at: new Date().toISOString()\n    }\n  } \n}];"
+      },
+      "id": "nws-alerts-envelope",
+      "name": "Build Job Envelope",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.weather.gov/alerts/active",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/geo+json"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Harvy NWS Alerts Ingestion (https://harvy.dev)"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "batching": {
+            "batch": {
+              "enabled": false
+            }
+          }
+        }
+      },
+      "id": "nws-alerts-fetch",
+      "name": "Fetch NWS Alerts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        300
+      ],
+      "continueOnFail": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract and normalize NWS alert features\nconst features = $json.features || [];\n\n// Map features to normalized records\nconst normalizedRecords = features.map(feature => {\n  const properties = feature.properties || {};\n  const geometry = feature.geometry || {};\n  \n  return {\n    json: {\n      id: properties.id || feature.id || '',\n      title: properties.headline || properties.event || '',\n      summary: properties.description || '',\n      event_type: properties.event || '',\n      severity: properties.severity || '',\n      area: properties.area || '',\n      sender: properties.sender || '',\n      sent: properties.sent || '',\n      effective: properties.effective || '',\n      onset: properties.onset || '',\n      expires: properties.expires || '',\n      ends: properties.ends || '',\n      status: properties.status || '',\n      message_type: properties.messageType || '',\n      category: properties.category || '',\n      response: properties.response || '',\n      urgency: properties.urgency || '',\n      certainty: properties.certainty || '',\n      parameters: properties.parameters || {},\n      geometry_type: geometry.type || '',\n      coordinates: geometry.coordinates || [],\n      raw_feature: feature,\n      source_id: 'src_weather-gov-alerts',\n      ingested_at: new Date().toISOString(),\n      provenance: {\n        source: 'U.S. National Weather Service API',\n        url: 'https://api.weather.gov/alerts/active',\n        retrieved_at: new Date().toISOString(),\n        license: 'public_domain'\n      }\n    }\n  };\n});\n\nreturn normalizedRecords;"
+      },
+      "id": "nws-alerts-normalize",
+      "name": "Normalize Alerts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Deduplicate alerts by ID\nconst seenIds = new Set();\nconst uniqueRecords = [];\n\nfor (const record of $input.all()) {\n  const id = record.json.id;\n  if (id && !seenIds.has(id)) {\n    seenIds.add(id);\n    uniqueRecords.push(record);\n  } else if (!id) {\n    // Log records without IDs for debugging\n    $execution.resume(\n      'Missing ID detected',\n      { severity: 'warning', record: record.json }\n    );\n  }\n}\n\nreturn uniqueRecords;"
+      },
+      "id": "nws-alerts-dedupe",
+      "name": "Deduplicate Alerts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://harvy.dev/api/v1/runs",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-harvy-organization-id",
+              "value": "{{ $env.HARVY_ORGANIZATION_ID }}"
+            },
+            {
+              "name": "x-harvy-product",
+              "value": "ops"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-api-key",
+              "value": "{{ $env.HARVY_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "nws-alerts-submit",
+      "name": "Submit to Harvy Automation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1340,
+        300
+      ],
+      "continueOnFail": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error handling and logging\nif ($execution.error) {\n  $execution.resume('NWS alerts ingestion failed', {\n    error: $execution.error,\n    source: 'src_weather-gov-alerts',\n    timestamp: new Date().toISOString()\n  });\n}\n\n// Log success metrics\nconst recordCount = $input.all().length;\n$execution.resume('NWS alerts ingestion completed', {\n  records_processed: recordCount,\n  source: 'src_weather-gov-alerts',\n  timestamp: new Date().toISOString()\n});"
+      },
+      "id": "nws-alerts-logging",
+      "name": "Logging & Error Handling",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build Job Envelope",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Job Envelope": {
+      "main": [
+        [
+          {
+            "node": "Fetch NWS Alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch NWS Alerts": {
+      "main": [
+        [
+          {
+            "node": "Normalize Alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Alerts": {
+      "main": [
+        [
+          {
+            "node": "Deduplicate Alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deduplicate Alerts": {
+      "main": [
+        [
+          {
+            "node": "Submit to Harvy Automation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Submit to Harvy Automation": {
+      "main": [
+        [
+          {
+            "node": "Logging & Error Handling",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "timezone": "America/New_York"
+  },
+  "active": false,
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "workflowId": "pjAnniOjaI3bxVqZ",
+    "source": "nws-alerts-ingestion",
+    "description": "Automated ingestion of National Weather Service alerts via weather.gov API. Fetches active alerts, normalizes data, deduplicates, and submits to Harvy automation pipeline.",
+    "requirements": [
+      "WEBSHARE_PROXY_URL must be configured for egress",
+      "HARVY_API_KEY must be set in n8n credentials",
+      "HARVY_ORGANIZATION_ID must be configured",
+      "Spider Unlimited route must be approved for weather.gov",
+      "Source must be approved in harvy-upstream-manifest.json",
+      "Basin send token must be configured for processed data"
+    ],
+    "provenance": {
+      "created_by": "n8n MCP automation",
+      "created_at": "2026-10-30",
+      "version": "1.0.0"
+    }
+  }
+}

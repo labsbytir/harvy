@@ -1,0 +1,228 @@
+{
+  "name": "Harvy — un_data Ingestion",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://data.un.org/Rest/GetData/{{ $parameter[\"datasetCode\"] }}/{{ $parameter[\"filterCode\"] }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "headers": {
+          "User-Agent": "Harvy-Data-Ingestor/1.0",
+          "Accept": "application/json"
+        },
+        "options": {
+          "timeout": 30000,
+          "batching": {
+            "batch": {
+              "enabled": false
+            }
+          }
+        }
+      },
+      "id": "un-data-api-call",
+      "name": "UN Data API Call",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        250,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Webshare Proxy"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json[\"error\"] }}",
+              "operation": "notExists"
+            }
+          ]
+        }
+      },
+      "id": "error-check",
+      "name": "Check for Errors",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Extract provenance from request metadata\nconst provenance = {\n  source: 'UN Data API',\n  sourceUrl: 'https://data.un.org/',\n  retrievalDate: new Date().toISOString(),\n  datasetCode: items[0].json.datasetCode,\n  filterCode: items[0].json.filterCode,\n  requestId: items[0].json.requestId || $execution.id,\n  workflowId: $workflow.id,\n  workflowName: $workflow.name,\n  eventId: 'un_data_' + $execution.id + '_' + Date.now(),\n  dataSource: 'public-api',\n  accessMethod: 'api',\n  proxyUsed: 'webshare',\n  ingestionPipeline: 'harvy_pipeline_un_data',\n  sink: 'harvy_sink_un_data'\n};\n\n// Add provenance to each item\nfor (const item of items) {\n  item.json._provenance = provenance;\n}\n\nreturn items;"
+      },
+      "id": "add-provenance",
+      "name": "Add Provenance",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        650,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Dedupe logic based on UN Data identifiers\nconst seen = new Set();\nconst dedupedItems = [];\n\nfor (const item of items) {\n  const dedupeKey = item.json[\"Country or Area\"] + \"|\" + item.json[\"Year\"] + \"|\" + item.json[\"Value\"];\n  if (!seen.has(dedupeKey)) {\n    seen.add(dedupeKey);\n    dedupedItems.push(item);\n  } else {\n    // Log duplicate for monitoring\n    item.json._duplicate = true;\n    item.json._duplicateReason = 'Country/Year/Value combination already seen';\n  }\n}\n\nreturn dedupedItems;"
+      },
+      "id": "dedupe",
+      "name": "Deduplicate Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        850,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Prepare data for Basin SQL ingestion\nconst preparedItems = items.map(item => ({\n  country: item.json[\"Country or Area\"],\n  year: item.json[\"Year\"],\n  value: item.json[\"Value\"],\n  indicator: item.json[\"Indicator\"],\n  unit: item.json[\"Unit\"],\n  source: item.json._provenance.source,\n  retrieval_date: item.json._provenance.retrievalDate,\n  event_id: item.json._provenance.eventId,\n  ingestion_timestamp: new Date().toISOString()\n}));\n\nreturn preparedItems;"
+      },
+      "id": "prepare-basin",
+      "name": "Prepare for Basin",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1050,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Log errors to harvy_errors table\nconst errorItems = items.filter(item => item.json._duplicate === true || item.json.error);\nif (errorItems.length > 0) {\n  const errors = errorItems.map(item => ({\n    workflow_id: $workflow.id,\n    workflow_name: $workflow.name,\n    execution_id: $execution.id,\n    error_type: item.json.error ? 'api_error' : 'duplicate_data',\n    error_message: item.json.error || item.json._duplicateReason,\n    source_dataset: 'un_data',\n    record_identifier: item.json[\"Country or Area\"] + '|' + item.json[\"Year\"],\n    severity: 'medium',\n    timestamp: new Date().toISOString(),\n    event_id: 'error_' + $execution.id + '_' + Date.now()\n  }));\n  \n  // In a real workflow, this would insert into harvy_errors table\n  console.log('ERRORS LOGGED:', JSON.stringify(errors, null, 2));\n}\n\nreturn items.filter(item => !item.json._duplicate);"
+      },
+      "id": "log-errors",
+      "name": "Log Errors",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Add OpenObserve tracing headers\nfor (const item of items) {\n  item.json._trace = {\n    service: 'un_data_ingestion',\n    version: '1.0.0',\n    executionId: $execution.id,\n    workflowId: $workflow.id,\n    timestamp: new Date().toISOString(),\n    source: 'n8n'\n  };\n}\n\nreturn items;"
+      },
+      "id": "add-tracing",
+      "name": "Add OpenObserve Tracing",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "throw new Error(\"BLOCKED: Basin publication is not connected. Simulated ingestion cannot count as stored data.\");"
+      },
+      "id": "basin-ingestion",
+      "name": "Basin Ingestion",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1650,
+        300
+      ],
+      "notes": "Basin publication is not connected. Simulated ingestion cannot count as stored data.",
+      "notesInFlow": true
+    }
+  ],
+  "connections": {
+    "UN Data API Call": {
+      "main": [
+        [
+          {
+            "node": "Check for Errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for Errors": {
+      "main": [
+        [
+          {
+            "node": "Add Provenance",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Provenance": {
+      "main": [
+        [
+          {
+            "node": "Deduplicate Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deduplicate Data": {
+      "main": [
+        [
+          {
+            "node": "Prepare for Basin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare for Basin": {
+      "main": [
+        [
+          {
+            "node": "Log Errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Errors": {
+      "main": [
+        [
+          {
+            "node": "Add OpenObserve Tracing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add OpenObserve Tracing": {
+      "main": [
+        [
+          {
+            "node": "Basin Ingestion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1.0.0"
+}

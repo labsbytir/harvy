@@ -2,6 +2,25 @@
 
 > Terminology note (2026-10-30): "connector" in dated entries below means the n8n **workflow** for that source, and `connector.harvy.dev` refers to the n8n MCP endpoint now documented as `https://n8n.harvy.dev`. Entries are historical evidence and are not rewritten.
 
+## 2026-10-30 ~23:17 UTC — batch 2: three new workflows built and run (session: ledger + build)
+
+Built from the frozen ledger's buildable set (N=158; these three are `overpass_api`, `wikidata_power_plants`, `openflights` — all keyless public sources, none previously built on this instance). Each got its own `<slug>_ingested` data table with the 10-column evidence schema (no `fetched_at`), upsert keyed on `event_id`, and an error branch into shared `harvy_errors` (`PY1AIYu7XuMxoTZQ`).
+
+| source | workflow id | table (id) | manual runs | rows | idempotent | active |
+|---|---|---|---|---|---|---|
+| src_overpass_api | `2jNrzsifnw3VNc9C` | overpass_api_ingested (`PPGPUvzkkF4XmZiQ`) | 65, 69 success | 300 | yes (300 after re-run) | yes |
+| src_wikidata_power_plants | `B5ggLU66qLMBJU2f` | wikidata_power_plants_ingested (`qDVUegXcP9Q74U8V`) | 66 (0 rows), 67 error, 68 success, 70 success | 93 | yes (93 after re-run) | yes |
+| src_openflights | `U8aJr5OLdAACaynG` | openflights_ingested (`ahOTFnnYYv0kKNZi`) | 71, 72 success | 5000 | yes (5000 after re-run, 2m22s) | yes |
+
+- **Overpass** (`2jNrzsifnw3VNc9C`, cron `23 */6 * * *`): bounded NYC bounding box, amenity hospital/clinic/school, `out body 300`. Fetch is POST form-urlencoded to `overpass-api.de/api/interpreter` through `$vars.WEBSHARE_PROXY_URL`; `event_id = osm_<type>_<id>`; `captured_at` from `osm3s.timestamp_osm_base` (source time, not run time). Exec 65 took 54s through the proxy — Overpass is slow, not broken.
+- **Wikidata** (`B5ggLU66qLMBJU2f`, cron `41 */12 * * *`): SPARQL `P31 wd:Q159719` (power station) LIMIT 100, POST form-urlencoded with a Wikimedia-required User-Agent. Two real defects found and fixed during the run, both worth knowing for every future SPARQL/CSV source:
+  1. `query.wikidata.org` answers `application/sparql-results+json`, which n8n does **not** auto-parse; the body arrived as a string under `data`, so exec 66 produced 0 rows silently. The normalizer now parses `raw.data` when it is a string. Any non-`application/json` source needs this guard.
+  2. The first `updateNodeParameters` pass double-escaped the `jsCode` (literal `\n` instead of newlines) and exec 67 died with `SyntaxError: Invalid or unexpected token`. Patched by decoding the escapes before sending; the failed run also proved the error branch is not automatic — a Code-node throw is only logged if that node itself has `onError: continueErrorOutput` wired to Log Error, which is now set on both Fetch and Normalize.
+- **OpenFlights** (`U8aJr5OLdAACaynG`, cron `13 4 * * *`): `airports.dat` fetched with `options.response.response.responseFormat: 'text'` (validated via `validate_node_config` before build), parsed by an in-code RFC-4180-ish CSV parser (handles quoted commas and doubled quotes), bounded at 5000 rows. Exec 71 success in 2m12s; 5000 distinct `of_airport_<id>` rows. 5000 sequential upserts take minutes — acceptable at daily cadence, too slow for a short interval.
+- Shared `harvy_errors` = 0 rows after all runs. No secrets in any workflow JSON; proxy is the `$vars` reference, as required.
+- **NOT claimed:** none of these counts as adopted. There is no R2 artifact, no authorized API/HQL read, no UI evidence, and no independent review (R2 S3 credentials and the PostgreSQL path remain blocked as recorded above); durable storage is the n8n data table only. Two of three have not yet had a scheduled (mode=trigger) cycle, so per the adoption bar they are `runnable`, not `live_verified`.
+- Reusable build notes for the next batch: `create_data_table` needs `projectId` (`aCavofIGSB72GSxu`); `get_data_table_rows` also requires `projectId`; `execute_workflow` requires `executionMode`; `validate_workflow` returns 502/404 during n8n restarts and must be retried (observed once, recovered in ~30s).
+
 Running log per workflow operations mission. All times UTC. Secrets never recorded here.
 
 ## 2026-10-30 — Basin pipe diagnosis (mission step 1-2)
@@ -741,3 +760,4 @@ harvy_errors = 0 rows after all runs. Source fixes along the way: api.weather.go
 
 - THIRD scheduled cycle verified: exec 59 fema 7OucM9UE1R9UG594 22:27:00 trigger success -> fema_openfema_ingested 3003 -> 3956 (+953, rows==distinct). Trigger execs so far: 57 usgs 22:07, 58 nws 22:17, 59 fema 22:27, all success; harvy_errors 0. Pending today: worldbank 22:37, blockchair + data-gov 22:47 (data-gov schedule id 8 re-registered after re-activation). Daily auto-verify 00b98df4 at 23:10 UTC covers them.
 - [builder-1] COMPLETED (ses_e715dfbe4ffeDZ2T0jfxQAQzrO, mimo-v2.6-flash): workflow dbbaNmFfRUkzGgmR "Harvy — gdacs Ingestion" ACTIVE (8 workflows total now). Manual execs 60 + 61 success; gdacs_ingested = 184 rows / 184 distinct event_id; physical unique index ux_gdacs_ingested_event_id on data_table_user_OSazII6bqSjmri8T verified; cursor job_key 'gdacs' seeded (watermark 2026-10-30T20:58:08). Schedule = two enabled cron jobs (13 0-23/3 and 43 1-23/3, 90-min cadence off :00); first fire 23:43 UTC, second 01:13 UTC. Sinks = data tables only; no secrets in JSON. NOT yet healthy (needs 2 scheduled cycles): one-off verifies armed — ed7b7c7f at 23:50 UTC (cycle 1), 81f1b48d at 2026-10-31 01:20 UTC (cycle 2). Builder session ended before appending its own log entry; recorded here instead.
+- [owid_datasets] TASK CLOSED (original builder ses_e73e0eecaffcexIkZO66GBJcq6, mimo-flash): workflow lJKHQLDM1Rqs7WyA proven (exec 114: 100 rows Basin src_owid_datasets + R2 artifacts), then adopted/extended/activated by the [unhcr]+[owid] agent (13:10 UTC entry): active on 6h schedule, source_id retagged src_owid for new rows, original 100 src_owid_datasets rows dedupe-held across all subsequent runs = idempotency proven in production (count stable at 100/100 distinct). Final: published active; dedupe table I53AZa8obhi4jtJE.

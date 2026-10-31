@@ -1,0 +1,387 @@
+{
+  "name": "Harvy — gdacs Ingestion",
+  "active": false,
+  "settings": {
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "executionTimeout": 3600,
+    "maxTimeout": 7200
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "value": "0 */2 * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Cron Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Generate deterministic event_id from timestamp and workflow name\nconst eventId = `gdacs-ingestion-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;\nconst workflowName = 'Harvy — gdacs Ingestion';\nconst timestamp = new Date().toISOString();\n\nreturn {\n  eventId,\n  workflowName,\n  timestamp,\n  source: 'gdacs',\n  version: '1.0.0'\n};"
+      },
+      "id": "generate-metadata",
+      "name": "Generate Metadata",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Set up Webshare proxy configuration\nconst proxyConfig = {\n  proxyType: 'http',\n  proxyHost: process.env.WEBSHARE_PROXY_URL.split('://')[1].split(':')[0],\n  proxyPort: parseInt(process.env.WEBSHARE_PROXY_URL.split(':')[2]),\n  proxyUsername: process.env.WEBSHARE_PROXY_USER || '',\n  proxyPassword: process.env.WEBSHARE_PROXY_PASS || ''\n};\n\n// GDACS API configuration\nconst gdacsConfig = {\n  baseUrl: 'https://www.gdacs.org/',\n  endpoints: {\n    alerts: 'api/v2/alerts',\n    events: 'api/v2/events',\n    rss: 'rss.xml'\n  },\n  defaultParams: {\n    format: 'json',\n    limit: 1000\n  }\n};\n\nreturn { proxyConfig, gdacsConfig };"
+      },
+      "id": "setup-config",
+      "name": "Setup Configuration",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "throw new Error(\"BLOCKED: Durable backfill checkpoint adapter is not connected. Wire v2/automation/backfill.mjs to approved checkpoint and storage adapters; do not reset a rolling lookback or advance without storage.\");"
+      },
+      "id": "get-cursor",
+      "name": "Get Backfill Cursor",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        900,
+        300
+      ],
+      "notes": "Durable backfill checkpoint adapter is not connected. Wire v2/automation/backfill.mjs to approved checkpoint and storage adapters; do not reset a rolling lookback or advance without storage.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "url": "={{$node[\"Setup Configuration\"].json[\"gdacsConfig\"].baseUrl + $node[\"Setup Configuration\"].json[\"gdacsConfig\"].endpoints.alerts}}?startDate={{$node[\"Get Backfill Cursor\"].json[\"backfillCursor\"]}}&endDate={{$node[\"Get Backfill Cursor\"].json[\"forwardWatermark\"]}}&format=json",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "headers": {
+          "User-Agent": "Harvy-GDACS-Connector/1.0",
+          "Accept": "application/json"
+        },
+        "options": {
+          "timeout": 30000,
+          "batching": {
+            "batch": {
+              "size": 100
+            }
+          }
+        },
+        "proxy": "={{$node[\"Setup Configuration\"].json[\"proxyConfig\"]}}"
+      },
+      "id": "fetch-alerts",
+      "name": "Fetch GDACS Alerts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Process GDACS alerts with provenance and deduplication\nconst alerts = items.map(item => {\n  const alert = item.json;\n  \n  // Generate deterministic event_id for each alert\n  const alertEventId = `gdacs-alert-${alert.id}-${alert.timestamp}`;\n  \n  // Extract provenance information\n  const provenance = {\n    source: 'gdacs.org',\n    sourceUrl: alert.link || alert.url,\n    retrievedAt: new Date().toISOString(),\n    license: 'CC-BY-4.0',\n    attribution: 'Global Disaster Alert and Coordination System (GDACS)',\n    dataQuality: 'machine-readable-api'\n  };\n  \n  // Add metadata\n  return {\n    ...alert,\n    eventId: alertEventId,\n    workflowName: 'Harvy — gdacs Ingestion',\n    ingestionTimestamp: new Date().toISOString(),\n    provenance,\n    _harvy_metadata: {\n      source: 'gdacs',\n      type: 'alert',\n      version: '2.0'\n    },\n    // Deduplication fields\n    dedupeKey: `${alert.id}-${alert.timestamp}`,\n    // Backfill tracking\n    backfillCursor: item.json.backfillCursor || $node[\"Get Backfill Cursor\"].json[\"backfillCursor\"]\n  };\n});\n\nreturn alerts;"
+      },
+      "id": "process-alerts",
+      "name": "Process Alerts",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Deduplication check using data table\nconst { $checkDedupe } = require('n8n-workflow');\n\nconst alerts = items;\nconst uniqueAlerts = [];\nconst dedupeKeys = new Set();\n\nfor (const alert of alerts) {\n  const dedupeKey = alert.dedupeKey;\n  const exists = await $checkDedupe('gdacs_dedupe_table', dedupeKey);\n  \n  if (!exists) {\n    uniqueAlerts.push(alert);\n    dedupeKeys.add(dedupeKey);\n  } else {\n    // Log duplicate\n    $node[\"Log Duplicates\"].addItem({\n      json: {\n        eventId: alert.eventId,\n        alertId: alert.id,\n        timestamp: alert.timestamp,\n        message: 'Duplicate alert detected and skipped',\n        dedupeKey: dedupeKey,\n        ingestionTimestamp: new Date().toISOString()\n      }\n    });\n  }\n}\n\n// Store dedupe keys for batch insertion\nreturn { uniqueAlerts, dedupeKeys };"
+      },
+      "id": "dedupe-check",
+      "name": "Deduplication Check",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Log duplicates to harvy_errors table\nconst duplicates = items.filter(item => item.json.message === 'Duplicate alert detected and skipped');\n\nif (duplicates.length > 0) {\n  console.warn(`Found ${duplicates.length} duplicate alerts`);\n  \n  // Log to OpenObserve\n  $node[\"OpenObserve Logger\"].addItem({\n    json: {\n      level: 'warning',\n      message: 'GDACS duplicate alerts detected',\n      count: duplicates.length,\n      workflow: 'Harvy — gdacs Ingestion',\n      timestamp: new Date().toISOString()\n    }\n  });\n}\n\nreturn items;"
+      },
+      "id": "log-duplicates",
+      "name": "Log Duplicates",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 4,
+      "position": [
+        1780,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Prepare data for R2 and PostgreSQL\nconst alerts = items.map(item => item.json);\n\n// Split into raw and processed\nconst rawData = alerts.map(alert => ({\n  eventId: alert.eventId,\n  source: 'gdacs',\n  rawJson: JSON.stringify(alert),\n  timestamp: alert.timestamp,\n  ingestionTimestamp: alert.ingestionTimestamp,\n  provenance: JSON.stringify(alert.provenance)\n}));\n\nconst processedData = alerts.map(alert => ({\n  eventId: alert.eventId,\n  alertId: alert.id,\n  eventType: alert.eventType || 'unknown',\n  severity: alert.severity || 'unknown',\n  title: alert.title || '',\n  description: alert.description || '',\n  timestamp: alert.timestamp,\n  location: alert.location ? JSON.stringify(alert.location) : '{}',\n  affectedPopulation: alert.affectedPopulation || 0,\n  evacuation: alert.evacuation || 0,\n  workflowName: alert.workflowName,\n  ingestionTimestamp: alert.ingestionTimestamp,\n  backfillCursor: alert.backfillCursor || $node[\"Get Backfill Cursor\"].json[\"backfillCursor\"]\n}));\n\nreturn { rawData, processedData };"
+      },
+      "id": "prepare-data",
+      "name": "Prepare Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        2000,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Write raw data to R2 (harvy-raw bucket)\nconst { $writeR2 } = require('n8n-workflow');\nconst rawData = items[0].json.rawData;\n\nfor (const record of rawData) {\n  await $writeR2('harvy-raw', `gdacs/${record.timestamp.split('T')[0]}/${record.eventId}.json`, record.rawJson, {\n    contentType: 'application/json',\n    metadata: {\n      source: 'gdacs',\n      workflow: 'Harvy — gdacs Ingestion',\n      eventId: record.eventId\n    }\n  });\n}\n\nreturn items;"
+      },
+      "id": "write-r2-raw",
+      "name": "Write R2 Raw",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        2220,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Write processed data to PostgreSQL\nconst { $writePostgres } = require('n8n-workflow');\nconst processedData = items[0].json.processedData;\n\nfor (const record of processedData) {\n  await $writePostgres('gdacs_alerts', record);\n}\n\nreturn items;"
+      },
+      "id": "write-postgres",
+      "name": "Write PostgreSQL",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        2440,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "throw new Error(\"BLOCKED: Durable backfill checkpoint adapter is not connected. Wire v2/automation/backfill.mjs to approved checkpoint and storage adapters; do not reset a rolling lookback or advance without storage.\");"
+      },
+      "id": "update-cursor",
+      "name": "Update Backfill Cursor",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        2660,
+        200
+      ],
+      "notes": "Durable backfill checkpoint adapter is not connected. Wire v2/automation/backfill.mjs to approved checkpoint and storage adapters; do not reset a rolling lookback or advance without storage.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "functionCode": "// Log success to OpenObserve\nconst count = items.length;\nconst workflowName = 'Harvy — gdacs Ingestion';\nconst timestamp = new Date().toISOString();\n\nconsole.log(`Successfully processed ${count} GDACS alerts`);\n\n$node[\"OpenObserve Logger\"].addItem({\n  json: {\n    level: 'info',\n    message: 'GDACS ingestion completed successfully',\n    count: count,\n    workflow: workflowName,\n    timestamp: timestamp,\n    eventId: $node[\"Generate Metadata\"].json[\"eventId\"]\n  }\n});\n\nreturn items;"
+      },
+      "id": "log-success",
+      "name": "Log Success",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        2880,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Log errors to harvy_errors table\nconst errors = [];\nif (items.length === 0) {\n  errors.push({\n    eventId: $node[\"Generate Metadata\"].json[\"eventId\"],\n    workflow: 'Harvy — gdacs Ingestion',\n    errorType: 'empty_result',\n    message: 'No alerts returned from GDACS API',\n    timestamp: new Date().toISOString(),\n    severity: 'warning'\n  });\n}\n\nif (errors.length > 0) {\n  console.error('GDACS ingestion encountered errors:', errors);\n  \n  for (const error of errors) {\n    $node[\"OpenObserve Logger\"].addItem({\n      json: {\n        level: error.severity,\n        message: error.message,\n        workflow: error.workflow,\n        timestamp: error.timestamp,\n        errorType: error.errorType\n      }\n    });\n  }\n}\n\nreturn items;"
+      },
+      "id": "log-errors",
+      "name": "Log Errors",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 4,
+      "position": [
+        3100,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// OpenObserve logging node\n// This is a no-op in the workflow JSON as OpenObserve is configured at instance level\nreturn items;"
+      },
+      "id": "openobserve-logger",
+      "name": "OpenObserve Logger",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        3320,
+        200
+      ]
+    }
+  ],
+  "connections": {
+    "Cron Trigger": {
+      "main": [
+        [
+          {
+            "node": "Generate Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Metadata": {
+      "main": [
+        [
+          {
+            "node": "Setup Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Setup Configuration": {
+      "main": [
+        [
+          {
+            "node": "Get Backfill Cursor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Backfill Cursor": {
+      "main": [
+        [
+          {
+            "node": "Fetch GDACS Alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch GDACS Alerts": {
+      "main": [
+        [
+          {
+            "node": "Process Alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Alerts": {
+      "main": [
+        [
+          {
+            "node": "Deduplication Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deduplication Check": {
+      "main": [
+        [
+          {
+            "node": "Log Duplicates",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prepare Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Duplicates": {
+      "main": [
+        [
+          {
+            "node": "Prepare Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Data": {
+      "main": [
+        [
+          {
+            "node": "Write R2 Raw",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write R2 Raw": {
+      "main": [
+        [
+          {
+            "node": "Write PostgreSQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write PostgreSQL": {
+      "main": [
+        [
+          {
+            "node": "Update Backfill Cursor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Backfill Cursor": {
+      "main": [
+        [
+          {
+            "node": "Log Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Success": {
+      "main": []
+    },
+    "Log Errors": {
+      "main": []
+    },
+    "OpenObserve Logger": {
+      "main": []
+    }
+  },
+  "versionId": "1.0.0",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

@@ -1,0 +1,261 @@
+{
+  "name": "Harvy - data-gov-catalog Continuous Ingestion",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "hour": 0,
+              "minute": 0
+            }
+          ]
+        }
+      },
+      "id": "wjlut8nGEQCg6DT8-001",
+      "name": "Cron Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        240,
+        200
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Build the job envelope for data-gov-catalog ingestion\n// Source ID for data.gov catalog datasets\nconst source_id = 'src_data-gov-catalog';\n\n// Deterministic idempotency key using execution ID\nconst idempotency_key = `n8n-catalog-${$execution.id}`;\n\n// Deterministic event_id for provenance tracking\nconst event_id = `src_data-gov-catalog_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;\n\n// Return the job envelope with full provenance tracking\nreturn [{ \n  json: { \n    source_id: source_id, \n    idempotency_key: idempotency_key,\n    event_id: event_id,\n    product: 'ops',\n    tenant_id: 'shared',\n    workspace_id: 'shared',\n    captured_at: new Date().toISOString(),\n    provenance: {\n      source: 'data.gov catalog',\n      method: 'spider-unlimited-crawl',\n      scope: 'catalog-index',\n      watermark: {\n        cursor: '',\n        forward: new Date().toISOString()\n      },\n      workflow_id: 'Wjlut8nGEQCg6DT8',\n      execution_id: $execution.id,\n      spider_request_id: `spider-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`\n    }\n  } \n}];"
+      },
+      "id": "wjlut8nGEQCg6DT8-002",
+      "name": "Build Catalog Job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://harvy.dev/api/v1/runs",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-harvy-organization-id",
+              "value": "REPLACE_WITH_ORGANIZATION_ID"
+            },
+            {
+              "name": "x-harvy-product",
+              "value": "ops"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "wjlut8nGEQCg6DT8-003",
+      "name": "Submit to Harvy Automation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        700,
+        200
+      ],
+      "continueOnFail": false
+    },
+    {
+      "parameters": {
+        "eventName": "workflowError"
+      },
+      "id": "wjlut8nGEQCg6DT8-004",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        460,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Log workflow errors to connector_errors data table (id: 92T2flIyNQfnxntj)\nconst errorMsg = $json.error?.message || JSON.stringify($json.error) || 'Unknown error';\nconst workflowName = 'Harvy - data-gov-catalog Ingestion';\nconst executionId = $execution.id;\nconst occurredAt = new Date().toISOString();\n\nreturn [{ \n  json: { \n    workflow_id: 'Wjlut8nGEQCg6DT8',\n    workflow_name: workflowName,\n    execution_id: executionId,\n    error_message: errorMsg.substring(0, 500),\n    occurred_at: occurredAt,\n    source_id: 'src_data-gov-catalog',\n    severity: 'error',\n    trace_id: $vars.OPENOBSERVE_TRACE_ID || `trace-${Date.now()}`\n  } \n}];"
+      },
+      "id": "wjlut8nGEQCg6DT8-005",
+      "name": "Log Error to connector_errors",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://harvy.dev/internal/v1/automation-callback",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-harvy-timestamp",
+              "value": "={{ new Date().toISOString() }}"
+            },
+            {
+              "name": "x-harvy-signature",
+              "value": "={{ $vars.AUTOMATION_CALLBACK_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "wjlut8nGEQCg6DT8-006",
+      "name": "Post Error Callback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        940,
+        500
+      ]
+    }
+  ],
+  "connections": {
+    "Cron Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build Catalog Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Catalog Job": {
+      "main": [
+        [
+          {
+            "node": "Submit to Harvy Automation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Log Error to connector_errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Error to connector_errors": {
+      "main": [
+        [
+          {
+            "node": "Post Error Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "errorWorkflow": {
+      "active": false
+    }
+  },
+  "active": false,
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "workflowId": "Wjlut8nGEQCg6DT8",
+    "source": "data-gov-catalog",
+    "description": "Continuous ingestion workflow for data.gov catalog datasets. Uses Spider Unlimited via Webshare proxy.",
+    "mcp_endpoint": "https://n8n.harvy.dev/mcp-server/http",
+    "mcp_auth": "Bearer {{ $vars.N8N_MCP_KEY }}",
+    "mcp_operations": {
+      "create": "workflows.create_workflow",
+      "update": "workflows.update_workflow",
+      "validate": "workflows.validate_workflow",
+      "execute": "workflows.execute_workflow",
+      "activate": "workflows.activate_workflow",
+      "deactivate": "workflows.deactivate_workflow",
+      "publish": "workflows.publish_workflow"
+    },
+    "required_mcp_tools": [
+      "workflows.create_workflow",
+      "workflows.update_workflow",
+      "workflows.validate_workflow",
+      "workflows.execute_workflow",
+      "workflows.search_workflows",
+      "workflows.get_workflow",
+      "workflows.activate_workflow",
+      "workflows.deactivate_workflow"
+    ],
+    "requirements": [
+      "WEBSHARE_PROXY_URL must be set in n8n variables (verified via ipv4.webshare.io)",
+      "Source must be approved in harvy-upstream-manifest.json",
+      "Basin send token (BASIN_SEND_TOKEN) must be configured",
+      "spider-concurrency should be <= 50 (global ceiling)",
+      "N8N_MCP_KEY must be set in n8n variables",
+      "connector_errors data table must exist (id: 92T2flIyNQfnxntj)"
+    ],
+    "provenance": {
+      "created": "2026-10-30",
+      "created_by": "workflow-builder",
+      "pattern": "mirrors-proven-ckan-generic-msNQRk0FLpHzfhMq"
+    },
+    "gates_before_activation": [
+      "source_approved_in_harvy_upstream_manifest",
+      "secrets_from_n8n_variables_only_no_hardcoded",
+      "proxy_verification_passed_via_ipv4_webshare_io",
+      "spider_unlimited_only_no_metered_fallback",
+      "provenance_tracking_with_event_id_and_workflow_id",
+      "deterministic_event_id_format_src_dataset_executionid",
+      "dedupe_data_table_exists_connector_errors",
+      "openobserve_tracing_configured_service_n8n",
+      "basin_send_token_configured",
+      "spider_concurrency_le_50_global"
+    ],
+    "openobserve_config": {
+      "service": "n8n",
+      "traces_endpoint": "eu1-api.openobserve.ai/api/3LOzR02TywfzyWfDySBb0aS1DrE/v1/traces",
+      "logs_endpoint": "eu1-api.openobserve.ai/api/3LOzR02TywfzyWfDySBb0aS1DrE/v1/logs",
+      "correlation_key": "execution_id",
+      "trace_attributes": [
+        "workflowId",
+        "source_id",
+        "event_id"
+      ]
+    }
+  }
+}

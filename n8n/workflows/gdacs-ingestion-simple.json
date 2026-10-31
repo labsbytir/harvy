@@ -1,0 +1,300 @@
+{
+  "name": "Harvy — gdacs Ingestion",
+  "active": false,
+  "settings": {
+    "saveManualExecutions": true,
+    "executionTimeout": 3600
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "value": "0 */2 * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Cron Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Generate metadata\nconst eventId = 'gdacs-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);\nreturn [{\n  eventId: eventId,\n  workflowName: 'Harvy — gdacs Ingestion',\n  timestamp: new Date().toISOString(),\n  source: 'gdacs'\n}];"
+      },
+      "id": "generate-metadata",
+      "name": "Generate Metadata",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Configuration setup\nconst config = {\n  gdacsApi: 'https://www.gdacs.org/api/v2/alerts',\n  proxy: {\n    host: process.env.WEBSHARE_PROXY_URL ? process.env.WEBSHARE_PROXY_URL.split('://')[1].split(':')[0] : '',\n    port: process.env.WEBSHARE_PROXY_URL ? parseInt(process.env.WEBSHARE_PROXY_URL.split(':')[2]) : 0\n  }\n};\nreturn [config];"
+      },
+      "id": "setup-config",
+      "name": "Setup Configuration",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "throw new Error(\"BLOCKED: Durable backfill checkpoint adapter is not connected. Wire v2/automation/backfill.mjs to approved checkpoint and storage adapters; do not reset a rolling lookback or advance without storage.\");"
+      },
+      "id": "get-cursor",
+      "name": "Get Backfill Cursor",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        900,
+        300
+      ],
+      "notes": "Durable backfill checkpoint adapter is not connected. Wire v2/automation/backfill.mjs to approved checkpoint and storage adapters; do not reset a rolling lookback or advance without storage.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "url": "={{$node[\"Setup Configuration\"].json[\"gdacsApi\"]}}?startDate={{$node[\"Get Backfill Cursor\"].json[\"backfillCursor\"]}}&endDate={{$node[\"Get Backfill Cursor\"].json[\"forwardWatermark\"]}}&format=json",
+        "method": "GET",
+        "authentication": "none",
+        "headers": {
+          "User-Agent": "Harvy-GDACS-Connector/1.0",
+          "Accept": "application/json"
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "fetch-alerts",
+      "name": "Fetch GDACS Alerts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Process alerts with provenance\nconst alerts = items.map(item => {\n  const alert = item.json;\n  const eventId = 'gdacs-alert-' + alert.id + '-' + alert.timestamp;\n  \n  return {\n    ...alert,\n    eventId: eventId,\n    workflowName: 'Harvy — gdacs Ingestion',\n    ingestionTimestamp: new Date().toISOString(),\n    provenance: {\n      source: 'gdacs.org',\n      retrievedAt: new Date().toISOString(),\n      license: 'CC-BY-4.0'\n    },\n    dedupeKey: alert.id + '-' + alert.timestamp\n  };\n});\nreturn alerts;"
+      },
+      "id": "process-alerts",
+      "name": "Process Alerts",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Simple deduplication\nconst seen = new Set();\nconst unique = [];\nconst duplicates = [];\n\nfor (const item of items) {\n  if (!seen.has(item.json.dedupeKey)) {\n    seen.add(item.json.dedupeKey);\n    unique.push(item);\n  } else {\n    duplicates.push(item);\n  }\n}\n\nif (duplicates.length > 0) {\n  console.warn('Duplicate alerts found:', duplicates.length);\n}\n\nreturn { uniqueAlerts: unique, duplicateCount: duplicates.length };"
+      },
+      "id": "dedupe-check",
+      "name": "Deduplication Check",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Prepare for storage\nconst alerts = items.map(item => item.json);\n\nconst rawData = alerts.map(a => ({\n  eventId: a.eventId,\n  source: 'gdacs',\n  rawJson: JSON.stringify(a),\n  timestamp: a.timestamp,\n  ingestionTimestamp: a.ingestionTimestamp\n}));\n\nconst processedData = alerts.map(a => ({\n  eventId: a.eventId,\n  alertId: a.id,\n  title: a.title || '',\n  severity: a.severity || 'unknown',\n  timestamp: a.timestamp,\n  location: JSON.stringify(a.location || {}),\n  workflowName: a.workflowName\n}));\n\nreturn [{ rawData, processedData }];"
+      },
+      "id": "prepare-data",
+      "name": "Prepare Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1780,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "throw new Error(\"BLOCKED: Storage adapter is not connected. Logging records is not a successful write.\");"
+      },
+      "id": "write-r2",
+      "name": "Write to R2",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        2000,
+        300
+      ],
+      "notes": "Storage adapter is not connected. Logging records is not a successful write.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "functionCode": "throw new Error(\"BLOCKED: Storage adapter is not connected. Logging records is not a successful write.\");"
+      },
+      "id": "write-postgres",
+      "name": "Write to PostgreSQL",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        2220,
+        300
+      ],
+      "notes": "Storage adapter is not connected. Logging records is not a successful write.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "functionCode": "throw new Error(\"BLOCKED: Durable backfill checkpoint adapter is not connected. Wire v2/automation/backfill.mjs to approved checkpoint and storage adapters; do not reset a rolling lookback or advance without storage.\");"
+      },
+      "id": "update-cursor",
+      "name": "Update Backfill Cursor",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        2420,
+        300
+      ],
+      "notes": "Durable backfill checkpoint adapter is not connected. Wire v2/automation/backfill.mjs to approved checkpoint and storage adapters; do not reset a rolling lookback or advance without storage.",
+      "notesInFlow": true
+    }
+  ],
+  "connections": {
+    "Cron Trigger": {
+      "main": [
+        [
+          {
+            "node": "Generate Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Metadata": {
+      "main": [
+        [
+          {
+            "node": "Setup Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Setup Configuration": {
+      "main": [
+        [
+          {
+            "node": "Get Backfill Cursor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Backfill Cursor": {
+      "main": [
+        [
+          {
+            "node": "Fetch GDACS Alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch GDACS Alerts": {
+      "main": [
+        [
+          {
+            "node": "Process Alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Alerts": {
+      "main": [
+        [
+          {
+            "node": "Deduplication Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deduplication Check": {
+      "main": [
+        [
+          {
+            "node": "Prepare Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Data": {
+      "main": [
+        [
+          {
+            "node": "Write to R2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Write to PostgreSQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write to R2": {
+      "main": [
+        [
+          {
+            "node": "Write to PostgreSQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write to PostgreSQL": {
+      "main": [
+        [
+          {
+            "node": "Update Backfill Cursor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Backfill Cursor": {
+      "main": []
+    }
+  },
+  "versionId": "1.0.0"
+}

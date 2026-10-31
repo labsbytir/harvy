@@ -1,5 +1,58 @@
 # Harvy n8n workflow starters
 
+## Local repair status — 2026-10-30
+
+Run `npm run validate:workflows` before import. It checks JSON parsing, embedded
+JavaScript syntax, unique node identities, and graph references across this
+directory and the legacy `n8n/workflows/` directory. Passing does not verify n8n
+node parameters, expression evaluation, installed node versions, credentials,
+source endpoints, pagination, proxy egress, or storage. All exports remain inactive.
+
+Nine malformed exports were repaired. The FEMA export had embedded serialized
+workflow text inside its purported completion code; it is now a narrow run
+submission draft using the existing API contract, with organization/domain
+placeholders and a disabled schedule. Its completion step explicitly fails until
+canonical status reconciliation is connected. EU sanctions uses the same scoped
+submission pattern and cannot claim ingestion success from submission alone.
+
+GDACS drafts no longer reset a rolling seven-day cursor or call unverified
+`n8n-workflow` checkpoint helpers. Their checkpoint steps fail explicitly pending
+durable integration. GDACS simulated R2/PostgreSQL writes and UN Data simulated
+Basin ingestion also fail explicitly. These drafts are not ready to activate.
+
+`v2/automation/backfill.mjs` provides bounded orchestration with fixed historical
+bounds, half-open date windows, pagination, page limits, lease-protected checkpoint
+adapter contracts, and publication-before-checkpoint ordering. Failed checkpoint
+writes replay the same page idempotency key. Provider adapters must map these
+bounds to actual source semantics and implement approved proxy preflight. Storage
+adapters must durably publish artifacts/records and deduplicate before resolving;
+checkpoint adapters must implement durable storage and exclusive, fenced leases.
+No production adapter or live execution is provided by this local module. Call it
+from the authorized Automation runtime after verifying the installed n8n execution
+capabilities; do not paste its Node imports into a restricted n8n Code node.
+
+After the server MCP is attached: inventory installed version/nodes and existing
+workflows, preserve recoverable revisions, inspect one real failed execution,
+connect source/publication/checkpoint adapters, verify bounded ingestion and
+replay, and query stored counts plus min/max source dates. Preserve existing
+schedules and configured source ranges during this inspection.
+
+Use this compact task envelope for an agent after server access is available:
+
+```text
+Repair source <ID> in the existing installed workflow; preserve unrelated work.
+Historical bounds: <START UTC> to <END UTC>; records/page: <N>; pages/run: <N>.
+Read repository guidance and only the relevant adapter, workflow and contracts.
+Inspect the actual failed execution. Reuse approved credentials and proxy path.
+Implement historical pagination, durable leased checkpoints, idempotent storage,
+bounded retries and canonical status reconciliation. Preserve existing schedules.
+Use code for ingestion; return payload references rather than source data to AI.
+Completion evidence: execution/run IDs, durable raw+processed references, stored
+count, min/max source dates, replay result and a successful storage query.
+If evidence is unavailable, report the exact blocker; never invent success.
+Perform live changes only within the user's current authorization.
+```
+
 The canonical [n8n standard](../../docs/DEVELOPMENT.md#18-uniform-n8n-integration-standard) and [single project plan](../../docs/ROADMAP.md) govern these files. The templates are **inactive and not verified against the installed n8n instance**. They submit approved source IDs to Harvy's `/api/v1/runs`; they are not the live scraper workflows. The VPS-hosted n8n instance is Harvy's Automation system: it receives Harvy's validated run envelope, calls Spider Unlimited with the approved Webshare proxy or calls a registered structured API through that proxy, normalizes results, stores artifacts in R2, and posts signed callbacks. The live n8n instance and its credentials are not connected to this checkout, so that execution path is unverified. A template or green n8n execution is not proof of proxy egress or collection success.
 
 ## Available Inactive Workflow Starters

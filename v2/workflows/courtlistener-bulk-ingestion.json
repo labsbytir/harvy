@@ -1,0 +1,394 @@
+{
+  "name": "Harvy - CourtListener Bulk Data Ingestion",
+  "id": "courtlistener-bulk-ingestion-v1",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Set job parameters for CourtListener bulk ingestion\nconst now = new Date();\n\nreturn [{\n  json: {\n    source_id: 'src_courtlistener',\n    connector_id: 'courtlistener',\n    product: 'Civic',\n    tenant_id: 'shared',\n    workspace_id: 'shared',\n    idempotency_key: 'courtlistener-bulk-' + now.getTime() + '-' + Math.random().toString(36).substr(2, 9),\n    contract_version: 1,\n    mode: 'scrape',\n    provider: 'spider_unlimited',\n    required_proxy: 'webshare',\n    preflight_required: true,\n    direct_fallback_allowed: false,\n    max_pages: 100,\n    deadline_seconds: 3600,\n    target_url: 'https://com-courtlistener-storage.s3-us-west-2.amazonaws.com/?list-type=2&prefix=bulk-data/',\n    file_types: [\n      'dockets',\n      'people-db-people',\n      'people-db-educations',\n      'people-db-positions',\n      'people-db-political-affiliations',\n      'people-db-schools',\n      'people-db-retention-events',\n      'people_db_race'\n    ],\n    start_date: '2023-01-01',\n    end_date: now.toISOString().split('T')[0],\n    provenance: {\n      source: 'CourtListener Bulk Data',\n      url: 'https://com-courtlistener-storage.s3-us-west-2.amazonaws.com/',\n      license: 'Public Domain (RECAP)',\n      retrieved_at: now.toISOString(),\n      data_format: 'CSV.bz2'\n    },\n    scope: {\n      organization_id: 'harvy',\n      product_id: 'harvy-ingestion',\n      environment: 'production'\n    }\n  }\n}];"
+      },
+      "id": "set-job-params",
+      "name": "Set Job Parameters",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate envelope against contract\nconst body = $input.first().json || {};\nconst required = ['contract_version', 'source_id', 'connector_id', 'idempotency_key', 'mode', 'provider', 'required_proxy', 'preflight_required', 'direct_fallback_allowed', 'max_pages', 'deadline_seconds', 'target_url'];\nconst missing = required.filter(key => !(key in body));\nif (missing.length > 0) {\n  throw new Error('Missing required fields: ' + missing.join(', '));\n}\nif (body.contract_version !== 1) {\n  throw new Error('Unsupported contract version: ' + body.contract_version);\n}\nif (body.required_proxy !== 'webshare') {\n  throw new Error('Required proxy must be webshare');\n}\nif (body.preflight_required !== true) {\n  throw new Error('Preflight must be required');\n}\nif (body.direct_fallback_allowed !== false) {\n  throw new Error('Direct fallback must be disabled');\n}\nif (body.connector_id !== 'courtlistener' && body.connector_id !== 'src_courtlistener') {\n  throw new Error('This workflow only handles CourtListener requests. Received: ' + body.connector_id);\n}\nreturn [{ json: { ...body, validated: true } }];"
+      },
+      "id": "validate-envelope",
+      "name": "Validate Envelope",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://REPLACE_WITH_HARVY_DOMAIN/api/v1/runs",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-harvy-organization-id",
+              "value": "REPLACE_WITH_ORGANIZATION_ID"
+            },
+            {
+              "name": "x-harvy-product",
+              "value": "harvy-ingestion"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "submit-to-automation",
+      "name": "Submit to Automation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 200],
+      "continueOnFail": false
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://ipv4.webshare.io/",
+        "options": {
+          "timeout": 30000,
+          "proxy": "={{ $vars.WEBSHARE_PROXY_URL }}"
+        }
+      },
+      "id": "preflight-proxy",
+      "name": "Preflight Webshare Proxy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://spider.unlimited.cloudflare.com/scrape",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-spider-api-key",
+              "value": "={{ $vars.SPIDER_API_KEY }}"
+            },
+            {
+              "name": "x-spider-proxy",
+              "value": "={{ $vars.WEBSHARE_PROXY_URL }}"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Harvy-CourtListener-Ingestion/1.0"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "target",
+              "value": "={{ $json.target_url }}"
+            },
+            {
+              "name": "format",
+              "value": "text"
+            },
+            {
+              "name": "max_pages",
+              "value": "={{ $json.max_pages }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "fetch-s3-listing",
+      "name": "Fetch S3 File Listing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse S3 XML listing and filter files\nfunction parseS3Xml(xml) {\n  const files = [];\n  const keyRegex = /<Key>([^<]+)<\\/Key>/g;\n  const sizeRegex = /<Size>(\\d+)<\\/Size>/g;\n  const lastModifiedRegex = /<LastModified>([^<]+)<\\/LastModified>/g;\n  \n  const keys = xml.match(keyRegex) || [];\n  const sizes = xml.match(sizeRegex) || [];\n  const lastModifieds = xml.match(lastModifiedRegex) || [];\n  \n  for (let i = 0; i < keys.length; i++) {\n    const key = keys[i].replace(/<Key>|<\\/Key>/g, '');\n    const size = sizes[i] ? parseInt(sizes[i].replace(/<Size>|<\\/Size>/g, '')) : 0;\n    const lastModified = lastModifieds[i] ? lastModifieds[i].replace(/<LastModified>|<\\/LastModified>/g, '') : '';\n    \n    if (key.includes('bulk-data/') && (key.endsWith('.csv.bz2') || key.endsWith('.csv'))) {\n      files.push({ Key: key, Size: size, LastModified: lastModified });\n    }\n  }\n  return files;\n}\n\nconst body = $input.first().json || {};\nconst xml = body.text || '';\nconst allFiles = parseS3Xml(xml);\n\n// Filter by type\nconst fileTypes = body.file_types || [];\nconst filteredByType = allFiles.filter(file => \n  fileTypes.some(type => file.Key.includes(type))\n);\n\n// Filter by date range\nconst startDate = body.start_date;\nconst endDate = body.end_date;\nconst filteredByDate = filteredByType.filter(file => {\n  const dateMatch = file.Key.match(/(\\d{4}-\\d{2}-\\d{2})/);\n  if (!dateMatch) return true;\n  const fileDate = dateMatch[1];\n  if (startDate && fileDate < startDate) return false;\n  if (endDate && fileDate > endDate) return false;\n  return true;\n});\n\n// Add metadata\nconst filesWithMetadata = filteredByDate.map(file => ({\n  ...file,\n  filename: file.Key.split('/').pop(),\n  url: 'https://com-courtlistener-storage.s3-us-west-2.amazonaws.com/' + file.Key,\n  source_id: body.source_id,\n  run_id: body.run_id || body.idempotency_key,\n  trace_id: body.trace_id,\n  access_scope_id: body.access_scope_id\n}));\n\nconsole.log('[CourtListener] Found ' + allFiles.length + ' files, filtered to ' + filteredByDate.length);\n\nreturn filesWithMetadata.map(file => ({ json: file }));"
+      },
+      "id": "parse-and-filter",
+      "name": "Parse and Filter Files",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 200]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.url }}",
+        "options": {
+          "timeout": 120000,
+          "proxy": "={{ $vars.WEBSHARE_PROXY_URL }}",
+          "followRedirects": true
+        },
+        "responseFormat": "binary"
+      },
+      "id": "download-file",
+      "name": "Download File via Proxy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1780, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Create Harvy event metadata\nconst items = $input.all();\nconst envelope = $input.first().json || {};\nconst events = [];\n\nfor (let i = 0; i < items.length; i++) {\n  const item = items[i].json || {};\n  const binaryData = items[i].binary?.data || null;\n  \n  if (!binaryData) {\n    console.warn('No binary data for ' + item.filename);\n    continue;\n  }\n  \n  // Create deterministic event ID\n  const crypto = require('crypto');\n  const hash = crypto.createHash('sha256').update(String(item.filename || item.Key || i)).digest('hex').slice(0, 16);\n  const eventId = 'src_courtlistener_' + hash;\n  \n  const fileSizeGB = item.Size ? (item.Size / 1024 / 1024 / 1024).toFixed(2) : 'unknown';\n  \n  const event = {\n    id: eventId,\n    event_id: eventId,\n    source_id: 'src_courtlistener',\n    publisher: 'CourtListener',\n    product: 'Civic',\n    tenant_id: envelope.access_scope_id?.replace('tenant-', '') || 'shared',\n    workspace_id: envelope.access_scope_id?.replace('tenant-', '') || 'shared',\n    title: item.filename || 'CourtListener Bulk Data',\n    summary: 'Bulk data file: ' + item.filename + ' (' + fileSizeGB + ' GB)',\n    status: 'new',\n    first_seen_at: new Date(item.LastModified).toISOString(),\n    last_seen_at: new Date().toISOString(),\n    run_id: envelope.run_id || envelope.idempotency_key,\n    trace_id: envelope.trace_id,\n    source_scope_id: envelope.source_scope_id || 'src_courtlistener',\n    access_scope_id: envelope.access_scope_id || 'tenant-shared',\n    metadata: {\n      filename: item.filename,\n      url: item.url,\n      size: item.Size,\n      last_modified: item.LastModified,\n      content_type: item.filename?.endsWith('.bz2') ? 'application/x-bzip2' : 'text/csv',\n      file_type: item.Key?.split('/').pop()?.replace(/\\.csv\\.bz2$|\\.csv$/, '') || 'unknown'\n    },\n    provenance: {\n      source: 'CourtListener Bulk Data',\n      url: 'https://com-courtlistener-storage.s3-us-west-2.amazonaws.com/',\n      license: 'Public Domain (RECAP)',\n      retrieved_at: new Date().toISOString()\n    }\n  };\n  \n  events.push({ json: event, binary: { data: binaryData } });\n}\n\nreturn events;"
+      },
+      "id": "create-metadata",
+      "name": "Create Event Metadata",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 200]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "operation": "upload",
+        "bucketName": "={{ $vars.R2_BUCKET_NAME || 'harvy-raw' }}",
+        "fileName": "={{ 'courtlistener/raw/' + $json.metadata.filename }}",
+        "binaryData": true,
+        "additionalFields": {
+          "contentType": "={{ $json.metadata.content_type }}",
+          "customMetadata": "={{ JSON.stringify({ run_id: $json.run_id, trace_id: $json.trace_id, source_id: $json.source_id }) }}"
+        }
+      },
+      "id": "upload-raw",
+      "name": "Upload Raw to R2",
+      "type": "n8n-nodes-base.s3",
+      "typeVersion": 1,
+      "position": [2220, 200],
+      "credentials": {
+        "s3": {
+          "id": "r2-credentials",
+          "name": "R2 Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Transform to evidence format\nconst items = $input.all();\nconst evidenceList = [];\n\nfor (let i = 0; i < items.length; i++) {\n  const item = items[i].json || {};\n  \n  const evidence = {\n    id: item.id + '-evidence',\n    event_id: item.event_id,\n    source_id: item.source_id,\n    publisher: item.publisher,\n    product: item.product,\n    tenant_id: item.tenant_id,\n    workspace_id: item.workspace_id,\n    type: 'document',\n    title: item.title,\n    summary: item.summary,\n    content: item.summary,\n    url: item.metadata?.url,\n    file_path: 'courtlistener/raw/' + item.metadata?.filename,\n    file_size: item.metadata?.size,\n    file_type: item.metadata?.content_type,\n    first_seen_at: item.first_seen_at,\n    last_seen_at: item.last_seen_at,\n    run_id: item.run_id,\n    trace_id: item.trace_id,\n    metadata: {\n      filename: item.metadata.filename,\n      url: item.metadata.url,\n      size: item.metadata.size,\n      content_type: item.metadata.content_type,\n      evidence_type: 'bulk_data_file'\n    },\n    provenance: item.provenance\n  };\n  \n  evidenceList.push({ json: evidence });\n}\n\nreturn evidenceList;"
+      },
+      "id": "transform-evidence",
+      "name": "Transform to Evidence",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2440, 200]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "operation": "upload",
+        "bucketName": "={{ $vars.R2_BUCKET_NAME || 'harvy-artifacts' }}",
+        "fileName": "={{ 'courtlistener/processed/' + $json.event_id + '.json' }}",
+        "binaryData": false,
+        "fileContent": "={{ JSON.stringify($json, null, 2) }}",
+        "additionalFields": {
+          "contentType": "application/json",
+          "customMetadata": "={{ JSON.stringify({ run_id: $json.run_id, trace_id: $json.trace_id, event_id: $json.event_id }) }}"
+        }
+      },
+      "id": "upload-processed",
+      "name": "Upload Processed to R2",
+      "type": "n8n-nodes-base.s3",
+      "typeVersion": 1,
+      "position": [2660, 200],
+      "credentials": {
+        "s3": {
+          "id": "r2-credentials",
+          "name": "R2 Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://REPLACE_WITH_HARVY_DOMAIN/internal/v1/automation-callback",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Harvy-Timestamp",
+              "value": "={{ Date.now() }}"
+            },
+            {
+              "name": "X-Harvy-Signature",
+              "value": "={{ $vars.AUTOMATION_CALLBACK_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n          run_id: $json.run_id,\n          status: 'succeeded',\n          error_code: null,\n          processed_count: 1,\n          timestamp: new Date().toISOString()\n        }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "callback-status",
+      "name": "Post Status Callback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2880, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://REPLACE_WITH_HARVY_DOMAIN/internal/v1/automation-publications",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Harvy-Timestamp",
+              "value": "={{ Date.now() }}"
+            },
+            {
+              "name": "X-Harvy-Signature",
+              "value": "={{ $vars.AUTOMATION_CALLBACK_SECRET }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n          run_id: $json.run_id,\n          raw_manifests: [\n            {\n              stage: 'raw',\n              scope: $json.access_scope_id,\n              source_id: 'src_courtlistener',\n              path: 'courtlistener/raw/' + $json.metadata.filename,\n              size: $json.metadata.size || 0,\n              sha256: 'placeholder',\n              timestamp: $json.first_seen_at\n            }\n          ],\n          processed_manifests: [\n            {\n              stage: 'processed',\n              scope: $json.access_scope_id,\n              source_id: 'src_courtlistener',\n              path: 'courtlistener/processed/' + $json.event_id + '.json',\n              size: JSON.stringify($json).length,\n              sha256: 'placeholder',\n              timestamp: new Date().toISOString()\n            }\n          ],\n          event_count: 1,\n          evidence_count: 1,\n          timestamp: new Date().toISOString()\n        }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "callback-publication",
+      "name": "Post Publication Callback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3100, 200]
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 202,
+          "responseData": "{ \"status\": \"queued\", \"message\": \"CourtListener bulk request accepted\" }"
+        }
+      },
+      "id": "respond-accepted",
+      "name": "Respond 202 Accepted",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [3320, 200]
+    },
+    {
+      "parameters": {},
+      "id": "error-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [920, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format error for logging\nconst body = $input.first().json || {};\nconst exec = body.execution || body;\nconst lastNode = (exec.lastNode && exec.lastNode.name) || null;\nconst errObj = exec.error || {};\nconst message = errObj.message || errObj.description || JSON.stringify(body).slice(0, 500);\nreturn [{ json: { error: message, last_node: lastNode, timestamp: new Date().toISOString() } }];"
+      },
+      "id": "format-error",
+      "name": "Format Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1140, 600]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [[{ "node": "Set Job Parameters", "type": "main", "index": 0 }]]
+    },
+    "Set Job Parameters": {
+      "main": [[{ "node": "Validate Envelope", "type": "main", "index": 0 }]]
+    },
+    "Validate Envelope": {
+      "main": [[{ "node": "Submit to Automation", "type": "main", "index": 0 }]]
+    },
+    "Submit to Automation": {
+      "main": [[{ "node": "Preflight Webshare Proxy", "type": "main", "index": 0 }]]
+    },
+    "Preflight Webshare Proxy": {
+      "main": [[{ "node": "Fetch S3 File Listing", "type": "main", "index": 0 }]]
+    },
+    "Fetch S3 File Listing": {
+      "main": [[{ "node": "Parse and Filter Files", "type": "main", "index": 0 }]]
+    },
+    "Parse and Filter Files": {
+      "main": [[{ "node": "Download File via Proxy", "type": "main", "index": 0 }]]
+    },
+    "Download File via Proxy": {
+      "main": [[{ "node": "Create Event Metadata", "type": "main", "index": 0 }]]
+    },
+    "Create Event Metadata": {
+      "main": [[{ "node": "Upload Raw to R2", "type": "main", "index": 0 }]]
+    },
+    "Upload Raw to R2": {
+      "main": [[{ "node": "Transform to Evidence", "type": "main", "index": 0 }]]
+    },
+    "Transform to Evidence": {
+      "main": [[{ "node": "Upload Processed to R2", "type": "main", "index": 0 }]]
+    },
+    "Upload Processed to R2": {
+      "main": [[{ "node": "Post Status Callback", "type": "main", "index": 0 }]]
+    },
+    "Post Status Callback": {
+      "main": [[{ "node": "Post Publication Callback", "type": "main", "index": 0 }]]
+    },
+    "Post Publication Callback": {
+      "main": [[{ "node": "Respond 202 Accepted", "type": "main", "index": 0 }]]
+    },
+    "Error Trigger": {
+      "main": [[{ "node": "Format Error", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  },
+  "active": false,
+  "meta": {
+    "instanceId": "courtlistener-bulk-ingestion-v1",
+    "templateCredsSetupCompleted": false,
+    "lastTested": null,
+    "verificationStatus": "inactive",
+    "description": "CourtListener bulk data ingestion workflow using spider.cloud and Webshare proxy. INACTIVE - requires credential configuration and Harvy domain setup."
+  },
+  "versionId": "v1.0.0"
+}

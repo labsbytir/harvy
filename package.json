@@ -17,7 +17,10 @@
     "typecheck:email-inbox": "tsc -p v2/email-inbox/tsconfig.json",
     "docs:install-plugins": "tsx quartz/plugins/loader/install-plugins.ts",
     "docs:build": "npm run docs:install-plugins && node quartz/bootstrap-cli.mjs build --directory docs --output dist/docs && node v2/scripts/docs_tombstones.mjs",
-    "docs:dev": "npm run docs:build && node v2/scripts/serve_docs.mjs"
+    "docs:dev": "npm run docs:build && node v2/scripts/serve_docs.mjs",
+    "validate:workflows": "node v2/scripts/validate_workflows.mjs",
+    "ledger:build": "node v2/scripts/build_workflow_ledger.mjs",
+    "ledger:check": "node v2/scripts/build_workflow_ledger.mjs --check"
   },
   "dependencies": {
     "@better-auth/api-key": "^1.7.13",

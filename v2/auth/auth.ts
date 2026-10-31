@@ -198,12 +198,6 @@ export function createAuth(env: HarvyAuthEnv, ctx?: ExecutionContext, cf?: objec
       },
       ...emailOptions,
     };
-  if (env.HARVY_D1) {
-    return betterAuth(withCloudflare(
-      { d1Native: env.HARVY_D1, autoDetectIpAddress: true, geolocationTracking: false, cf: cf || {} },
-      options,
-    ) as any);
-  }
   if (env.HYPERDRIVE_PRIVATE?.connectionString) {
     // Production: real Better Auth adapter over PostgreSQL via Hyperdrive, same
     // node-postgres client pattern as v2/api/analytics.ts. Default table mapping
@@ -213,6 +207,13 @@ export function createAuth(env: HarvyAuthEnv, ctx?: ExecutionContext, cf?: objec
       ...options,
       database: drizzleAdapter(drizzlePostgres(pg.nativeClient), { provider: "pg" }),
     } as any);
+  }
+  if (env.HARVY_D1) {
+    // Local/test fallback only: D1-bound Better Auth adapter.
+    return betterAuth(withCloudflare(
+      { d1Native: env.HARVY_D1, autoDetectIpAddress: true, geolocationTracking: false, cf: cf || {} },
+      options,
+    ) as any);
   }
   if (ctx) throw new Error("No database binding: set HYPERDRIVE_PRIVATE (prod) or HARVY_D1 (local/test).");
   // CLI schema generation only (schema.config.ts); never runs in the worker and never connects.

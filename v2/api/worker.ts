@@ -815,13 +815,15 @@ async function automationCallback(request: Request, env: Env, trace: string, db:
       !["running", "succeeded", "partial", "failed", "cancelled"].includes(String(b.status)) ||
       (b.error_code !== undefined && (typeof b.error_code !== "string" || b.error_code.length > 64))) return fail("invalid_callback", "Callback state is invalid.", 400, trace);
   if (!db) return fail("unavailable", "Harvy PostgreSQL storage is not configured.", 503, trace);
-  const current = await db.prepare("SELECT status FROM harvy_v2_runs WHERE id = ?").bind(b.run_id).first<{ status: RunStatus }>();
-  if (!current) return fail("not_found", "Run not found.", 404, trace);
+  // Security: Look up run with tenant_id and workspace_id to ensure tenant isolation
+  const run = await db.prepare("SELECT tenant_id, workspace_id, status FROM harvy_v2_runs WHERE id = ?").bind(b.run_id).first<{ tenant_id: string; workspace_id: string; status: RunStatus }>();
+  if (!run) return fail("not_found", "Run not found.", 404, trace);
   const next = b.status as RunStatus;
-  if (current.status === next) return json({ accepted: true, status: next });
-  if (!canTransitionAutomationRun(current.status, next)) return fail("invalid_transition", "Run state cannot move to that status.", 409, trace);
-  const result = await db.prepare("UPDATE harvy_v2_runs SET status = ?, error_code = ?, updated_at = ? WHERE id = ? AND status = ?")
-    .bind(next, next === "failed" && typeof b.error_code === "string" ? b.error_code.slice(0, 64) : null, now(), b.run_id, current.status).run();
+  if (run.status === next) return json({ accepted: true, status: next });
+  if (!canTransitionAutomationRun(run.status, next)) return fail("invalid_transition", "Run state cannot move to that status.", 409, trace);
+  // Security: Update only runs belonging to the same tenant/workspace
+  const result = await db.prepare("UPDATE harvy_v2_runs SET status = ?, error_code = ?, updated_at = ? WHERE id = ? AND tenant_id = ? AND workspace_id = ? AND status = ?")
+    .bind(next, next === "failed" && typeof b.error_code === "string" ? b.error_code.slice(0, 64) : null, now(), b.run_id, run.tenant_id, run.workspace_id, run.status).run();
   return result.meta.changes ? json({ accepted: true, status: next }) : fail("revision_conflict", "Run state changed concurrently.", 409, trace);
 }
 

@@ -1,0 +1,386 @@
+{
+  "version": "1.0.0",
+  "description": "Pre-configured United States datasets for Harvy Kaggle Pipeline",
+  "categories": {
+    "government": {
+      "description": "US Government and Public Sector Datasets",
+      "datasets": [
+        {
+          "id": "us-census-bureau/decennial-census",
+          "title": "US Decennial Census",
+          "description": "Complete US Census data from 1790 to 2020",
+          "tags": ["census", "population", "demographics", "government"],
+          "priority": "high",
+          "estimated_size": "50GB",
+          "update_frequency": "decennial",
+          "license": "Public Domain"
+        },
+        {
+          "id": "us-census-bureau/american-community-survey",
+          "title": "American Community Survey",
+          "description": "Annual survey data on population, housing, and economic characteristics",
+          "tags": ["survey", "demographics", "economics", "housing"],
+          "priority": "high",
+          "estimated_size": "20GB",
+          "update_frequency": "annual",
+          "license": "Public Domain"
+        },
+        {
+          "id": "bureau-of-labor-statistics/employment-data",
+          "title": "BLS Employment Data",
+          "description": "Monthly employment, unemployment, and wage data",
+          "tags": ["employment", "unemployment", "wages", "economics"],
+          "priority": "high",
+          "estimated_size": "10GB",
+          "update_frequency": "monthly",
+          "license": "Public Domain"
+        },
+        {
+          "id": "federal-reserve/economic-data",
+          "title": "Federal Reserve Economic Data (FRED)",
+          "description": "Comprehensive economic time series data",
+          "tags": ["economics", "financial", "interest-rates", "inflation"],
+          "priority": "high",
+          "estimated_size": "15GB",
+          "update_frequency": "daily",
+          "license": "Public Domain"
+        },
+        {
+          "id": "irs/tax-statistics",
+          "title": "IRS Tax Statistics",
+          "description": "Tax return data and statistics",
+          "tags": ["tax", "income", "revenue", "government"],
+          "priority": "medium",
+          "estimated_size": "5GB",
+          "update_frequency": "annual",
+          "license": "Public Domain"
+        },
+        {
+          "id": "fbi/crime-data-explorer",
+          "title": "FBI Crime Data Explorer",
+          "description": "Crime statistics from law enforcement agencies",
+          "tags": ["crime", "law-enforcement", "safety", "justice"],
+          "priority": "medium",
+          "estimated_size": "8GB",
+          "update_frequency": "annual",
+          "license": "Public Domain"
+        },
+        {
+          "id": "usgs/geographic-data",
+          "title": "USGS Geographic Data",
+          "description": "Geospatial data for the United States",
+          "tags": ["geography", "maps", "gis", "environment"],
+          "priority": "medium",
+          "estimated_size": "100GB",
+          "update_frequency": "various",
+          "license": "Public Domain"
+        },
+        {
+          "id": "noaa/climate-data",
+          "title": "NOAA Climate Data",
+          "description": "Historical weather and climate data",
+          "tags": ["weather", "climate", "temperature", "precipitation"],
+          "priority": "medium",
+          "estimated_size": "50GB",
+          "update_frequency": "daily",
+          "license": "Public Domain"
+        }
+      ]
+    },
+    "economics": {
+      "description": "Economic and Financial Datasets",
+      "datasets": [
+        {
+          "id": "quandl/sp-500-stock-data",
+          "title": "S&P 500 Stock Data",
+          "description": "Historical stock prices and trading data",
+          "tags": ["stocks", "finance", "investing", "market"],
+          "priority": "high",
+          "estimated_size": "2GB",
+          "update_frequency": "daily",
+          "license": "Quandl License"
+        },
+        {
+          "id": "zillow/us-housing-market",
+          "title": "Zillow US Housing Market Data",
+          "description": "Home values, sales, and rental data",
+          "tags": ["housing", "real-estate", "property", "market"],
+          "priority": "high",
+          "estimated_size": "20GB",
+          "update_frequency": "monthly",
+          "license": "Zillow License"
+        },
+        {
+          "id": "bureau-of-economic-analysis/gdp-data",
+          "title": "BEA GDP Data",
+          "description": "Gross Domestic Product and related economic indicators",
+          "tags": ["gdp", "economics", "growth", "productivity"],
+          "priority": "high",
+          "estimated_size": "1GB",
+          "update_frequency": "quarterly",
+          "license": "Public Domain"
+        },
+        {
+          "id": "world-bank/us-economic-indicators",
+          "title": "World Bank US Economic Indicators",
+          "description": "Comprehensive economic data for the US",
+          "tags": ["economics", "indicators", "development", "finance"],
+          "priority": "medium",
+          "estimated_size": "500MB",
+          "update_frequency": "annual",
+          "license": "Creative Commons"
+        }
+      ]
+    },
+    "health": {
+      "description": "Health and Medical Datasets",
+      "datasets": [
+        {
+          "id": "cdc/places",
+          "title": "CDC PLACES Data",
+          "description": "Population Level Analysis and Community Estimates",
+          "tags": ["health", "disease", "prevention", "public-health"],
+          "priority": "high",
+          "estimated_size": "5GB",
+          "update_frequency": "annual",
+          "license": "Public Domain"
+        },
+        {
+          "id": "johns-hopkins-university/covid-19-data",
+          "title": "JHU COVID-19 Data",
+          "description": "Global and US COVID-19 case and death data",
+          "tags": ["covid19", "pandemic", "health", "disease"],
+          "priority": "high",
+          "estimated_size": "1GB",
+          "update_frequency": "daily",
+          "license": "Creative Commons"
+        },
+        {
+          "id": "cms/medicare-data",
+          "title": "CMS Medicare Data",
+          "description": "Medicare provider and utilization data",
+          "tags": ["healthcare", "medicare", "providers", "costs"],
+          "priority": "medium",
+          "estimated_size": "10GB",
+          "update_frequency": "annual",
+          "license": "Public Domain"
+        },
+        {
+          "id": "nih/clinical-trials",
+          "title": "NIH Clinical Trials Data",
+          "description": "Information on clinical trials and research studies",
+          "tags": ["clinical-trials", "research", "medicine", "health"],
+          "priority": "medium",
+          "estimated_size": "2GB",
+          "update_frequency": "daily",
+          "license": "Public Domain"
+        }
+      ]
+    },
+    "demographics": {
+      "description": "Population and Demographic Datasets",
+      "datasets": [
+        {
+          "id": "us-census-bureau/population-estimates",
+          "title": "US Population Estimates",
+          "description": "Annual population estimates by state and county",
+          "tags": ["population", "demographics", "census", "estimates"],
+          "priority": "high",
+          "estimated_size": "1GB",
+          "update_frequency": "annual",
+          "license": "Public Domain"
+        },
+        {
+          "id": "us-census-bureau/american-community-survey-5-year",
+          "title": "ACS 5-Year Estimates",
+          "description": "5-year rolling averages for small geographic areas",
+          "tags": ["demographics", "survey", "small-areas", "estimates"],
+          "priority": "high",
+          "estimated_size": "50GB",
+          "update_frequency": "annual",
+          "license": "Public Domain"
+        },
+        {
+          "id": "us-census-bureau/voting-and-registration",
+          "title": "Voting and Registration Data",
+          "description": "Voter registration and turnout statistics",
+          "tags": ["voting", "elections", "registration", "politics"],
+          "priority": "medium",
+          "estimated_size": "500MB",
+          "update_frequency": "biennial",
+          "license": "Public Domain"
+        },
+        {
+          "id": "us-department-of-education/school-data",
+          "title": "US Education Data",
+          "description": "School performance, enrollment, and demographic data",
+          "tags": ["education", "schools", "students", "performance"],
+          "priority": "medium",
+          "estimated_size": "10GB",
+          "update_frequency": "annual",
+          "license": "Public Domain"
+        }
+      ]
+    },
+    "transportation": {
+      "description": "Transportation and Infrastructure Datasets",
+      "datasets": [
+        {
+          "id": "us-department-of-transportation/airline-data",
+          "title": "DOT Airline Data",
+          "description": "Airline flight data, delays, and performance",
+          "tags": ["airlines", "flights", "transportation", "aviation"],
+          "priority": "medium",
+          "estimated_size": "10GB",
+          "update_frequency": "monthly",
+          "license": "Public Domain"
+        },
+        {
+          "id": "us-department-of-transportation/highway-data",
+          "title": "Highway Performance Data",
+          "description": "Highway infrastructure and traffic data",
+          "tags": ["highways", "transportation", "infrastructure", "traffic"],
+          "priority": "medium",
+          "estimated_size": "5GB",
+          "update_frequency": "annual",
+          "license": "Public Domain"
+        },
+        {
+          "id": "us-department-of-transportation/transit-data",
+          "title": "Public Transit Data",
+          "description": "Public transportation systems and usage data",
+          "tags": ["transit", "public-transportation", "buses", "subways"],
+          "priority": "low",
+          "estimated_size": "2GB",
+          "update_frequency": "quarterly",
+          "license": "Public Domain"
+        }
+      ]
+    },
+    "environment": {
+      "description": "Environmental and Climate Datasets",
+      "datasets": [
+        {
+          "id": "epa/air-quality-data",
+          "title": "EPA Air Quality Data",
+          "description": "Air pollution measurements and trends",
+          "tags": ["air-quality", "pollution", "environment", "health"],
+          "priority": "high",
+          "estimated_size": "15GB",
+          "update_frequency": "daily",
+          "license": "Public Domain"
+        },
+        {
+          "id": "epa/water-quality-data",
+          "title": "EPA Water Quality Data",
+          "description": "Water pollution and quality measurements",
+          "tags": ["water-quality", "pollution", "environment", "rivers"],
+          "priority": "medium",
+          "estimated_size": "8GB",
+          "update_frequency": "monthly",
+          "license": "Public Domain"
+        },
+        {
+          "id": "usgs/water-resources",
+          "title": "USGS Water Resources Data",
+          "description": "Streamflow, groundwater, and water use data",
+          "tags": ["water", "hydrology", "environment", "resources"],
+          "priority": "medium",
+          "estimated_size": "20GB",
+          "update_frequency": "daily",
+          "license": "Public Domain"
+        },
+        {
+          "id": "noaa/coastal-data",
+          "title": "NOAA Coastal Data",
+          "description": "Coastal and oceanographic measurements",
+          "tags": ["coastal", "ocean", "tides", "environment"],
+          "priority": "low",
+          "estimated_size": "10GB",
+          "update_frequency": "hourly",
+          "license": "Public Domain"
+        }
+      ]
+    }
+  },
+  "recommended_imports": {
+    "quick_start": [
+      "us-census-bureau/decennial-census",
+      "bureau-of-labor-statistics/employment-data",
+      "federal-reserve/economic-data",
+      "cdc/places",
+      "johns-hopkins-university/covid-19-data"
+    ],
+    "comprehensive": [
+      "us-census-bureau/decennial-census",
+      "us-census-bureau/american-community-survey",
+      "bureau-of-labor-statistics/employment-data",
+      "federal-reserve/economic-data",
+      "irs/tax-statistics",
+      "fbi/crime-data-explorer",
+      "cdc/places",
+      "johns-hopkins-university/covid-19-data",
+      "noaa/climate-data",
+      "epa/air-quality-data"
+    ],
+    "economics_focus": [
+      "bureau-of-labor-statistics/employment-data",
+      "federal-reserve/economic-data",
+      "bureau-of-economic-analysis/gdp-data",
+      "quandl/sp-500-stock-data",
+      "zillow/us-housing-market"
+    ],
+    "health_focus": [
+      "cdc/places",
+      "johns-hopkins-university/covid-19-data",
+      "cms/medicare-data",
+      "nih/clinical-trials"
+    ]
+  },
+  "import_strategies": {
+    "full_import": {
+      "description": "Import all data from selected datasets",
+      "recommended_for": ["small datasets", "critical data", "one-time imports"],
+      "settings": {
+        "importFiles": true,
+        "storeInR2": true,
+        "storeInDatabase": true,
+        "processFiles": true
+      }
+    },
+    "metadata_only": {
+      "description": "Import only metadata, not actual files",
+      "recommended_for": ["large datasets", "initial discovery", "catalog building"],
+      "settings": {
+        "importFiles": false,
+        "storeInR2": false,
+        "storeInDatabase": true,
+        "processFiles": false
+      }
+    },
+    "sample_import": {
+      "description": "Import sample data for evaluation",
+      "recommended_for": ["dataset evaluation", "testing", "proof of concept"],
+      "settings": {
+        "importFiles": true,
+        "storeInR2": true,
+        "storeInDatabase": true,
+        "processFiles": true,
+        "maxFiles": 3,
+        "sampleRows": 1000
+      }
+    },
+    "scheduled_sync": {
+      "description": "Regularly sync with Kaggle for updates",
+      "recommended_for": ["frequently updated datasets", "ongoing monitoring"],
+      "settings": {
+        "importFiles": true,
+        "storeInR2": true,
+        "storeInDatabase": true,
+        "processFiles": true,
+        "schedule": "daily",
+        "checkForUpdates": true
+      }
+    }
+  }
+}

@@ -1,0 +1,136 @@
+{
+  "name": "Harvy — eu_sanctions Ingestion",
+  "id": "eu_sanctions_ingestion_001",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "mode": "everyDay",
+              "hour": 12,
+              "minute": 0
+            }
+          ]
+        }
+      },
+      "id": "eu-schedule-001",
+      "name": "Schedule: Daily at 12:00 UTC",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        240,
+        200
+      ],
+      "webhookId": "eu-sanctions-daily-trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { source_id: 'src_eu_sanctions', idempotency_key: `n8n-eu-sanctions-${$execution.id}` } }];"
+      },
+      "id": "eu-setup-002",
+      "name": "Set Job Parameters",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        200
+      ],
+      "continueOnFail": false
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://REPLACE_WITH_HARVY_DOMAIN/api/v1/runs",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-harvy-organization-id",
+              "value": "REPLACE_WITH_ORGANIZATION_ID"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "eu-api-call-003",
+      "name": "Trigger Harvy API Run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "throw new Error('BLOCKED: Run submitted; canonical status polling and artifact verification must be connected before reporting ingestion success.');"
+      },
+      "id": "eu-log-004",
+      "name": "Log Execution",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        200
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule: Daily at 12:00 UTC": {
+      "main": [
+        [
+          {
+            "node": "Set Job Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Job Parameters": {
+      "main": [
+        [
+          {
+            "node": "Trigger Harvy API Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Harvy API Run": {
+      "main": [
+        [
+          {
+            "node": "Log Execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "mcp_operations": {
+      "endpoint": "https://n8n.harvy.dev/mcp-server/http",
+      "workflow_id": "eu_sanctions_ingestion_001",
+      "created_via": "automation",
+      "created_at": "2026-10-30T14:00:00Z",
+      "updated_at": "2026-10-30T14:00:00Z",
+      "version": "1.0.0"
+    }
+  }
+}
