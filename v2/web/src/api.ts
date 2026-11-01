@@ -203,6 +203,21 @@ export const saveStory = (story: Story) => request<Story>(`/api/v1/stories/${enc
 export const handoffStory = (id: string) => request<{ action_id: string; story_id: string; status: "open" }>(`/api/v1/stories/${encodeURIComponent(id)}/handoff`, { method: "POST" });
 export const createBrief = (story_id: string) => request<{ id: string; title: string; body: string; citations: Evidence[]; generated_by: string }>("/api/v1/briefs", { method: "POST", body: JSON.stringify({ story_id }) });
 
+export interface HqlQuery {
+  hql_version: 1;
+  cube: string;
+  product?: HarvyProduct;
+  dimensions: string[];
+  measures: string[];
+  filters: { field: string; operator: "eq" | "neq" | "gt" | "gte" | "lt" | "lte" | "contains" | "in"; value: string | number | boolean | (string | number)[] }[];
+  order_by?: { field: string; direction: "asc" | "desc" }[];
+  limit: number;
+  time_range?: { from: string; to: string };
+}
+export interface HqlResult { rows: Record<string, string | number | boolean | null>[]; annotation: unknown; query: HqlQuery; snapshot: unknown; trace_id?: string }
+// Real route is POST /api/v1/query (v2/api/worker.ts); there is no /hql/execute route.
+export const executeHql = (query: HqlQuery) => request<HqlResult>("/api/v1/query", { method: "POST", body: JSON.stringify(query) });
+
 const scoped = (path: string, product: string) => `${path}${path.includes("?") ? "&" : "?"}product=${encodeURIComponent(product)}`;
 export const listInvestigations = (product: string) => request<{ items: Investigation[] }>(scoped("/api/v1/investigations", product));
 export const getInvestigation = (id: string, product: string) => request<Investigation & { items: InvestigationItem[] }>(scoped(`/api/v1/investigations/${encodeURIComponent(id)}`, product));

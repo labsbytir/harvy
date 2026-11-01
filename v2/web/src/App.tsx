@@ -13,6 +13,7 @@ import Divider from "@mui/material/Divider";
 import Stack from "@mui/material/Stack";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
+import AnalyticsPage from "./AnalyticsPage";
 import { TacticalPanel } from "./TacticalPanel";
 import { Ticker } from "./Ticker";
 import { CliSimulator } from "./CliSimulator";
@@ -37,6 +38,7 @@ const pipelineNodes = [
 ];
 
 export default function App() {
+  if (window.location.pathname === "/analytics") return <AnalyticsPage />;
   return window.location.pathname.startsWith("/app") || window.location.pathname === "/sign-in" ? <Workspace /> : <MarketingHome />;
 }
 
